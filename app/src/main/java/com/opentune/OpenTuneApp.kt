@@ -43,9 +43,13 @@ class OpenTuneApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // First, so a crash anywhere after this is kept for Export diagnostics.
         com.opentune.data.CrashLog.install(this)
-        // Initialize Google Mobile Ads and AdBreakManager
-        com.google.android.gms.ads.MobileAds.initialize(this) {}
-        com.opentune.ads.AdBreakManager.install(this)
+        // Initialize Google Mobile Ads and AdBreakManager safely
+        runCatching {
+            com.google.android.gms.ads.MobileAds.initialize(this) {}
+            com.opentune.ads.AdBreakManager.install(this)
+        }.onFailure {
+            com.opentune.data.DebugLog.w("OpenTuneApp", "MobileAds initialization skipped: ${it.message}")
+        }
 
         // The home-screen widget follows the shared player service.
         com.opentune.data.AppHooks.onPlayerChanged = { context, player ->

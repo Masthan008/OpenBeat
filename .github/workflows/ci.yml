@@ -55,10 +55,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build, unit tests and lint
-        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest lintDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug testDebugUnitTest lintDebug
 
       - name: Release build (R8 shrinking)
-        run: ./gradlew --no-daemon assembleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
 
       - name: Test and lint reports
         if: always()
@@ -119,7 +123,9 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
           DISCORD_APP_ID: ${{ vars.DISCORD_APP_ID || secrets.DISCORD_APP_ID }}
-        run: ./gradlew --no-daemon :desktop:test ${{ matrix.package }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :desktop:test ${{ matrix.package }}
       # The packaged app on its own trimmed runtime: FFmpeg, GraalJS and SQLite must load there too.
       - name: Packaged app self-check
         if: runner.os != 'Windows'

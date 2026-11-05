@@ -104,25 +104,31 @@ object AdBreakManager {
     fun preload(context: Context) {
         if (rewardedAd != null || isLoadingAd) return
         isLoadingAd = true
-        val request = AdRequest.Builder().build()
-        RewardedInterstitialAd.load(
-            context,
-            AD_UNIT_ID,
-            request,
-            object : RewardedInterstitialAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedInterstitialAd) {
-                    rewardedAd = ad
-                    isLoadingAd = false
-                    Log.d(TAG, "AdMob Rewarded Interstitial successfully preloaded.")
-                }
+        runCatching {
+            val request = AdRequest.Builder().build()
+            RewardedInterstitialAd.load(
+                context,
+                AD_UNIT_ID,
+                request,
+                object : RewardedInterstitialAdLoadCallback() {
+                    override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                        rewardedAd = ad
+                        isLoadingAd = false
+                        Log.d(TAG, "AdMob Rewarded Interstitial successfully preloaded.")
+                    }
 
-                override fun onAdFailedToLoad(loadAdError: LoadAdError) {
-                    rewardedAd = null
-                    isLoadingAd = false
-                    Log.w(TAG, "AdMob failed to preload: ${loadAdError.message}")
+                    override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                        rewardedAd = null
+                        isLoadingAd = false
+                        Log.w(TAG, "AdMob failed to preload: ${loadAdError.message}")
+                    }
                 }
-            }
-        )
+            )
+        }.onFailure {
+            rewardedAd = null
+            isLoadingAd = false
+            Log.w(TAG, "AdMob preload error: ${it.message}")
+        }
     }
 
     /** Called by PlaybackService on Player.MEDIA_ITEM_TRANSITION_REASON_AUTO only. */
