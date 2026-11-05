@@ -60,8 +60,15 @@ fun OpeningReveal(onDive: (Float) -> Unit, onDone: () -> Unit) {
     Canvas(
         Modifier
             .fillMaxSize()
-            // Its own layer, so the window cut through it shows the app below.
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
+            // Offscreen compositing is only needed while punching the window through the field with DstOut
+            .graphicsLayer {
+                val d = dive.value
+                compositingStrategy = if (d > 0.03f && d < 0.98f) {
+                    CompositingStrategy.Offscreen
+                } else {
+                    CompositingStrategy.Auto
+                }
+            },
     ) {
         val d = dive.value
         val st = settle.value
@@ -71,13 +78,20 @@ fun OpeningReveal(onDive: (Float) -> Unit, onDone: () -> Unit) {
         val s = base * breathe * exp(ln(ZOOM) * d * d)
         val window = smooth(0.04f, 0.28f, d)
         val fade = 1f - smooth(0.8f, 1f, d)
+        val maxDim = kotlin.math.max(size.width, size.height)
+        val markScreenSize = s * MARK_VIEWPORT
 
-        drawRect(OPENING_FIELD, alpha = fade)
+        if (fade > 0f) {
+            drawRect(OPENING_FIELD, alpha = fade)
+        }
+
         // A white rim that stays the same width on screen however big the mark gets.
         val rim = Stroke(width = RIM.toPx() / s, join = StrokeJoin.Round)
         translate(center.x - MARK_VIEWPORT / 2f * s, center.y - MARK_VIEWPORT / 2f * s) {
             scale(s, s, pivot = Offset.Zero) {
-                drawPath(mark, Color.White, alpha = 1f - window)
+                if (window < 1f) {
+                    drawPath(mark, Color.White, alpha = 1f - window)
+                }
                 // A band of light that runs across the mark once as it settles.
                 if (st in 0.05f..0.98f && d == 0f) {
                     val x = -30f + 170f * st
@@ -92,10 +106,14 @@ fun OpeningReveal(onDive: (Float) -> Unit, onDone: () -> Unit) {
                     )
                 }
                 // Then the mark becomes a window onto the app.
-                if (window > 0f) drawPath(mark, Color.Black, alpha = window, blendMode = BlendMode.DstOut)
+                if (window > 0f && markScreenSize < maxDim * 2.5f) {
+                    drawPath(mark, Color.Black, alpha = window, blendMode = BlendMode.DstOut)
+                }
                 // Its white edge outlines the window, so the way in shows even when the
                 // app behind is as dark as the field around it.
-                if (fade > 0f) drawPath(mark, Color.White, alpha = fade, style = rim)
+                if (fade > 0f && markScreenSize < maxDim * 2.2f) {
+                    drawPath(mark, Color.White, alpha = fade, style = rim)
+                }
             }
         }
     }
@@ -108,8 +126,8 @@ private fun smooth(from: Float, to: Float, x: Float): Float {
 
 /** The width of the white edge around the mark. */
 private val RIM = 2.5.dp
-private const val SETTLE_MS = 620
-private const val HOLD_MS = 120L
-private const val DIVE_MS = 900
+private const val SETTLE_MS = 480
+private const val HOLD_MS = 60L
+private const val DIVE_MS = 650
 /** How many times its size the mark grows to by the end of the dive, enough for its band to fill the screen. */
 private const val ZOOM = 90f

@@ -437,6 +437,8 @@ class PlaybackService : MediaLibraryService() {
         mediaSession = MediaLibrarySession.Builder(this, player, sessionCallback)
             .setSessionActivity(sessionActivity)
             .build()
+        activePlayer = player
+        activeSession = mediaSession
         // Earlier versions posted the song as a Live Update on its own channel. That's
         // gone; clear the channel so it doesn't linger in the phone's settings.
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -604,6 +606,8 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        activePlayer = null
+        activeSession = null
         ExternalStreams.playing(null, null)
         (mediaSession?.player as? ExoPlayer)?.takeIf { it.mediaItemCount > 0 }?.let { p ->
             QueueStore.save(QueueStore.Saved((0 until p.mediaItemCount).map { SongRef.of(p.getMediaItemAt(it).toSong()) }, p.currentMediaItemIndex, p.currentPosition))
@@ -2513,8 +2517,12 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private companion object {
-        const val TAG = "PlaybackService"
+    companion object {
+        @Volatile var activePlayer: Player? = null
+            internal set
+        @Volatile var activeSession: MediaLibrarySession? = null
+            internal set
+        private const val TAG = "PlaybackService"
 
         /** Bounds on the loudness gain, in millibels: down 15 dB, up 3 dB at most. */
         const val LOUDNESS_RETRY_MS = 6_000L

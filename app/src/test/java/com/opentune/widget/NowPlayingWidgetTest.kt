@@ -80,4 +80,22 @@ class NowPlayingWidgetTest {
             assertEquals("A saved song", view.findViewById<TextView>(R.id.widget_title).text.toString())
         }
     }
+
+    @Test
+    fun likeActionTogglesLikedInStore() {
+        context.getSharedPreferences("widget", 0).edit()
+            .putString("id", "test_song_1")
+            .putString("title", "Test Title")
+            .putString("artist", "Test Artist")
+            .commit()
+
+        val id = manager.createWidget(NowPlayingWidget::class.java, R.layout.widget_now_playing)
+        NowPlayingWidget().onUpdate(context, AppWidgetManager.getInstance(context), intArrayOf(id))
+
+        NowPlayingWidget().onReceive(context, android.content.Intent(NowPlayingWidget.ACTION_LIKE))
+        org.junit.Assert.assertTrue(LibraryStore.isLiked("test_song_1"))
+
+        NowPlayingWidget().onReceive(context, android.content.Intent(NowPlayingWidget.ACTION_LIKE))
+        org.junit.Assert.assertFalse(LibraryStore.isLiked("test_song_1"))
+    }
 }

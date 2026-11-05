@@ -9,14 +9,14 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.view.KeyEvent
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.OptIn
 import androidx.core.content.edit
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.MediaButtonReceiver
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -28,12 +28,14 @@ import com.opentune.data.library.LibraryStore
 import com.opentune.data.model.Song
 import com.opentune.data.model.artworkAt
 import com.opentune.data.subsonic.Subsonic
+import com.opentune.playback.PlaybackService
 import com.opentune.playback.toSong
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -41,11 +43,9 @@ import kotlinx.coroutines.withContext
  * The home-screen widget: cover, title and artist, previous / play-pause /
  * next, and the heart.
  *
- * The playback buttons are media-button events sent through Media3's
- * [MediaButtonReceiver], which starts the player service if it isn't
- * running (resuming the saved queue), the same path a Bluetooth headset's
- * buttons take. The heart goes straight to the library. The last song shown
- * is kept, cover included, so the widget isn't blank after a restart.
+ * Controls send direct in-app broadcast actions to [NowPlayingWidget], which
+ * operates on the active [PlaybackService] player immediately if alive, or
+ * connects a [MediaController] to resume the saved queue.
  */
 @OptIn(UnstableApi::class)
 open class NowPlayingWidget : AppWidgetProvider() {
@@ -65,12 +65,106 @@ open class NowPlayingWidget : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action != ACTION_LIKE) return
-        val state = load(context)
-        val id = state.videoId ?: return
-        val song = Song(id, state.title, state.artist, state.thumbnailUrl)
-        LibraryStore.setLiked(song, !LibraryStore.isLiked(id))
-        render(context, state.copy(liked = LibraryStore.isLiked(id)))
+        when (intent.action) {
+            ACTION_LIKE -> {
+                val state = load(context)
+                val id = state.videoId ?: return
+                val song = Song(id, state.title, state.artist, state.thumbnailUrl)
+                LibraryStore.setLiked(song, !LibraryStore.isLiked(id))
+                render(context, state.copy(liked = LibraryStore.isLiked(id)))
+            }
+            ACTION_PLAY_PAUSE -> handlePlayPause(context)
+            ACTION_NEXT -> handleNext(context)
+            ACTION_PREVIOUS -> handlePrevious(context)
+        }
+    }
+
+    private fun handlePlayPause(context: Context) {
+        val player = PlaybackService.activePlayer
+        if (player != null) {
+            if (player.isPlaying) {
+                player.pause()
+                render(context, (last ?: load(context)).copy(playing = false))
+            } else {
+                if (player.playbackState == Player.STATE_ENDED) {
+                    player.seekTo(0, 0)
+                }
+                player.play()
+                render(context, (last ?: load(context)).copy(playing = true))
+            }
+            return
+        }
+        val pendingResult = goAsync()
+        scope.launch(Dispatchers.Main) {
+            try {
+                val sessionToken = SessionToken(context.applicationContext, ComponentName(context.applicationContext, PlaybackService::class.java))
+                val controller = MediaController.Builder(context.applicationContext, sessionToken).buildAsync().await()
+                if (controller.isPlaying) {
+                    controller.pause()
+                } else {
+                    controller.play()
+                }
+                controller.release()
+            } catch (e: Exception) {
+                com.opentune.data.DebugLog.w("NowPlayingWidget", "Widget play/pause failed", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private fun handleNext(context: Context) {
+        val player = PlaybackService.activePlayer
+        if (player != null) {
+            if (player.hasNextMediaItem()) {
+                player.seekToNextMediaItem()
+            }
+            return
+        }
+        val pendingResult = goAsync()
+        scope.launch(Dispatchers.Main) {
+            try {
+                val sessionToken = SessionToken(context.applicationContext, ComponentName(context.applicationContext, PlaybackService::class.java))
+                val controller = MediaController.Builder(context.applicationContext, sessionToken).buildAsync().await()
+                if (controller.hasNextMediaItem()) {
+                    controller.seekToNextMediaItem()
+                }
+                controller.release()
+            } catch (e: Exception) {
+                com.opentune.data.DebugLog.w("NowPlayingWidget", "Widget next failed", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private fun handlePrevious(context: Context) {
+        val player = PlaybackService.activePlayer
+        if (player != null) {
+            if (player.hasPreviousMediaItem()) {
+                player.seekToPreviousMediaItem()
+            } else {
+                player.seekTo(0)
+            }
+            return
+        }
+        val pendingResult = goAsync()
+        scope.launch(Dispatchers.Main) {
+            try {
+                val sessionToken = SessionToken(context.applicationContext, ComponentName(context.applicationContext, PlaybackService::class.java))
+                val controller = MediaController.Builder(context.applicationContext, sessionToken).buildAsync().await()
+                if (controller.hasPreviousMediaItem()) {
+                    controller.seekToPreviousMediaItem()
+                } else {
+                    controller.seekTo(0)
+                }
+                controller.release()
+            } catch (e: Exception) {
+                com.opentune.data.DebugLog.w("NowPlayingWidget", "Widget previous failed", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 
     private data class State(
@@ -83,7 +177,10 @@ open class NowPlayingWidget : AppWidgetProvider() {
     )
 
     companion object {
-        private const val ACTION_LIKE = "com.opentune.widget.LIKE"
+        const val ACTION_PLAY_PAUSE = "com.opentune.widget.PLAY_PAUSE"
+        const val ACTION_NEXT = "com.opentune.widget.NEXT"
+        const val ACTION_PREVIOUS = "com.opentune.widget.PREVIOUS"
+        const val ACTION_LIKE = "com.opentune.widget.LIKE"
         private const val PREFS = "widget"
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private var last: State? = null
@@ -181,24 +278,21 @@ open class NowPlayingWidget : AppWidgetProvider() {
                     views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
                         context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                     ))
-                    views.setOnClickPendingIntent(R.id.widget_previous, mediaKey(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS))
-                    views.setOnClickPendingIntent(R.id.widget_play, mediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
-                    views.setOnClickPendingIntent(R.id.widget_next, mediaKey(context, KeyEvent.KEYCODE_MEDIA_NEXT))
-                    views.setOnClickPendingIntent(R.id.widget_like, PendingIntent.getBroadcast(
-                        context, 1, Intent(context, NowPlayingWidget::class.java).setAction(ACTION_LIKE),
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    ))
+                    views.setOnClickPendingIntent(R.id.widget_previous, actionIntent(context, ACTION_PREVIOUS, 101))
+                    views.setOnClickPendingIntent(R.id.widget_play, actionIntent(context, ACTION_PLAY_PAUSE, 102))
+                    views.setOnClickPendingIntent(R.id.widget_next, actionIntent(context, ACTION_NEXT, 103))
+                    views.setOnClickPendingIntent(R.id.widget_like, actionIntent(context, ACTION_LIKE, 104))
                     manager.updateAppWidget(id, views)
                 }
             }
         }
 
-        private fun mediaKey(context: Context, keyCode: Int): PendingIntent {
-            val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
-                .setComponent(ComponentName(context, MediaButtonReceiver::class.java))
-                .putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            return PendingIntent.getBroadcast(context, keyCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        }
+        private fun actionIntent(context: Context, action: String, requestCode: Int): PendingIntent =
+            PendingIntent.getBroadcast(
+                context, requestCode,
+                Intent(context, NowPlayingWidget::class.java).setAction(action),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
         private fun coverFile(context: Context) = File(context.cacheDir, "widget-cover.jpg")
 

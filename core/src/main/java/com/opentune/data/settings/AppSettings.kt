@@ -648,6 +648,10 @@ enum class LyricsAnimation(val label: String, val summary: String) {
     KARAOKE("Karaoke", "Words fill with a glow; lines stay still"),
     ZOOM("Focus zoom", "A big current line, the rest blurred away"),
     MINIMAL("Minimal", "Only the colour changes"),
+    GLOW("Neon glow", "The active line radiates with an intense luminous glow"),
+    KINETIC("Kinetic wave", "The active line bounces forward with dynamic rhythm"),
+    SPOTLIGHT("Stage spotlight", "Dramatic concert focus: sharp bright center, deep soft contrast"),
+    CASCADE("Cascade drift", "Active line glides smoothly with a floating cascade"),
 }
 
 /** Where lyrics can come from. */

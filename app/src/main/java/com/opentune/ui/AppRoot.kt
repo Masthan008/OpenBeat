@@ -547,6 +547,8 @@ fun AppRoot(vm: PlayerViewModel) {
             if (activity == null || !activity.moveTaskToBack(true)) { leave.snapTo(0f); return@launch }
             // The shrink was the closing; skip the system's own on top of it where it allows.
             @Suppress("DEPRECATION") activity.overridePendingTransition(0, 0)
+            leave.snapTo(0f)
+            com.opentune.ui.components.Opening.played = false
         }
     }
 

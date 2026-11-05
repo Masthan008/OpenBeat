@@ -1,8 +1,5 @@
-• Fixes a crash in the blurred cover behind the player.
-• Smoother lyrics, and player buttons that match the theme.
-• Artist, album and playlist pages keep their picture at the top when pulled down.
-• Artist photos stay cached for a day, so going back doesn't load them again.
-• Artist signatures (beta), with fewer wrong matches.
-• Library playlists as tiles or a list, in Settings.
-• Settings rearranged so each page holds what you'd look for.
-• Last.fm scrobbling.
+• OpenBlast rebrand: New high-octane visual identity with modern adaptive launcher icons and dark/gold vectors.
+• Responsive home screen widgets: Instant play, pause, next, and previous controls.
+• 4 new lyrics animation styles: Neon glow, Kinetic wave, Stage spotlight, and Cascade drift alongside classic styles.
+• Fluid 60/120 Hz opening performance: Viewport-bounded rasterization and compositing fixes eliminate GPU frame drops.
+• Media3 audio engine stability: Rock-solid continuous audio streaming pipeline with offline resilience.

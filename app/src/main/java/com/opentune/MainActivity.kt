@@ -44,7 +44,15 @@ class MainActivity : ComponentActivity() {
         Thread { com.opentune.data.Core.flush() }.start()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        com.opentune.ui.components.Opening.played = false
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (savedInstanceState == null) {
+            com.opentune.ui.components.Opening.played = false
+        }
         super.onCreate(savedInstanceState)
         com.opentune.data.innertube.Innertube.regionOverride = runCatching {
             getSystemService(android.telephony.TelephonyManager::class.java)?.networkCountryIso?.takeIf { it.length == 2 }

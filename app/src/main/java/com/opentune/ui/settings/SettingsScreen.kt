@@ -1563,19 +1563,8 @@ private fun settingsSections(
                         icon = Icons.Rounded.Info,
                     )
                 },
-                Entry("OpenBlast community", "github discord community addons developer") { CommunityBanner() },
                 Entry("Support OpenBlast", "donate upi pay money tip support developer") {
-                    NavRow("Support OpenBlast", { supportDialog = true }, summary = "A small thank-you helps keep OpenTune going", icon = Icons.Rounded.Favorite)
-                },
-                Entry("Star on GitHub", "star github rate like") {
-                    NavRow("Star on GitHub", {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, com.opentune.ui.components.Support.REPO.toUri())) }
-                    }, summary = "Helps other people find OpenBlast", icon = Icons.Rounded.Star)
-                },
-                Entry("Source code", "github open source license gpl") {
-                    NavRow("Source code", {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/justshivv/Opentune".toUri())) }
-                    }, summary = "github.com/justshivv/Opentune · GPL v3", icon = Icons.Rounded.Code)
+                    NavRow("Support OpenBlast", { supportDialog = true }, summary = "A small thank-you helps keep OpenBlast going", icon = Icons.Rounded.Favorite)
                 },
                 Entry("Export diagnostics", "log share troubleshooting bug report") {
                     NavRow("Export diagnostics", {

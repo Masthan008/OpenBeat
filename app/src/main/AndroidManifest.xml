@@ -278,6 +278,10 @@
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

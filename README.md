@@ -6,8 +6,7 @@
   <a href="https://github.com/Masthan008/OpenBeat/releases/latest"><b>Download the latest APK</b></a>
   &nbsp;·&nbsp;
   <a href="https://justshivv.github.io/Opentune/">Website</a>
-  &nbsp;·&nbsp;
-  <a href="https://discord.gg/6udrCVh5n">Discord</a>
+  
   &nbsp;·&nbsp;
   <a href="#features">Features</a>
   &nbsp;·&nbsp;
@@ -22,8 +21,6 @@
   <a href="https://justshivv.github.io/Opentune/usage/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fopentune-usage.create-a-new-site-with-sites.workers.dev%2Fv1%2Fbadge%3Flabel%3Dactive%2520this%2520month&cacheSeconds=300" alt="Active installations this month"></a>
 </p>
 
-[![Get it on Orion Store](https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png)](https://rookieenough.github.io/Orion-Data/redirect.html?id=opentune&icon=https%3A%2F%2Fjustshivv.github.io%2FOpentune%2Ficon-512.png)
-
 # OpenBlast
 
 An Android music player for YouTube Music. It talks to YouTube's internal
@@ -32,19 +29,10 @@ no server of your own. Sign in if you want your likes and playlists.
 
 Built with Kotlin, Jetpack Compose and Media3. Android 8.0 and newer.
 
-Questions, ideas or bug reports: join the
-[Discord](https://discord.gg/6udrCVh5n).
-
 Build-owner setup and current Last.fm, Discord and extension-update limits are
 documented in [service integrations](docs/service-integrations.md).
 
 ## See it
-
-<p align="center">
-  <a href="docs/media/opentune-reel.mp4"><img src="docs/media/preview.gif" alt="OpenTune in 40 seconds" width="300" height="533"></a>
-  <br>
-  <sub><a href="docs/media/opentune-reel.mp4">Watch the 40-second video</a> (MP4, with sound)</sub>
-</p>
 
 <table>
   <tr>

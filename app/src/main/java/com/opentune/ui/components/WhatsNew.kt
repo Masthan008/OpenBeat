@@ -81,6 +81,13 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "1.0.4" to listOf(
+            Note(Icons.Rounded.AutoAwesome, "OpenBlast", "A fresh high-octane rebrand with modern adaptive launcher icons, dark & gold vector emblems, and refined styling."),
+            Note(Icons.Rounded.TouchApp, "Home screen widget controls", "Full 4x2 and 4x1 home screen widgets with instant, responsive play, pause, next, and previous playback controls."),
+            Note(Icons.Rounded.Lyrics, "4 new lyrics animation styles", "Brand-new lyric visual styles: Neon glow, Kinetic wave, Stage spotlight, and Cascade drift alongside classic Fluid, Karaoke, Focus zoom, and Minimal."),
+            Note(Icons.Rounded.GraphicEq, "Smooth opening & 60/120 Hz performance", "Opening reveal animation optimized with viewport-bounded rasterization and dynamic compositing to eliminate GPU stalls and frame drops."),
+            Note(Icons.Rounded.Headphones, "Media3 playback stability", "Rock-solid continuous audio streaming pipeline with resilient offline playback and instant track switching."),
+        ),
         "0.4.17" to listOf(
             Note(Icons.Rounded.Notifications, "In the status bar", "On Android 16 and newer, the playing song shows as a Live Update: a chip in the status bar counts down the time left, and the lock screen shows a bar in the cover's colour. Turn it off in Settings › Playback."),
             Note(Icons.Rounded.VisibilityOff, "Not interested", "A song's menu can now keep that song, or everything by its artist, out of radio, mixes and Home. Your own playlists, likes and downloads stay as they are. Undo it in Settings › Playback › Hidden songs and artists."),

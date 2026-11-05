@@ -717,6 +717,10 @@ private class LineMotion(
     val blurPerLine: Float,
     val glow: Boolean,
     val inactiveAlpha: Float,
+    val glowRadius: Float = 24f,
+    val glowAlpha: Float = 0.55f,
+    val bounce: Boolean = false,
+    val activeOffsetDp: Float = 0f,
 )
 
 private fun motionOf(animation: LyricsAnimation) = when (animation) {
@@ -726,6 +730,10 @@ private fun motionOf(animation: LyricsAnimation) = when (animation) {
     // without scaling the current line past its box, which chopped long lines.
     LyricsAnimation.ZOOM -> LineMotion(1f, 0.84f, 1.9f, glow = false, inactiveAlpha = 0.6f)
     LyricsAnimation.MINIMAL -> LineMotion(1f, 1f, 0f, glow = false, inactiveAlpha = 0.6f)
+    LyricsAnimation.GLOW -> LineMotion(1f, 0.96f, 1.4f, glow = true, inactiveAlpha = 0.50f, glowRadius = 38f, glowAlpha = 0.85f)
+    LyricsAnimation.KINETIC -> LineMotion(1.05f, 0.94f, 1.6f, glow = false, inactiveAlpha = 0.65f, bounce = true)
+    LyricsAnimation.SPOTLIGHT -> LineMotion(1.02f, 0.90f, 2.8f, glow = true, inactiveAlpha = 0.35f, glowRadius = 18f, glowAlpha = 0.40f)
+    LyricsAnimation.CASCADE -> LineMotion(1f, 0.96f, 1.6f, glow = false, inactiveAlpha = 0.70f, activeOffsetDp = 12f)
 }
 
 @Composable
@@ -747,11 +755,22 @@ internal fun LyricLineView(
     val bright = MaterialTheme.colorScheme.onSurface
     val dim = bright.copy(alpha = 0.45f)
     val picking = selected != null
+    val scaleSpec = if (motion.bounce) {
+        spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+    } else {
+        tween<Float>(LINE_SETTLE_MS, easing = GLIDE_EASING)
+    }
     val scale by animateFloatAsState(
         if (isActive || picking) motion.activeScale else motion.inactiveScale,
-        // On the glide's own curve and time, so the size, the fade and the move are one motion.
-        tween(LINE_SETTLE_MS, easing = GLIDE_EASING),
+        scaleSpec,
         label = "lineScale",
+    )
+    val rtl = remember(line) { com.opentune.data.lyrics.readsRightToLeft(line) }
+    val targetOffset = if (isActive && !picking) (if (rtl) -motion.activeOffsetDp else motion.activeOffsetDp).dp else 0.dp
+    val offsetX by animateDpAsState(
+        targetOffset,
+        tween(LINE_SETTLE_MS, easing = GLIDE_EASING),
+        label = "lineOffsetX",
     )
     val alpha by animateFloatAsState(
         when {
@@ -789,10 +808,9 @@ internal fun LyricLineView(
         else -> TextAlign.Start
     }
     // A right-to-left line starts at the right: Start and End swap sides, and it sweeps leftwards.
-    val rtl = remember(line) { com.opentune.data.lyrics.readsRightToLeft(line) }
     val origin = when (align) { TextAlign.Center -> 0.5f; TextAlign.End -> if (rtl) 0f else 1f; else -> if (rtl) 1f else 0f }
     val base = lyricsStyle().copy(textAlign = align, textDirection = if (rtl) TextDirection.Rtl else TextDirection.Ltr)
-    val style = if ((motion.glow || ui.lyricsGlow) && isActive) base.copy(shadow = Shadow(bright.copy(alpha = 0.55f), blurRadius = 24f)) else base
+    val style = if ((motion.glow || ui.lyricsGlow) && isActive) base.copy(shadow = androidx.compose.ui.graphics.Shadow(bright.copy(alpha = motion.glowAlpha), blurRadius = motion.glowRadius)) else base
     val text = remember(line) { if (line.words.isEmpty()) line.text else line.words.joinToString("") { it.text } }
     val layout = remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     // Where each word sits, worked out once per layout rather than every frame.
@@ -846,6 +864,7 @@ internal fun LyricLineView(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
+                translationX = offsetX.toPx()
                 this.alpha = alpha
                 compositingStrategy = CompositingStrategy.ModulateAlpha
                 transformOrigin = TransformOrigin(origin, 0.5f)
@@ -872,7 +891,7 @@ internal fun LyricLineView(
                     ))
                     layout((p.width - bleed * 2).coerceAtLeast(0), (p.height - bleed * 2).coerceAtLeast(0)) { p.place(-bleed, -bleed) }
                 }
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .graphicsLayer { compositingStrategy = if (sweep) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
                 .padding(GLOW_BLEED)
                 .drawWithCache {
                     val boxes = wordBoxesOf(layout.value, line, text)
@@ -972,7 +991,7 @@ internal fun SungLine(line: LyricLine, position: () -> Long, style: androidx.com
         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         onTextLayout = { layout.value = it },
         modifier = modifier
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .graphicsLayer { compositingStrategy = if (line.wordSynced) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
             .drawWithCache {
                 val boxes = wordBoxesOf(layout.value, line, text)
                 onDrawWithContent {
