@@ -23,9 +23,4 @@ object AppHooks {
     /** Called when the player stops for good. */
     @Volatile var onPlayerStopped: (Context) -> Unit = { }
 
-    /** Called when a song ends naturally (REASON_AUTO), excluding user skips and seeks. */
-    @Volatile var onSongCompletedNaturally: (Context, Player?) -> Unit = { _, _ -> }
-
-    /** Called when player playback state changes between active playback and paused. */
-    @Volatile var onPlaybackStateChanged: (Context, Player?, Boolean) -> Unit = { _, _, _ -> }
 }

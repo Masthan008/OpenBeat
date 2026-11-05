@@ -839,9 +839,6 @@ class PlaybackService : MediaLibraryService() {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             refreshArtistCredit(mediaItem)
-            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                com.opentune.data.AppHooks.onSongCompletedNaturally(this@PlaybackService, mediaSession?.player)
-            }
             // The same song put onto its better stream: the swap that did it is
             // still running, waiting to bring the volume back up. A new upgrade
             // check here used to cancel it and leave every song after silent.
@@ -879,7 +876,6 @@ class PlaybackService : MediaLibraryService() {
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             mediaSession?.player?.let { watchPlayed(it, isPlaying) }
-            com.opentune.data.AppHooks.onPlaybackStateChanged(this@PlaybackService, mediaSession?.player, isPlaying)
             if (!isPlaying) mediaSession?.player?.let(::saveEpisodePosition)
             if (isPlaying && startRequestedAt > 0) {
                 NerdStats.onStartup(SystemClock.elapsedRealtime() - startRequestedAt)

@@ -22,10 +22,6 @@ android {
             .takeIf { it.exists() }?.readText().orEmpty().replace("\r", "").trim()
         buildConfigField("String", "CHANGELOG", "\"" + changelog.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
 
-        val admobAppId = (project.findProperty("ADMOB_APP_ID") as? String)?.takeIf { it.isNotBlank() } ?: "ca-app-pub-3940256099942544~3347511713"
-        val admobRewardedAdUnitId = (project.findProperty("ADMOB_REWARDED_AD_UNIT_ID") as? String)?.takeIf { it.isNotBlank() } ?: "ca-app-pub-3940256099942544/5354046379"
-        manifestPlaceholders["admobAppId"] = admobAppId
-        buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$admobRewardedAdUnitId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -136,8 +132,6 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
 
-    // Google Mobile Ads (AdMob)
-    implementation("com.google.android.gms:play-services-ads:23.6.0")
 
     // ---- Images ----
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
