@@ -1,0 +1,26 @@
+<p>OpenTune is a music player for the YouTube Music catalogue. No account is required for basic listening. Optional sign-in connects your YouTube Music library. Additional audio and discovery features use third-party services.</p>
+
+<p><b>Listening</b></p>
+<ul>
+<li>Best audio by default, with crossfade, loudness levelling, a 15-band equalizer and AutoEq correction for 8,000+ headphones</li>
+<li>Synced lyrics lit word by word, also offline for downloads, from LRCLIB, YouTube Music and NetEase</li>
+<li>Autoplay that keeps similar songs coming, from YouTube Music, Spotify or JioSaavn recommendations</li>
+<li>Daily mixes made on the phone from what you play</li>
+<li>Downloads, songs on the phone and your own Subsonic or Navidrome server</li>
+<li>50,000+ live radio stations and podcasts</li>
+<li>Cast to Chromecasts and DLNA TVs and speakers, without Google's libraries</li>
+<li>Name the song playing near you</li>
+<li>Listen together: friends join a room and hear the same song in step</li>
+<li>SponsorBlock for music videos, Android Auto, a home-screen widget</li>
+</ul>
+
+<p><b>Looks</b></p>
+<ul>
+<li>Several player designs, Liquid Glass, colours from the cover, a waveform seek bar and ambient light</li>
+<li>Wrapped: your listening as an animated story, made on the phone</li>
+</ul>
+
+<p><b>Privacy</b></p>
+<p>Your history, likes and settings stay on the phone. Optional usage counting sends a random installation identifier, app version and daily play totals to the project’s analytics service. It does not send song titles or hardware identifiers. Counting is enabled by default and can be turned off under Settings › About. Connected services receive the requests needed to provide their features.</p>
+
+<p>OpenTune is free software under the GPL-3.0. It isn't made by or connected with Google, YouTube, Spotify or Shazam.</p>

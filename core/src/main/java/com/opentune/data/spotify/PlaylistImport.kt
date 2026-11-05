@@ -1,0 +1,171 @@
+package com.opentune.data.spotify
+
+import com.opentune.data.DebugLog as Log
+import com.opentune.data.MusicRepository
+import com.opentune.data.library.LibraryStore
+import com.opentune.data.model.SearchFilter
+import com.opentune.data.model.SearchResult
+import com.opentune.data.model.Song
+import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+
+/**
+ * Brings a Spotify playlist (or the liked songs) over as a playlist on the
+ * phone: each track is looked up on YouTube Music by title and artist and
+ * the closest catalogue song is kept. Runs on its own scope so leaving the
+ * screen doesn't stop it.
+ */
+object PlaylistImport {
+    private const val TAG = "PlaylistImport"
+    private const val PARALLEL = 4
+
+    data class Progress(
+        val name: String,
+        val total: Int,
+        val done: Int = 0,
+        val matched: Int = 0,
+        val missed: List<String> = emptyList(),
+        val playlistId: String? = null,
+        val finished: Boolean = false,
+        val error: String? = null,
+    )
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var job: Job? = null
+    private val _progress = MutableStateFlow<Progress?>(null)
+    val progress: StateFlow<Progress?> = _progress.asStateFlow()
+
+    val running get() = job?.isActive == true
+
+    /** Finds [tracks] on YouTube Music and saves them as a new phone playlist called [name]. */
+    fun start(name: String, tracks: suspend () -> List<Spotify.Track>) = startAll(listOf(name to tracks))
+
+    /**
+     * Imports several playlists one after another, each its own phone
+     * playlist. Progress counts every song across all of them; [Progress.name]
+     * names the one being worked on.
+     */
+    fun startAll(playlists: List<Pair<String, suspend () -> List<Spotify.Track>>>) {
+        if (running || playlists.isEmpty()) return
+        val title = if (playlists.size == 1) playlists.first().first else "${playlists.size} playlists"
+        _progress.value = Progress(title, total = 0)
+        job = scope.launch {
+            try {
+                val lists = playlists.map { (name, load) -> name to load() }
+                _progress.value = Progress(title, total = lists.sumOf { it.second.size })
+                val gate = Semaphore(PARALLEL)
+                var lastId: String? = null
+                lists.forEachIndexed { i, (name, list) ->
+                    if (lists.size > 1) _progress.update { it?.copy(name = "$name (${i + 1} of ${lists.size})") }
+                    val found = list.map { t ->
+                        async {
+                            val song = gate.withPermit { runCatching { match(t) }.getOrNull() }
+                            _progress.update { p ->
+                                p?.copy(
+                                    done = p.done + 1,
+                                    matched = p.matched + if (song != null) 1 else 0,
+                                    missed = if (song == null) p.missed + "${t.artists.firstOrNull().orEmpty()} – ${t.title}" else p.missed,
+                                )
+                            }
+                            song
+                        }
+                    }.awaitAll().filterNotNull()
+                    val id = LibraryStore.createPlaylist(name)
+                    LibraryStore.addAllToPlaylist(id, found)
+                    lastId = id
+                }
+                // With several, "Open" goes to Library's list rather than the last one.
+                _progress.update { it?.copy(name = title, playlistId = lastId.takeIf { lists.size == 1 }, finished = true) }
+            } catch (e: CancellationException) {
+                _progress.update { it?.copy(finished = true, error = "Cancelled") }
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "import of $title failed", e)
+                _progress.update { it?.copy(finished = true, error = e.message ?: "Import failed") }
+            }
+        }
+    }
+
+    /** Saves songs that are already YouTube Music songs, with nothing to look up. */
+    fun saveSongs(name: String, songs: List<Song>) {
+        if (running) return
+        val id = LibraryStore.createPlaylist(name)
+        LibraryStore.addAllToPlaylist(id, songs)
+        _progress.value = Progress(name, total = songs.size, done = songs.size, matched = songs.size, playlistId = id, finished = true)
+    }
+
+    fun cancel() = job?.cancel()
+
+    fun dismiss() {
+        if (!running) _progress.value = null
+    }
+
+    /** The YouTube Music song for [track], or null when nothing is close enough. */
+    suspend fun match(track: Spotify.Track, exactLength: Boolean = false): Song? {
+        val artist = track.artists.firstOrNull().orEmpty()
+        val rows = MusicRepository.search("${track.title} $artist".trim(), SearchFilter.SONGS)
+        val candidates = rows.mapNotNull { (it as? SearchResult.Track)?.song ?: (it as? SearchResult.TopTrack)?.song }
+        return best(track, candidates, exactLength)
+    }
+
+    /**
+     * The candidate whose title and artist match [track], preferring one
+     * whose length is within a few seconds. Null when no title matches.
+     * With [exactLength] and the track's length known, only a candidate
+     * within 3 s of it counts, so a live, sped-up or cover version isn't
+     * taken for the studio one.
+     */
+    internal fun best(track: Spotify.Track, candidates: List<Song>, exactLength: Boolean = false): Song? {
+        val strict = exactLength && track.durationMs > 0
+        val wantTitle = key(track.title)
+        val wantArtists = track.artists.map(::key).filter { it.isNotEmpty() }
+        val pick = candidates
+            .map { song ->
+                val title = key(song.title)
+                val artist = key(song.artist)
+                var score = 0
+                if (title == wantTitle) score += 4 else if (title.contains(wantTitle) || wantTitle.contains(title)) score += 2 else return@map song to -1
+                val sameArtist = wantArtists.any { artist.contains(it) || it.contains(artist) }
+                if (sameArtist) score += 3
+                val seconds = durationSeconds(song.durationText)
+                val off = if (seconds != null && track.durationMs > 0) kotlin.math.abs(seconds * 1000 - track.durationMs) else null
+                // Whole seconds on YouTube Music, so half a second more for the rounding.
+                if (strict && (off == null || off > 3_500)) return@map song to -1
+                // Credited to someone else: only the very same title and length will do.
+                if (!sameArtist && !placeholder(artist) && (title != wantTitle || off == null || off > 3_500)) return@map song to -1
+                if (off != null && off <= 7_000) score += 2
+                song to score
+            }
+            .filter { it.second >= 5 } // a title and the artist, or a title and the length
+            .maxByOrNull { it.second }?.first ?: return null
+        // An upload credited to "Various Artists" or the like is still the song; it shows who sings it.
+        return if (placeholder(key(pick.artist)) && track.artists.isNotEmpty()) pick.copy(artist = track.artists.joinToString(", "), artistId = null) else pick
+    }
+
+    /** "Various Artists", "VA", "Unknown Artist": an upload's stand-in for whoever sings. */
+    internal fun placeholder(artistKey: String) =
+        com.opentune.data.model.isPlaceholderArtist(artistKey)
+
+    /** Lower-case letters and digits, with "(feat. …)", "- Remastered 2011" and similar taken off. */
+    internal fun key(s: String): String =
+        s.lowercase(Locale.ROOT)
+            .replace(Regex("""\s*[(\[](?:feat|ft|with|from|remaster|live|radio edit|mono|stereo)[^)\]]*[)\]]"""), "")
+            .replace(Regex("""\s+-\s+.*(?:remaster|version|edit|mix|live|mono|stereo).*$"""), "")
+            .filter { it.isLetterOrDigit() }
+
+    private fun durationSeconds(text: String?): Long? =
+        text?.split(':')?.map { it.trim().toLongOrNull() ?: return null }?.fold(0L) { acc, n -> acc * 60 + n }
+}

@@ -1,0 +1,422 @@
+/* OpenTune's shared visual language: warm tonal surfaces, artwork accents,
+   generous rounded artwork, solid full-player controls and a glass mini-player. */
+@layer base {
+  :root {
+    --ot-seed: #e53935;
+    --ot-accent-choice: #e53935;
+    --radius-artwork-small: 12px;
+    --radius-artwork-medium: 20px;
+    --radius-artwork-large: 28px;
+    --radius-nav-item: 22px;
+    --radius-track-row: 14px;
+    --header-emphasized: 800 clamp(30px, 4vw, 44px) / 1.1 var(--font-family);
+    --title-2-emphasized: 700 22px / 28px var(--font-family);
+    --body-reduced: 400 15px / 22px var(--font-family);
+    --player-pill-height: 68px;
+    /* The full player and audio details stand on dark in either mode: a pale key color, as dark mode's. */
+    --ot-key-on-dark: color-mix(in srgb, var(--ot-seed) 32%, #ffe0d5);
+  }
+  :root[data-appearance='light'] {
+    color-scheme: light;
+    --pageBG: color-mix(in srgb, var(--ot-seed) 3%, #fffaf6);
+    --pageBG-rgb: 255, 250, 246;
+    --systemPrimary: #201a19;
+    --systemSecondary: #655854;
+    --systemTertiary: #776764;
+    --systemQuaternary: #38241d24;
+    --systemQuinary: #38241d0b;
+    --keyColor: color-mix(in srgb, var(--ot-seed) 65%, #44211b);
+    --keyColor-rgb: 120, 57, 50;
+    --glassMaterialBackground: #fffaf6bf;
+    --glassMaterialShadowColor: #44211b20;
+    --glassMaterialInnerStroke: #fff;
+    --glassMaterialInnerStrokeAlpha: .5;
+    --systemStandardThinMaterialSover: #fffaf6bc;
+    --systemStandardThickMaterialSover: #fffaf6ed;
+    --systemHeaderMaterialSover: #fffaf6eb;
+    --navSidebarSelectedState: color-mix(in srgb, var(--ot-seed) 14%, transparent);
+    --tracklistHoverColor: #38241d0c;
+    --shelfBG: #38241d08;
+    --opaqueShelfBG: #f0e8e3;
+    --footerBg: #f0e8e3;
+    --genericJoeColor: #e8ded8;
+    --labelDivider: #38241d1f;
+    --vibrantDivider: #38241d30;
+    --searchBarBorderColor: #38241d28;
+    --segmentedControlBG: #38241d12;
+    --segmentedControlSelectedBG: #fffaf6;
+    --button-pill-color: #fffaf6;
+    --button-pill-background-color: #30201c;
+    --containerInnerStroke: #38241d;
+    --containerInnerStrokeAlpha: .12;
+    --skeleton-fill: #38241d10;
+    --skeleton-shimmer: #ffffff88;
+    --systemRed: #ff3b30;
+    --systemGreen: #28cd41;
+    --systemBlue: #007aff;
+    --systemGray: #8e8e93;
+    --systemGray2: #aeaeb2;
+    --systemGray3: #c7c7cc;
+    --systemGray4: #d1d1d6;
+    --systemGray5: #e5e5ea;
+    --systemGray6: #f2f2f7;
+    --radiosityShadowColor: #0000001a;
+    --dialogShadowColor: #00000040;
+  }
+  :root[data-appearance='dark'] {
+    color-scheme: dark;
+    --pageBG: color-mix(in srgb, var(--ot-seed) 4%, #11100f);
+    --pageBG-rgb: 17, 16, 15;
+    --systemPrimary: #f6ede9;
+    --systemSecondary: #c9bdb7;
+    --systemTertiary: #a99891;
+    --systemQuaternary: #ffffff24;
+    --systemQuinary: #ffffff0d;
+    --keyColor: color-mix(in srgb, var(--ot-seed) 32%, #ffe0d5);
+    --keyColor-rgb: 255, 183, 165;
+    --glassMaterialBackground: #272322ae;
+    --glassMaterialShadowColor: #00000060;
+    --glassMaterialInnerStroke: #fff;
+    --glassMaterialInnerStrokeAlpha: .22;
+    --systemStandardThinMaterialSover: #201c1aaf;
+    --systemStandardThickMaterialSover: #201c1aed;
+    --systemHeaderMaterialSover: #171412eb;
+    --navSidebarSelectedState: color-mix(in srgb, var(--keyColor) 17%, transparent);
+    --tracklistHoverColor: #ffffff0f;
+    --shelfBG: #ffffff08;
+    --opaqueShelfBG: #211d1b;
+    --footerBg: #211d1b;
+    --genericJoeColor: #302927;
+    --labelDivider: #ffffff1c;
+    --vibrantDivider: #ffffff30;
+    --searchBarBorderColor: #ffffff28;
+    --segmentedControlBG: #ffffff16;
+    --segmentedControlSelectedBG: #51433d;
+    --button-pill-color: #211511;
+    --button-pill-background-color: #f6ede9;
+    --containerInnerStroke: #fff;
+    --containerInnerStrokeAlpha: .2;
+    --skeleton-fill: #ffffff12;
+    --skeleton-shimmer: #ffffff14;
+    --systemRed: #ff453a;
+    --systemGreen: #32d74b;
+    --systemBlue: #0a84ff;
+    --systemGray: #98989d;
+    --systemGray2: #636366;
+    --systemGray3: #48484a;
+    --systemGray4: #3a3a3c;
+    --systemGray5: #2c2c2e;
+    --systemGray6: #1c1c1e;
+    --radiosityShadowColor: #0000004d;
+    --dialogShadowColor: #0000008c;
+  }
+  :root[data-appearance='dark'][data-black='true'] { --pageBG: #000; --pageBG-rgb: 0,0,0; }
+  /* Fills under white text: dark mode's key color is too pale for that, so they use a deeper seed. */
+  :root[data-appearance='light'] { --keyColorBG: var(--keyColor); }
+  :root[data-appearance='dark'] { --keyColorBG: color-mix(in srgb, var(--ot-seed) 82%, #000); }
+  :root[data-appearance] {
+    --selectionColor: var(--keyColor);
+    --keyColor-rollover: color-mix(in srgb, var(--keyColor) 85%, white);
+    --keyColor-pressed: color-mix(in srgb, var(--keyColor) 85%, black);
+    --keyColor-focus-color: var(--keyColor);
+  }
+  body { transition: background-color .35s; }
+}
+.ot-home-heading { margin: 36px var(--body-gutter) 26px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.ot-home-heading p { color: var(--keyColor); font-weight: 650; margin-bottom: 9px; }
+.ot-home-heading h1 { font: var(--header-emphasized); letter-spacing: -.03em; text-wrap: balance; }
+.ot-home-heading > div:last-child { display: flex; gap: 8px; flex-shrink: 0; }
+.ot-circle-button { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--systemQuinary); transition: background-color .15s, scale .16s var(--ot-ease-settle); }
+.ot-circle-button:hover:not(:disabled) { background: var(--systemQuaternary); }
+.ot-circle-button:active:not(:disabled) { scale: .94; }
+.ot-circle-button:disabled { opacity: .5; }
+.ot-quick-title { display: flex; align-items: center; justify-content: space-between; margin: 0 var(--body-gutter); }
+.ot-quick-title h2 { font: var(--title-2-emphasized); }
+.ot-quick-title + section { margin-top: 8px; }
+.ot-quick-title + section > div:first-child { display: none; }
+.ot-home-links { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px var(--body-gutter) 0; }
+.ot-home-links a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; background: var(--systemQuinary); border-radius: 24px; font-weight: 600; transition: background-color .15s; }
+.ot-home-links a:hover { background: var(--systemQuaternary); }
+/* An announcement the owner publishes (Remote config › banners), above the feed. */
+.ot-banner { margin: 0 var(--body-gutter) 24px; padding: 18px 20px; border-radius: 18px; background: color-mix(in srgb, var(--keyColor) 12%, var(--systemQuinary)); }
+.ot-banner h2 { margin: 0 0 4px; font: var(--title-3-emphasized); }
+.ot-banner p { margin: 0; max-width: 64ch; color: var(--systemSecondary); font: var(--body-tall); }
+.ot-banner > div { margin-top: 12px; }
+.ot-banner a { display: inline-flex; padding: 7px 14px; border-radius: 99px; background: var(--keyColorBG); color: #fff; font: var(--body-emphasized); }
+.ot-quality-row { display: grid; grid-template-columns: 42px minmax(0,1fr) 42px; align-items: center; gap: 6px; min-height: 30px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--systemSecondary); }
+.ot-quality-row > span:last-child { text-align: right; }
+.ot-quality { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; max-width: 100%; justify-self: center; padding: 4px 8px; border-radius: 99px; font-size: clamp(11px, 1.2vw, 13px); font-weight: 650; line-height: 1; white-space: nowrap; transition: background-color .2s; }
+.ot-quality:hover { background: var(--systemQuinary); }
+.ot-quality svg { flex: 0 0 16px; }
+.ot-quality span { overflow: hidden; text-overflow: ellipsis; }
+.ot-quality[data-lossless='true'] { color: #fff3ed; }
+.ot-quality[data-lossless='true'] span { background: linear-gradient(110deg, #ffffff88 25%, #fff 45%, #ffffff88 65%); background-size: 250% 100%; background-clip: text; color: transparent; animation: ot-beam 5s linear infinite; }
+@keyframes ot-beam { to { background-position: -250% 0; } }
+.ot-audio-details { position: fixed; inset: auto max(20px, calc((100vw - 560px)/2)) 24px; z-index: 10005; background: #292321; color: #f6ede9; border: 1px solid #ffffff28; border-radius: 28px; padding: 0; margin: 0; width: auto; max-height: min(80dvh, calc(100dvh - 48px)); overflow: hidden; }
+.ot-audio-details[open] { display: flex; flex-direction: column; }
+.ot-audio-details header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 22px 22px 6px 28px; }
+.ot-audio-details h2 { font-size: 25px; font-weight: 700; }
+.ot-audio-details .ot-audio-close { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #ffffff14; color: #f6ede9; }
+.ot-audio-details .ot-audio-close:hover { background: #ffffff24; }
+.ot-audio-details .ot-audio-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 28px; }
+.ot-audio-details p { margin: 14px 0; overflow-wrap: anywhere; }
+.ot-audio-details .ot-audio-done { flex: none; margin: 8px 28px 28px; padding: 15px; border-radius: 30px; background: var(--ot-key-on-dark); color: #26110d; font-weight: 700; }
+.ot-playing-from { position: absolute; top: 22px; left: 25%; right: 25%; text-align: center; text-transform: uppercase; font-size: 10px; letter-spacing: .14em; color: #ffffff99; }
+.ot-playing-from strong { display: inline-block; margin-top: 3px; text-transform: none; letter-spacing: 0; font-size: 13px; color: #ffffffdd; }
+.ot-player-backdrop { position: absolute; inset: 0; z-index: -1; background: linear-gradient(155deg, var(--cover-color), #100d0c 95%); }
+.ot-player-backdrop.ot-echo { background: radial-gradient(ellipse at 30% 30%, var(--cover-color), transparent 60%), radial-gradient(ellipse at 80% 80%, var(--ot-seed), #100d0c 75%); }
+[data-full-screen] .ot-player-cover { flex-shrink: 0; }
+[data-player-style='vinyl'] .ot-player-cover, [data-player-style='halo'] .ot-player-cover { border-radius: 50%; }
+[data-player-style='vinyl'] .ot-player-cover { animation: ot-record 22s linear infinite; border: 12px solid #161414; box-shadow: 0 0 0 1px #ffffff20; }
+[data-player-style='vinyl'] .ot-player-cover::after { content: ''; position: absolute; inset: 46%; border-radius: 50%; background: #171313; border: 3px solid #e9ded7; }
+[data-player-style='halo'] .ot-player-cover { outline: 3px dashed #ffffff66; outline-offset: 12px; box-shadow: 0 0 60px var(--ot-seed); }
+[data-player-style='polaroid'] .ot-player-cover { border: 10px solid #f4efe5; border-bottom-width: 36px; border-radius: 4px; transform: rotate(-3deg); }
+[data-player-style='cassette'] .ot-player-cover { border: 18px solid #242120; border-radius: 24px; }
+[data-player-style='cassette'] .ot-player-cover::after { content: ''; position: absolute; inset: 42% 12% 14%; border: 8px solid #302a28; border-radius: 80px; background: radial-gradient(circle at 23% 50%, #181616 10%, #ddd2c7 11% 20%, #292421 21% 28%, transparent 29%), radial-gradient(circle at 77% 50%, #181616 10%, #ddd2c7 11% 20%, #292421 21% 28%, transparent 29%), #161313; }
+[data-paused] .ot-player-cover { animation-play-state: paused; }
+@keyframes ot-record { to { rotate: 360deg; } }
+.ot-mobile-dock { display: none; }
+.ot-source-list { list-style: none; padding: 0; margin: 0; }
+.ot-source-row { position: relative; display: grid; grid-template-columns: 16px 28px minmax(0,1fr) 44px 32px; gap: 0 12px; align-items: center; padding: 12px 12px 12px 16px; border-bottom: 0.5px solid var(--labelDivider); transition: background-color .18s, box-shadow .18s, border-radius .18s; }
+.ot-source-row[data-dragging='true'] { z-index: 2; background: var(--opaqueShelfBG); box-shadow: 0 12px 30px #0005; border-radius: 14px; }
+.ot-source-row strong { display: block; overflow-wrap: anywhere; font: var(--title-3); }
+.ot-source-row small { display: block; margin-top: 2px; font: var(--callout); color: var(--systemSecondary); }
+.ot-source-index { font: var(--callout-emphasized); color: var(--systemTertiary); text-align: center; font-variant-numeric: tabular-nums; }
+.ot-source-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--systemQuaternary); color: var(--systemPrimary); }
+.ot-grab { display: grid; place-items: center; width: 32px; height: 36px; border-radius: 8px; color: var(--systemTertiary); cursor: grab; touch-action: none; transition: background-color .15s, color .15s; }
+.ot-grab:hover { background: var(--systemQuinary); color: var(--systemPrimary); }
+.ot-grab:active { cursor: grabbing; }
+.ot-source-row details { grid-column: 3 / -1; margin-top: 6px; font: var(--callout); color: var(--systemSecondary); }
+.ot-source-row summary { width: fit-content; cursor: pointer; border-radius: 6px; }
+.ot-source-row summary:hover { color: var(--systemPrimary); }
+.ot-source-row details button { margin: 8px 6px 0 0; padding: 4px 10px; border-radius: 99px; background: var(--systemQuaternary); color: var(--systemPrimary); font: var(--callout-emphasized); }
+.ot-source-row details button:disabled { opacity: .4; }
+.ot-field { padding: 9px 12px; border: 0; border-radius: 10px; background: var(--systemQuaternary); color: var(--systemPrimary); font: var(--body-reduced); outline-offset: 2px; }
+.ot-field::placeholder { color: var(--systemTertiary); }
+@media (max-width: 767px) {
+  .ot-home-heading { align-items: center; }
+  .ot-home-heading h1 { font-size: 31px; }
+}
+@media (max-width: 483px) {
+  :root { --body-gutter: 22px; --mobile-top-bar-height: 48px; }
+  .ot-mobile-dock { position: absolute; z-index: 9900; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; right: 12px; display: grid; gap: 10px; pointer-events: none; }
+  .ot-mobile-dock > * { pointer-events: auto; }
+  .ot-mini { display: flex; align-items: center; padding: 9px; gap: 4px; border-radius: 28px; }
+  .ot-mini > button:not(:first-child) { width: 42px; height: 44px; display: grid; place-items: center; }
+  .ot-mini-track { display: flex; flex: 1; min-width: 0; gap: 10px; align-items: center; text-align: left; }
+  .ot-mini-track img { width: 44px; height: 44px; border-radius: 16px; object-fit: cover; }
+  .ot-mini-track span { min-width: 0; }
+  .ot-mini-track strong, .ot-mini-track small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ot-mini-track small { color: var(--systemSecondary); margin-top: 3px; }
+  .ot-bottom-nav { position: relative; display: flex; justify-content: space-around; border-radius: 36px; padding: 5px; }
+  .ot-bottom-nav a { min-height: 52px; display: flex; flex: 1; gap: 3px; align-items: center; justify-content: center; flex-direction: column; font-size: 10px; border-radius: 28px; }
+  .ot-bottom-nav a { position: relative; z-index: 1; transition: color 0.25s; }
+  .ot-bottom-nav a[aria-current='page'] { color: var(--keyColor); }
+  #scrollable-page > div { padding-bottom: 190px; }
+  .ot-quality { font-size: 11px; }
+}
+:root[data-motion='false'] *, :root[data-motion='false'] *::before, :root[data-motion='false'] *::after { animation: none !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) { .ot-quality span, .ot-player-cover { animation: none !important; } }
+@media (prefers-contrast: more) { :root[data-appearance] { --systemSecondary: var(--systemPrimary); --glassMaterialBackground: var(--pageBG); --glassMaterialBackdropFilter: none; } }
+
+.ot-audio-details::backdrop { background: #0009; }
+[data-player-style='minimal'][data-full-screen] .ot-player-cover { border-radius: 8px; box-shadow: none; }
+[data-player-style='minimal'][data-full-screen] .ot-player-cover img:first-child { visibility: hidden; }
+[data-player-style='minimal'][data-full-screen] .ot-playing-from { display: none; }
+.ot-quality .ot-hq { flex: none; display: grid; place-items: center; height: 14px; padding: 0 3px; border: 1.4px solid currentColor; border-radius: 4px; font-size: 8px; font-weight: 800; letter-spacing: .02em; line-height: 1; }
+.ot-saavn-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: #2bc5b4; color: #08201d; font-weight: 800; }
+.ot-access { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: space-between; padding: 16px 18px; border-radius: 20px; background: color-mix(in srgb, var(--keyColor) 12%, transparent); border: 1px solid color-mix(in srgb, var(--keyColor) 30%, transparent); }
+.ot-access p { flex: 1 1 260px; margin: 0; color: var(--systemSecondary); }
+.ot-access strong { display: block; color: var(--systemPrimary); }
+.ot-allow { display: block; width: fit-content; margin-top: 8px; padding: 6px 14px; border-radius: 99px; background: var(--keyColorBG); color: #fff; font-size: 13px; font-weight: 650; }
+.ot-access .ot-allow { margin-top: 0; padding: 9px 18px; font-size: 14px; }
+.ot-room-card { background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--keyColor) 16%, transparent), transparent 70%), var(--systemQuinary); }
+.ot-room-status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; color: var(--systemSecondary); }
+.ot-room-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--systemGray); }
+.ot-room-status[data-phase='live']::before { background: var(--systemGreen); box-shadow: 0 0 0 4px color-mix(in srgb, var(--systemGreen) 25%, transparent); }
+.ot-room-status[data-phase='lost']::before, .ot-room-status[data-phase='ended']::before { background: var(--systemRed); }
+.ot-room-chat { list-style: none; margin: 0; padding: 4px 6px; max-height: 280px; overflow-y: auto; display: grid; gap: 8px; }
+.ot-chat-system { text-align: center; font-size: 12px; color: var(--systemSecondary); }
+.ot-chat-line { justify-self: start; max-width: 85%; padding: 8px 12px; border-radius: 16px 16px 16px 4px; background: var(--systemQuaternary); overflow-wrap: anywhere; }
+.ot-chat-line[data-mine] { justify-self: end; border-radius: 16px 16px 4px 16px; background: var(--keyColorBG); color: #fff; }
+.ot-chat-line strong { display: block; font-size: 12px; opacity: .75; }
+.ot-room-notice { position: absolute; z-index: 9950; left: 50%; bottom: calc(var(--player-pill-height) + var(--player-bottom-offset, 16px) + 16px); translate: -50% 12px; max-width: min(440px, calc(100% - 32px)); margin: 0; padding: 12px 18px; border-radius: 20px; text-align: center; font-size: 14px; opacity: 0; transition: opacity .25s, translate .35s var(--ot-ease-emph); pointer-events: none; }
+.ot-room-notice[data-shown] { opacity: 1; translate: -50% 0; }
+@media (max-width: 483px) { .ot-room-notice { bottom: 170px; } }
+/* Settings: one centred frame; a list of the sections beside the rows when the page is wide
+   enough for both, chips that stick under the title bar when it isn't. */
+.ot-settings { container-type: inline-size; }
+.ot-set-frame { max-width: calc(680px + 2 * var(--body-gutter)); margin-inline: auto; }
+.ot-set-layout { display: grid; grid-template-columns: minmax(0, 1fr); margin: 20px var(--body-gutter) 0; }
+.ot-set-side { display: none; }
+@container (min-width: 1020px) {
+  .ot-set-frame { max-width: calc(204px + 48px + 680px + 2 * var(--body-gutter)); }
+  .ot-set-layout { grid-template-columns: 204px minmax(0, 680px); column-gap: 48px; }
+  .ot-set-side { position: sticky; top: 24px; align-self: start; display: flex; flex-direction: column; gap: 2px; }
+  .ot-set-jump { display: none !important; }
+  .ot-set-section { scroll-margin-top: 24px; }
+}
+.ot-set-side button { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius-nav-item); font: var(--title-3); text-align: start; transition: background-color .15s; }
+.ot-set-side button:hover { background: var(--systemQuinary); }
+.ot-set-side button[aria-current] { background: var(--navSidebarSelectedState); font-weight: 600; }
+.ot-set-side span { display: grid; flex: none; place-items: center; width: 24px; height: 24px; border-radius: 7px; color: #fff; }
+
+.ot-set-jump { position: sticky; top: 0; z-index: 2; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 12px -4px 0; padding: 10px 4px; background: var(--pageBG); box-shadow: 0 10px 12px -8px var(--pageBG); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+.ot-set-jump::-webkit-scrollbar { display: none; }
+.ot-set-jump button { flex: none; padding: 7px 14px; border-radius: 99px; background: var(--systemQuinary); font: var(--body-emphasized); font-size: 14px; transition: background-color .2s, color .2s; }
+.ot-set-jump button:hover { background: var(--systemQuaternary); }
+.ot-set-jump button[aria-current] { background: var(--systemPrimary); color: var(--pageBG); }
+@media (max-width: 483.98px) {
+  /* Under the phone's glass title bar, which floats over the top of the page. */
+  .ot-set-jump { top: var(--mobile-top-bar-height); }
+  .ot-set-section { scroll-margin-top: calc(var(--mobile-top-bar-height) + 64px); }
+}
+
+.ot-set-section { scroll-margin-top: 72px; margin-top: 36px; }
+.ot-set-title { margin: 0 4px 10px; font: var(--title-2-emphasized); text-wrap: balance; }
+
+.ot-set-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin-top: 4px; padding: 14px 16px; border-radius: 18px; background: var(--systemQuinary); }
+.ot-set-mark { flex: none; padding: 9px; border-radius: 12px; background: var(--keyColorBG); color: #fff; box-sizing: content-box; }
+.ot-set-hero-text { display: grid; flex: 1 1 220px; gap: 2px; min-width: 0; }
+.ot-set-hero-button { flex: none; padding: 8px 16px; border-radius: 99px; background: var(--keyColorBG); color: #fff; font: var(--body-emphasized); font-size: 14px; text-align: center; transition: scale .16s var(--ot-ease-settle), filter .15s; }
+.ot-set-hero-button:hover { filter: brightness(1.08); }
+.ot-set-hero-button:active { scale: .96; }
+.ot-set-hero-button.ot-quiet { background: var(--systemQuaternary); color: var(--systemPrimary); }
+@container (max-width: 520px) { .ot-set-hero-button { flex: 1 1 100%; padding: 10px; } }
+
+/* A native select, its chevron drawn here so it matches in every browser. */
+.ot-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+/* The open list is drawn by the browser: the field's see-through tint gives it nothing to stand on, so Chrome on
+   Windows fell back to a white list under the page's light text. Solid page colours, in the page's own scheme. */
+.ot-select { color-scheme: inherit; }
+.ot-select option { background-color: color-mix(in srgb, var(--systemPrimary) 9%, var(--pageBG)); color: var(--systemPrimary); }
+.ot-select option:checked { background-color: color-mix(in srgb, var(--keyColor, var(--ot-seed)) 30%, color-mix(in srgb, var(--systemPrimary) 9%, var(--pageBG))); }
+.ot-select option:disabled { color: var(--systemTertiary); }
+
+.ot-segmented { display: inline-flex; padding: 3px; border-radius: 99px; background: var(--systemQuaternary); }
+.ot-segmented button { padding: 6px 14px; border-radius: 99px; font-size: 14px; font-weight: 600; color: var(--systemSecondary); transition: background-color .2s, color .2s; }
+.ot-segmented button:hover { color: var(--systemPrimary); }
+.ot-segmented button[aria-checked='true'] { background: var(--segmentedControlSelectedBG); color: var(--systemPrimary); box-shadow: 0 1px 4px #0002; }
+
+/* The accent swatches: a row of their own under the label, inside the group. */
+.ot-accent-picker { position: relative; min-width: 0; margin: 0; border: 0; padding: 13px 16px 16px; }
+.ot-accent-picker legend { float: left; width: 100%; padding: 0; margin-bottom: 12px; font: var(--title-3); }
+.ot-accent-picker legend span { display: block; margin-top: 2px; font: var(--callout); color: var(--systemSecondary); }
+.ot-accent-picker > div { clear: both; display: flex; flex-wrap: wrap; gap: 10px; }
+.ot-accent-picker button { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #fff; outline-offset: 2px; transition: scale .2s var(--ot-ease-settle); }
+.ot-accent-picker button:hover { scale: 1.08; }
+.ot-accent-picker button[aria-pressed='true'] { outline: 2px solid var(--systemPrimary); }
+
+
+/* The sidebar folded to a rail of icons (the button at its top), and back, as one smooth movement.
+   The width eases (--web-navigation-width is registered in tokens.css, so the page and the player pill
+   slide with it); every icon keeps its place, 36px from the left edge, the middle of the 72px rail;
+   names fade and the rows that only the open sidebar has fold away. Phones keep the full drawer.
+   Labels stay in the page for screen readers; the tooltips name each icon for everyone else. */
+@media (min-width: 484px) {
+  .ot-side { overflow: hidden; }
+  .ot-side-top, .ot-side-scroll, .ot-side-bottom { transition: padding .38s var(--ot-ease-settle); }
+  .ot-side-wordmark, .ot-side-android { min-width: 0; flex-shrink: 1; overflow: hidden; white-space: nowrap; }
+  .ot-side-wordmark, .ot-side-android, .ot-side-label { transition: opacity .22s ease .14s, visibility 0s linear 0s; }
+  .ot-side-header { height: 24px; overflow: hidden; white-space: nowrap; transition: height .38s var(--ot-ease-settle), margin .38s var(--ot-ease-settle), padding .38s var(--ot-ease-settle), color .2s ease .1s, background-color .2s ease; }
+  .ot-side-extra, .ot-side-full, .ot-side-compact { overflow: hidden; transition: max-height .38s var(--ot-ease-settle), opacity .22s ease .1s; }
+  .ot-side-extra { max-height: 40px; }
+  .ot-side-full { max-height: 80px; }
+  .ot-side-compact { display: flex; max-height: 0; opacity: 0; }
+
+  .ot-side[data-folded='true'] .ot-side-top { padding-left: 20px; padding-right: 20px; }
+  .ot-side[data-folded='true'] .ot-side-scroll, .ot-side[data-folded='true'] .ot-side-bottom { padding-left: 20px; padding-right: 20px; }
+  /* The names only fade: they stay readable to screen readers. The wordmark and the app link go out of
+     reach as well, so the keyboard doesn't land on something that isn't there. */
+  .ot-side[data-folded='true'] .ot-side-label { opacity: 0; transition: opacity .12s ease; }
+  .ot-side[data-folded='true'] :is(.ot-side-wordmark, .ot-side-android) { opacity: 0; visibility: hidden; transition: opacity .12s ease, visibility 0s linear .12s; }
+  /* Section names become a hairline between the groups of icons. */
+  .ot-side[data-folded='true'] .ot-side-header { height: 1px; margin: 12px 4px; padding: 0; color: transparent; background: var(--labelDivider); transition: height .38s var(--ot-ease-settle), margin .38s var(--ot-ease-settle), padding .38s var(--ot-ease-settle), color .1s ease, background-color .2s ease .15s; }
+  .ot-side[data-folded='true'] :is(.ot-side-extra, .ot-side-full) { max-height: 0; opacity: 0; transition: max-height .38s var(--ot-ease-settle), opacity .12s ease; }
+  .ot-side[data-folded='true'] .ot-side-compact { max-height: 48px; opacity: 1; }
+  .ot-side[data-folded='true'] .ot-side-badge { position: absolute; top: 5px; right: 9px; width: 8px; height: 8px; padding: 0; border-radius: 50%; font-size: 0; }
+}
+:root[data-motion='false'] { transition: none !important; }
+@media (prefers-reduced-motion: reduce) { :root { transition: none !important; } .ot-side * { transition: none !important; } }
+/* A switch-like button that is on (shuffle, repeat, lyrics, Up Next): a fill of its own colour behind the
+   icon and a dot under it, so the state reads at a glance and not only as a slightly brighter glyph. */
+/* Relative only for toggles that aren't placed already: this sheet is outside Tailwind's layers, so a
+   plain position here beat the `absolute` on the full-screen player's corner toggles (Lyrics, Up Next),
+   and dropped them into the flow under the player, off the bottom of the screen. */
+.ot-toggle { transition: background-color .2s ease, color .2s ease, scale .1s ease-in; }
+.ot-toggle:not(.absolute, .fixed) { position: relative; }
+.ot-toggle[aria-pressed='true'] { background-color: color-mix(in srgb, currentColor 20%, transparent); }
+.ot-toggle::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; opacity: 0; scale: .2; transition: opacity .2s ease, scale .25s var(--ot-ease-settle); }
+.ot-toggle[aria-pressed='true']::after { opacity: 1; scale: 1; }
+
+/* Album and playlist headers: the cover blurred into a wash of its own colours behind the header,
+   fading into the page below it. Drawn from a 60px copy; at this blur nothing finer would show. */
+.ot-wash { position: absolute; inset: 0 0 -140px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .8s var(--ot-ease-emph); -webkit-mask-image: linear-gradient(180deg, #000 25%, transparent); mask-image: linear-gradient(180deg, #000 25%, transparent); }
+.ot-wash[data-loaded] { opacity: .75; }
+:root[data-appearance='light'] .ot-wash[data-loaded] { opacity: .5; }
+.ot-wash img { position: absolute; left: -20%; top: -50%; width: 140%; max-width: none; height: 200%; object-fit: cover; filter: blur(72px) saturate(1.8); }
+
+/* Cards: the cover lifts and zooms a little in its frame, a shade rises from the bottom and the play
+   disc comes up with it. Translate, scale and opacity only, so a full shelf stays on the compositor. */
+.ot-lockup-art { transition: translate .4s var(--ot-ease-settle), box-shadow .4s var(--ot-ease-settle); }
+.ot-lockup-art img { transition: opacity .2s ease-out, scale .7s var(--ot-ease-settle); }
+.ot-lockup-art:hover { translate: 0 -4px; box-shadow: 0 18px 34px -16px var(--radiosityShadowColor); }
+.ot-lockup-art:hover img { scale: 1.06; }
+.ot-lockup-shade { background: linear-gradient(180deg, transparent 40%, rgb(0 0 0 / .42)); opacity: 0; transition: opacity .3s ease-out; }
+.ot-lockup-art:is(:hover, :focus-within) .ot-lockup-shade { opacity: 1; }
+.ot-platter { opacity: 0; translate: 0 10px; scale: .8; transition: opacity .2s ease-out, translate .4s var(--ot-ease-settle), scale .4s var(--ot-ease-settle), filter .15s; }
+.ot-lockup-art:is(:hover, :focus-within) .ot-platter { opacity: 1; translate: 0 0; scale: 1; }
+.ot-lockup-art .ot-platter:hover { scale: 1.1; filter: brightness(1.12); }
+.ot-lockup-art .ot-platter:active { scale: .92; transition-duration: .08s; }
+.ot-circle-lockup > div:first-child { transition: translate .4s var(--ot-ease-settle), box-shadow .4s var(--ot-ease-settle); }
+.ot-circle-lockup > div:first-child img { transition: opacity .2s ease-out, scale .7s var(--ot-ease-settle); }
+.ot-circle-lockup:hover > div:first-child { translate: 0 -4px; box-shadow: 0 16px 30px -14px var(--radiosityShadowColor); }
+.ot-circle-lockup:hover > div:first-child img { scale: 1.06; }
+.ot-track-lockup { border-radius: 14px; transition: background-color .2s ease-out; }
+.ot-track-lockup:hover { background: var(--tracklistHoverColor); transition-duration: 0s; }
+
+/* A shelf's arrows: frosted discs that rise in at each end when the pointer is over the shelf. */
+.ot-arrow { translate: 0 -50%; scale: .8; opacity: 0; background: var(--glassMaterialBackground); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); box-shadow: 0 8px 24px var(--glassMaterialShadowColor), inset 0 0 0 .5px color-mix(in srgb, var(--glassMaterialInnerStroke) 30%, transparent); transition: opacity .2s ease-out, scale .35s var(--ot-ease-settle); }
+.group\/shelf:hover .ot-arrow:not(:disabled) { opacity: 1; scale: 1; }
+.group\/shelf .ot-arrow:not(:disabled):hover { scale: 1.08; }
+.group\/shelf .ot-arrow:not(:disabled):active { scale: .92; transition-duration: .08s; }
+
+/* Sidebar rows ease between states; the selected one carries a faint ring of the accent. */
+.ot-nav-item { transition: background-color .2s ease, box-shadow .2s ease; }
+.ot-nav-item svg { transition: scale .35s var(--ot-ease-settle); }
+.ot-nav-item:hover svg { scale: 1.08; }
+.ot-nav-item[aria-current='page'] { box-shadow: inset 0 0 0 .5px color-mix(in srgb, var(--keyColor) 30%, transparent); }
+
+/* Frosted glass along the top of the page once it has scrolled: what slides under the edge blurs
+   away instead of being cut off. The phone keeps its own glass top bar. */
+.ot-scroll-edge { position: absolute; top: 0; left: var(--web-navigation-width); right: 0; height: 64px; z-index: calc(var(--z-web-chrome) - 3); pointer-events: none; opacity: 0; transition: opacity .35s ease; -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); -webkit-mask-image: linear-gradient(#000 30%, transparent); mask-image: linear-gradient(#000 30%, transparent); }
+.ot-scroll-edge[data-shown='true'] { opacity: 1; }
+@media (max-width: 483.98px) { .ot-scroll-edge { display: none; } }
+
+@media (prefers-reduced-transparency: reduce) {
+  .ot-wash, .ot-scroll-edge { display: none; }
+  .ot-arrow { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--opaqueShelfBG); }
+}
+
+/* Liquid Glass (lib/liquidGlass.ts, Chromium only): the lens bends the backdrop at the rim, a light
+   blur smooths it, and a thin tint leaves the bent colours showing. A bright rim catches the light at
+   the top left and a softer one at the bottom right. Elsewhere the frosted glass above stays. */
+.glass-pill[data-liquid]::before, .ot-arrow[data-liquid] {
+  -webkit-backdrop-filter: var(--liquid-filter) blur(5px) saturate(1.8) brightness(1.04);
+  backdrop-filter: var(--liquid-filter) blur(5px) saturate(1.8) brightness(1.04);
+}
+.glass-pill[data-liquid]::before {
+  background-color: color-mix(in srgb, var(--glassMaterialBackground) 52%, transparent);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / .1), transparent 45%);
+}
+.ot-arrow[data-liquid] { background: color-mix(in srgb, var(--glassMaterialBackground) 45%, transparent); }
+.glass-pill[data-liquid]::after, .ot-arrow[data-liquid]::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 1;
+  box-shadow: inset 1.5px 1.5px 0 -.5px rgb(255 255 255 / .6), inset -1.5px -1.5px 0 -.5px rgb(255 255 255 / .3), inset 0 0 14px rgb(255 255 255 / .07);
+}
+:root[data-appearance='light'] .glass-pill[data-liquid]::after, :root[data-appearance='light'] .ot-arrow[data-liquid]::after {
+  box-shadow: inset 1.5px 1.5px 0 -.5px rgb(255 255 255 / .95), inset -1.5px -1.5px 0 -.5px rgb(255 255 255 / .6), inset 0 0 0 .5px rgb(0 0 0 / .08), inset 0 0 14px rgb(255 255 255 / .2);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-pill[data-liquid]::before, .ot-arrow[data-liquid] { -webkit-backdrop-filter: none; backdrop-filter: none; background-color: var(--opaqueShelfBG); }
+}

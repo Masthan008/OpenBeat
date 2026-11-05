@@ -1,0 +1,5 @@
+• Sound Center 1.0.0 initial release.
+• Seamless online streaming & offline caching.
+• Synced multi-source lyrics with KuGou, LrcLib & romanization.
+• High-performance audio playback engine with equalizers & reverb.
+• Android Auto and TV support.

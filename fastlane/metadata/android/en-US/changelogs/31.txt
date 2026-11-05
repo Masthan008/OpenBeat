@@ -1,0 +1,5 @@
+• Rooms: people with the code ask to join; you let them in or turn them away, and only they can hear or read the room
+• Voice notes in room chat, and push-to-talk
+• A guest's picked song can play now for everyone, and joining lists you straight away
+• Faster downloads: songs come in pieces, three songs at a time
+• The seek bar marks song parts with small dots

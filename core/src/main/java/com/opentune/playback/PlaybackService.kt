@@ -1,0 +1,2663 @@
+package com.opentune.playback
+
+import com.opentune.data.lossless.ExternalStreams
+import com.opentune.data.model.durationMillis
+import kotlinx.coroutines.ensureActive
+
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.media.audiofx.LoudnessEnhancer
+import android.net.Uri
+import android.os.SystemClock
+import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.session.MediaSession
+import androidx.media3.session.LibraryResult
+import com.opentune.data.radio.Radio
+import com.opentune.data.podcasts.Podcasts
+import com.opentune.data.sponsorblock.SponsorBlock
+import android.os.Bundle
+import androidx.media3.session.SessionResult
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.CommandButton
+import androidx.media3.session.SessionError
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.LibraryParams
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.collect.ImmutableList
+import kotlinx.coroutines.guava.future
+import com.opentune.data.DebugLog as Log
+import com.opentune.data.isYouTubeId
+import com.opentune.data.subsonic.Subsonic
+import com.opentune.data.listenbrainz.ListenBrainz
+import com.opentune.data.download.Downloads
+import com.opentune.data.lastfm.LastFm
+import com.opentune.data.library.LibraryStore
+import com.opentune.data.library.SongRef
+import com.opentune.data.NerdStats
+import com.opentune.data.history.History
+import com.opentune.data.local.LocalMusic
+import com.opentune.data.innertube.StreamResolver
+import com.opentune.data.model.QueueTier
+import com.opentune.data.model.Song
+import com.opentune.data.reco.Recommendations
+import com.opentune.data.settings.AppSettings
+import com.opentune.playback.dsp.DspAudioProcessor
+import com.opentune.playback.dsp.DspParams
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.media3.common.Tracks
+import android.content.IntentFilter
+import android.content.BroadcastReceiver
+import android.media.audiofx.AudioEffect
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+/**
+ * Foreground media session hosting playback, the queue, autoplay, the audio
+ * chain and listening history.
+ *
+ * Data path: an `opentune://track/<id>` item is looked up in [AudioCache]
+ * first, by video id; only on a miss is it resolved through [StreamResolver]
+ * and fetched. Local files (`content://`) skip both.
+ *
+ * Audio path: decoder → [DspAudioProcessor] (EQ, tone, balance, widening,
+ * levelling, limiter) → ExoPlayer's silence skipping and speed/pitch → output.
+ */
+@OptIn(UnstableApi::class)
+class PlaybackService : MediaLibraryService() {
+
+    private var mediaSession: MediaLibrarySession? = null
+
+    /** What Android Auto and other media browsers can browse; see [CarLibrary]. */
+    private val car by lazy { CarLibrary(this) }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private var castMirror: CastMirror? = null
+    private var radioJob: Job? = null
+    private var radioSeed: String? = null
+
+    /** Seeds whose radio added nothing new; asking again would only repeat that. */
+    private val exhaustedSeeds = mutableSetOf<String>()
+
+    /** Every track queued since the service started, for "don't repeat songs". */
+    private val sessionIds = mutableSetOf<String>()
+
+    /** The item a failed load was last retried for. See [recover]. */
+    private var retriedMediaId: String? = null
+
+    private var soundEffects: SoundEffects? = null
+    private val dsp = DspAudioProcessor()
+    /** The same effects, for the bridge player that carries a song across a quality swap. */
+    private val bridgeDsp = DspAudioProcessor()
+    private var audioManager: AudioManager? = null
+    private val startupSelections = ConcurrentHashMap<String, StartupSelection>()
+
+    private fun selectedUri(uri: Uri): Uri = startupToken(uri)?.let { startupSelections[it]?.selected } ?: uri
+
+    override fun onCreate() {
+        super.onCreate()
+        val context: Context = this
+
+        val songSources = SongSources(context)
+        val cached = songSources.cached
+        val direct = songSources.direct
+        val sources = DefaultMediaSourceFactory(songSources.routing)
+        val qualitySources = object : MediaSource.Factory by sources {
+            override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+                val input = mediaItem.localConfiguration?.uri ?: return sources.createMediaSource(mediaItem)
+                if (videoIdOf(input) == null) return sources.createMediaSource(mediaItem)
+                val addonKey = externalStreamKeyOf(input)
+                val addon = addonKey?.let { ExternalStreams.get(mediaItem.mediaId, it) }?.takeIf { it.addonId != null }
+                if (addon != null) {
+                    val http = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(com.opentune.data.addons.AddonHttp.mediaClient)
+                    val plain = androidx.media3.datasource.DefaultDataSource.Factory(context, http)
+                    // A link that won't open (expired, refused) is swapped for a new one from the same
+                    // add-on and opened again, so the song stays on its FLAC instead of falling back.
+                    val renewing = androidx.media3.datasource.DataSource.Factory {
+                        RenewingDataSource(plain.createDataSource(), renew = { failed -> ExternalStreams.refreshLink(mediaItem.mediaId, addon.key, failed) })
+                    }
+                    val resolving = androidx.media3.datasource.ResolvingDataSource.Factory(renewing) { spec ->
+                        // Re-check enablement/output before each manifest or segment request.
+                        val resolved = ExternalStreams.resolve(mediaItem.mediaId, addon.key)
+                        if (externalStreamKeyOf(spec.uri) != null) spec.withUri(android.net.Uri.parse(resolved)) else spec
+                    }
+                    // Kept in the song cache under the add-on stream's own address (not the
+                    // short-lived URL it resolves to), so an upgrade can be fetched ahead
+                    // by a silent player and then played from what's already here.
+                    val data = androidx.media3.datasource.cache.CacheDataSource.Factory()
+                        .setCache(AudioCache.get(context))
+                        .setUpstreamDataSourceFactory(resolving)
+                        .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                    return DefaultMediaSourceFactory(data).createMediaSource(mediaItem.buildUpon().setMimeType(addon.mimeType).build())
+                }
+                val uri = withoutStartup(input)
+                val id = videoIdOf(uri) ?: return sources.createMediaSource(mediaItem)
+                if (!isYouTubeId(id) || Podcasts.isEpisode(id) || externalStreamKeyOf(uri) != null ||
+                    uri.getQueryParameter("fallback") == "youtube") return sources.createMediaSource(mediaItem)
+                val token = java.util.UUID.randomUUID().toString()
+                val tagged = uri.buildUpon().appendQueryParameter("startup", token).build()
+                val selection = StartupSelection(mediaItem.toSong(), uri)
+                // Selection wraps the cache, so external audio never enters a YouTube cache entry.
+                val choosing = ResolvingDataSource.Factory(cached) { spec ->
+                    startupSelections[token] = selection
+                    val resolved = runBlocking { selection.resolve(spec) }
+                    scope.launch { updateExternalStats(); applyLoudness() }
+                    resolved
+                }
+                return DefaultMediaSourceFactory(SchemeRoutingDataSource.Factory(choosing, direct))
+                    .createMediaSource(mediaItem.buildUpon().setUri(tagged).build())
+            }
+        }
+
+        // The main player and the bridge decode the same way: the bridge used to
+        // take the phone's default FLAC decoder, which some phones can't play
+        // add-on FLAC with, so the swap to it failed and the song stayed on YouTube.
+        fun renderersFor(effects: DspAudioProcessor, exclusive: Boolean) = object : DefaultRenderersFactory(context) {
+            init {
+                setEnableDecoderFallback(true)
+                setMediaCodecSelector { mime, secure, tunneling ->
+                    val selector = if (mime == "audio/flac") androidx.media3.exoplayer.mediacodec.MediaCodecSelector.PREFER_SOFTWARE
+                        else androidx.media3.exoplayer.mediacodec.MediaCodecSelector.DEFAULT
+                    selector.getDecoderInfos(mime, secure, tunneling).filterNot {
+                        mime == "audio/flac" && LosslessAudioPolicy.unsafeFlacDecoder(it.name)
+                    }
+                }
+            }
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean,
+            ): AudioSink = com.opentune.playback.dsp.PrecisionAudioSink(
+                // The effects run in the precision sink, on float samples, not in Media3's chain.
+                // Float is always allowed through; the precision sink decides, song by song, whether to use it.
+                DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(true)
+                    .setAudioProcessorChain(DefaultAudioSink.DefaultAudioProcessorChain())
+                    .apply {
+                        // Only the main player takes the DAC exclusively: the bridge opening its
+                        // own output would switch the DAC under the song that's playing.
+                        if (exclusive) setAudioOutputProvider(ExclusiveUsbOutputProvider(
+                            androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider.Builder(context).build()))
+                    }
+                    .build(),
+                effects,
+                // Float where asked for, and for an exclusive USB DAC whenever the song has more
+                // than 16 bits: float carries 24-bit samples exactly, and they go out whole.
+                // Not while the song is stretched in time: Media3 changes speed and pitch, skips
+                // silence and nudges a listening room's sync only on 16-bit output, and on float
+                // it quietly plays at normal speed. The effects still run on float before that.
+                floatWanted = { source ->
+                    !stretching() && (
+                        AppSettings.playback.value.floatOutput ||
+                            (BitPerfectUsb.wanted && source != C.ENCODING_PCM_16BIT && source != C.ENCODING_PCM_8BIT)
+                        )
+                },
+            )
+        }
+        val renderers = renderersFor(dsp, exclusive = true)
+
+        // Start as soon as a little audio is in: the defaults wait for 2.5 s,
+        // which is video-sized caution. A stream starts after half a second buffered
+        // and a local file after a quarter second.
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMsForStreaming(30_000, FAR_BUFFER_MS, 500, 2_000)
+            .setBufferDurationsMsForLocalPlayback(5_000, FAR_BUFFER_MS, 250, 500)
+            // The byte ceiling decides, not the time one: a whole song at CD
+            // quality, a couple of minutes at 24-bit/96 kHz, so a fetched track is
+            // fetched once and seeks within it are instant. 8 MB held only about
+            // 15 s of hi-res FLAC, and any dip in the connection stalled it.
+            .setTargetBufferBytes(FAR_BUFFER_BYTES)
+            // However heavy the stream, at least the minimum time ahead is held.
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(BACK_BUFFER_MS, true)
+            .build()
+
+        val player = ExoPlayer.Builder(context, renderers)
+            .setMediaSourceFactory(qualitySources)
+            .setLoadControl(loadControl)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build(),
+                /* handleAudioFocus= */ true,
+            )
+            .setHandleAudioBecomingNoisy(true)
+            // On a watch, music waits for Bluetooth headphones rather than playing from
+            // its speaker, and Wear OS offers to connect some. Other devices are unaffected.
+            .setSuppressPlaybackOnUnsuitableOutput(true)
+            .build()
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setPreferredAudioMimeTypes("audio/flac", "audio/alac", "audio/raw").build()
+        // A silent, never-playing copy of the player for upgrades: it loads the
+        // better stream from where the song is, through the same sources and
+        // so into the same cache, and the swap then reads what it fetched.
+        auditionPlayer = {
+            ExoPlayer.Builder(context, renderersFor(bridgeDsp, exclusive = false))
+                .setMediaSourceFactory(qualitySources)
+                .setLoadControl(
+                    DefaultLoadControl.Builder()
+                        .setBufferDurationsMsForStreaming((AUDITION_AHEAD_MS + 10_000).toInt(), (AUDITION_AHEAD_MS + 20_000).toInt(), 500, 1_000)
+                        .setPrioritizeTimeOverSizeThresholds(true)
+                        .build(),
+                )
+                .build()
+                .apply { volume = 0f; playWhenReady = false }
+        }
+        player.addListener(playerListener)
+        player.addAnalyticsListener(PipelineTelemetry)
+
+        val effects = SoundEffects(player)
+        soundEffects = effects
+        scope.launch { AppSettings.sound.collect(effects::apply) }
+        scope.launch {
+            combine(AppSettings.equalizer, AppSettings.sound, AppSettings.playback, BitPerfectUsb.status, volumeTick) { eq, sound, pb, bp, _ ->
+                // Bit-perfect means nothing but the volume touches the samples.
+                if (bp is BitPerfectUsb.Status.Active) {
+                    DspParams(outputGainDb = audioManager?.let(BitPerfectUsb::softwareGainDb) ?: 0f)
+                } else {
+                    DspParams(eq, sound.bassBoost, pb.spatialAudio, pb.clarity, eightDPeriod = sound.eightD.periodSeconds, spacePeriod = sound.space.periodSeconds)
+                }
+            }.distinctUntilChanged().collect { dsp.params = it; bridgeDsp.params = it }
+        }
+        scope.launch {
+            AppSettings.playback.map { it.skipSilence }.distinctUntilChanged().collect { player.skipSilenceEnabled = it }
+        }
+        // Turning autoplay back on near the end of the queue should fetch now,
+        // not at the next track change.
+        scope.launch {
+            AppSettings.playback.map { it.autoplay to it.recommender }.distinctUntilChanged().collect {
+                radioJob?.cancel()
+                radioSeed = null
+                exhaustedSeeds.clear()
+                extendQueueIfNeeded()
+            }
+        }
+        scope.launch {
+            combine(
+                AppSettings.playback.map { it.pauseListeningHistory to it.listeningHistoryTarget }.distinctUntilChanged(),
+                com.opentune.data.account.AccountStore.accounts.map { list -> list.firstOrNull { it.active }?.id }.distinctUntilChanged(),
+            ) { policy, account -> policy to account }.distinctUntilChanged().drop(1).collect {
+                // Never backfill time heard while paused, or report it to a different account.
+                historyGeneration++
+                historyWork.cancel()
+                historyWork = SupervisorJob(scope.coroutineContext[Job])
+                resetAccountSync()
+            }
+        }
+        scope.launch { trackListening(player) }
+        scope.launch {
+            AppSettings.playback.map { listOf(it.losslessStreaming, it.losslessUnmeteredOnly, it.losslessHiRes, it.jioSaavnQuality, it.qobuzRelayUrl, it.wifiQuality, it.mobileQuality) }
+                .distinctUntilChanged().collect {
+                    val item = player.currentMediaItem
+                    val uri = item?.localConfiguration?.uri?.let(::selectedUri)
+                    if (item != null && uri != null) {
+                        val rendition = externalStreamKeyOf(uri)?.let { ExternalStreams.get(item.mediaId, it) }
+                        if (rendition != null && !ExternalStreams.allowed(rendition.lossless)) {
+                            swapToUpgrade(player, item.mediaId, youtubeFallbackUri(item.mediaId))
+                        }
+                    }
+                    scheduleUpgrade()
+                }
+        }
+        scope.launch {
+            AppSettings.playback.map { Triple(it.loudnessNormalization, it.normalizeOnSpeaker, it.volumeLevel) }.distinctUntilChanged().collect { applyLoudness() }
+        }
+        scope.launch {
+            AppSettings.playback.map { it.preloadUpcoming }.distinctUntilChanged().collect { on ->
+                // ExoPlayer prepares and buffers the next item in play order
+                // while this one plays, so it starts from memory.
+                player.preloadConfiguration =
+                    if (on) ExoPlayer.PreloadConfiguration(PRELOAD_US) else ExoPlayer.PreloadConfiguration.DEFAULT
+                if (on) warmNeighbours()
+            }
+        }
+
+        scope.launch { runSleepTimer(player) }
+        scope.launch {
+            AppSettings.playback.map { it.systemEffects }.distinctUntilChanged().collect { openEffectSession(player.audioSessionId) }
+        }
+        crossfade = Crossfade(context, scope, sources, player).also { it.start() }
+        // Casting: the device follows this player while one is connected.
+        castMirror = CastMirror(context, player, scope)
+        scope.launch {
+            com.opentune.cast.Cast.session.map { it?.receiver }.distinctUntilChanged().collect { r ->
+                if (r != null) castMirror?.attach(r) else castMirror?.detach()
+            }
+        }
+        scope.launch {
+            com.opentune.data.addons.AddonStore.revision.collect { revision ->
+                // Searched again at once, the misses forgotten, but quietly: not as if asked from the menu.
+                // A song already on a verified FLAC from an add-on still allowed is left on it: asking
+                // every add-on again moments after they answered only got them rate limiting.
+                if (revision > 0 && !playingAllowedLossless()) scheduleUpgrade(force = true, asked = false, quiet = true)
+            }
+        }
+        scope.launch { PlaybackRequests.upgrade.collect { scheduleUpgrade(force = true) } }
+        scope.launch { guardQuality() }
+        // A stream picked in Search's Add-ons tab that came in after its song had started.
+        scope.launch {
+            PlaybackRequests.picked.collect { id ->
+                val player = mediaSession?.player as? ExoPlayer ?: return@collect
+                if (player.currentMediaItem?.mediaId != id) return@collect
+                val rendition = ExternalStreams.cached(id)?.takeIf { it.picked } ?: return@collect
+                val uri = player.currentMediaItem?.localConfiguration?.uri ?: return@collect
+                if (externalStreamKeyOf(selectedUri(uri)) == rendition.key) return@collect
+                upgradeJob?.cancel()
+                swapToUpgrade(player, id, externalStreamUri(id, rendition.key))
+            }
+        }
+        // A higher-quality FLAC from an add-on that answered after the search had picked one:
+        // once any switch already under way is done, the song moves onto it the same seamless way.
+        scope.launch {
+            ExternalStreams.improved.collect { id ->
+                val player = mediaSession?.player as? ExoPlayer ?: return@collect
+                if (player.currentMediaItem?.mediaId != id) return@collect
+                upgradeJob?.join()
+                if (player.currentMediaItem?.mediaId != id) return@collect
+                val better = ExternalStreams.cached(id)?.takeIf { it.lossless && ExternalStreams.allowed(true) } ?: return@collect
+                val playing = player.currentMediaItem?.localConfiguration?.uri ?: return@collect
+                val existing = externalStreamKeyOf(selectedUri(playing))?.let { ExternalStreams.get(id, it) }
+                if (existing?.key == better.key) return@collect
+                if (existing?.lossless == true && com.opentune.data.addons.AddonResolver.qualityScore(better.bits, better.sampleRate) <=
+                    com.opentune.data.addons.AddonResolver.qualityScore(existing.bits, existing.sampleRate)) return@collect
+                if (player.duration > 0 && player.duration - player.currentPosition < UPGRADE_MIN_REMAINING_MS) return@collect
+                // Not asked for from the menu: "upgrading" goes once it's done, not left up from the last ask.
+                upgradeAsked = false
+                if (swapToUpgrade(player, id, externalStreamUri(id, better.key), quiet = true)) updateExternalStats()
+            }
+        }
+
+        audioManager = getSystemService(AudioManager::class.java)?.also { am ->
+            BitPerfectUsb.init(am)
+            am.registerAudioDeviceCallback(deviceCallback, null)
+        }
+        scope.launch {
+            AppSettings.playback.map { it.preferUsbDac }.distinctUntilChanged().collect { applyPreferredDevice() }
+        }
+        scope.launch {
+            AppSettings.playback.map { it.bitPerfectUsb to it.floatOutput }.distinctUntilChanged().collect { applyBitPerfect(reopen = true) }
+        }
+        scope.launch {
+            // Speed or pitch moved off normal (or back), skip silence turned on or off, a room joined
+            // or left: the output is set up again, so the song changes over at once rather than at the next.
+            combine(AppSettings.sound, AppSettings.playback, com.opentune.data.together.Together.room) { _, _, _ -> stretching() }
+                .distinctUntilChanged().drop(1).collect { rebuildOutput() }
+        }
+        registerReceiver(volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), VOLUME_RECEIVER_FLAGS)
+
+        val sessionActivity = PendingIntent.getActivity(
+            this,
+            0,
+            com.opentune.data.AppHooks.openApp(this),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        mediaSession = MediaLibrarySession.Builder(this, player, sessionCallback)
+            .setSessionActivity(sessionActivity)
+            .build()
+        // Earlier versions posted the song as a Live Update on its own channel. That's
+        // gone; clear the channel so it doesn't linger in the phone's settings.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            getSystemService(android.app.NotificationManager::class.java)?.run {
+                cancel(7_160)
+                deleteNotificationChannel("live_update")
+            }
+        }
+        // Likes changed anywhere (the app, the widget) show on the heart at once.
+        scope.launch { LibraryStore.liked.collect { refreshButtons() } }
+        scope.launch { skipDisliked(player) }
+
+        restoreQueue(player)
+        scope.launch { keepQueueSaved(player) }
+    }
+
+    /**
+     * A song disliked anywhere (the app, the notification, a car) stops being
+     * heard: if it's playing it's skipped, and the copies of it still to come
+     * leave the queue. Songs already played stay, so going back still works.
+     */
+    private suspend fun skipDisliked(player: ExoPlayer) {
+        var before: Set<String>? = null
+        LibraryStore.disliked.collect { now ->
+            val fresh = before?.let { now - it }.orEmpty()
+            before = now
+            if (fresh.isEmpty()) return@collect
+            // A guest's queue mirrors the host's: it asks the host to skip, and changes nothing here.
+            if (com.opentune.data.together.Together.room.value?.following == true) {
+                if (player.currentMediaItem?.mediaId in fresh) com.opentune.data.together.Together.intercept(com.opentune.data.together.Together.Control.Next)
+                return@collect
+            }
+            val current = player.currentMediaItemIndex
+            for (i in player.mediaItemCount - 1 downTo current + 1) {
+                if (player.getMediaItemAt(i).mediaId in fresh) player.removeMediaItem(i)
+            }
+            if (player.currentMediaItem?.mediaId in fresh && !com.opentune.data.together.Together.intercept(com.opentune.data.together.Together.Control.Next)) {
+                if (player.hasNextMediaItem()) player.seekToNextMediaItem() else player.pause()
+            }
+        }
+    }
+
+    /**
+     * Puts back the queue from last time, paused where it was left and not
+     * prepared: nothing is fetched until play is pressed.
+     */
+    private fun restoreQueue(player: ExoPlayer) {
+        if (player.mediaItemCount > 0) return
+        val saved = QueueStore.load() ?: return
+        val items = saved.songs.mapIndexed { i, ref ->
+            ref.toSong().copy(queueTier = saved.tiers?.getOrNull(i) ?: QueueTier.CONTEXT).toMediaItem()
+        }
+        // A saved queue with no songs in it has no index to start at.
+        if (items.isEmpty()) return
+        player.setMediaItems(items, saved.index.coerceIn(items.indices), saved.positionMs.coerceAtLeast(0))
+        player.shuffleModeEnabled = saved.shuffle
+        player.repeatMode = saved.repeat
+    }
+
+    /**
+     * With the whole queue on repeat, songs queued by hand play once: when a
+     * song of the list comes round, the ones already played leave.
+     */
+    private fun dropPlayedHandQueued() {
+        val player = mediaSession?.player ?: return
+        if (player.repeatMode != Player.REPEAT_MODE_ALL || player.shuffleModeEnabled) return
+        val tiers = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).queueTier }
+        QueueTimeline.playedUser(tiers, player.currentMediaItemIndex).asReversed().forEach(player::removeMediaItem)
+    }
+
+    /** Saves the queue every few seconds while it changes or plays. */
+    private suspend fun keepQueueSaved(player: ExoPlayer) {
+        var last: QueueStore.Saved? = null
+        while (true) {
+            delay(QUEUE_SAVE_MS)
+            if (player.mediaItemCount == 0) continue
+            val items = (0 until player.mediaItemCount).map { player.getMediaItemAt(it) }
+            val tiers = items.map { it.queueTier }
+            val saved = QueueStore.Saved(
+                items.map { SongRef.of(it.toSong()) }, player.currentMediaItemIndex, player.currentPosition,
+                tiers = tiers.takeIf { t -> t.any { it != QueueTier.CONTEXT } },
+                shuffle = player.shuffleModeEnabled,
+                repeat = player.repeatMode,
+            )
+            if (saved == last) continue
+            last = saved
+            withContext(Dispatchers.IO) { QueueStore.save(saved) }
+        }
+    }
+
+    /**
+     * Pauses at the time the sleep timer names, or at the end of the current
+     * track (ExoPlayer's own pause-at-end, so it lands on the boundary).
+     */
+    private suspend fun runSleepTimer(player: ExoPlayer) {
+        SleepTimer.state.collectLatest { state ->
+            player.pauseAtEndOfMediaItems = state is SleepTimer.State.EndOfTrack
+            try {
+                when (state) {
+                    is SleepTimer.State.At -> {
+                        // Winding down: the volume eases away over the last few minutes.
+                        val fadeMs = SleepTimer.fadeMsFor(state.endsAtMs - state.startedAtMs)
+                        while (true) {
+                            val left = state.endsAtMs - System.currentTimeMillis()
+                            if (left <= 0) break
+                            if (AppSettings.playback.value.sleepWindDown && left < fadeMs) {
+                                val f = 1f - left.toFloat() / fadeMs
+                                com.opentune.playback.dsp.DspAudioProcessor.masterGain = SleepTimer.gainAt(f)
+                                SleepTimer.setWindDown(f)
+                                delay(200)
+                            } else {
+                                delay(minOf(left - fadeMs, 1_000L).coerceAtLeast(50))
+                            }
+                        }
+                        player.pause()
+                        SleepTimer.cancel()
+                    }
+                    SleepTimer.State.EndOfTrack -> {
+                        // The last seconds of the song fade out, then pauseAtEndOfMediaItems pauses.
+                        val stopped = scope.launch { playWhenReadyFlow(player).first { !it } }
+                        while (stopped.isActive) {
+                            val left = player.duration - player.currentPosition
+                            if (AppSettings.playback.value.sleepWindDown && player.duration > 0 && left in 0 until END_FADE_MS) {
+                                val f = 1f - left.toFloat() / END_FADE_MS
+                                com.opentune.playback.dsp.DspAudioProcessor.masterGain = SleepTimer.gainAt(f)
+                                SleepTimer.setWindDown(f)
+                            }
+                            delay(200)
+                        }
+                        SleepTimer.cancel()
+                    }
+                    SleepTimer.State.Off -> Unit
+                }
+            } finally {
+                com.opentune.playback.dsp.DspAudioProcessor.masterGain = 1f
+                SleepTimer.setWindDown(0f)
+            }
+        }
+    }
+
+    /** Emits playWhenReady, now and on every change. */
+    private fun playWhenReadyFlow(player: Player) = callbackFlow {
+        trySend(player.playWhenReady)
+        val l = object : Player.Listener {
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { trySend(playWhenReady) }
+        }
+        player.addListener(l)
+        awaitClose { player.removeListener(l) }
+    }
+
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
+        mediaSession
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        val player = mediaSession?.player ?: return
+        if (AppSettings.playback.value.stopOnTaskRemoved) {
+            player.pause()
+            player.stop()
+            stopSelf()
+            return
+        }
+        if (!player.playWhenReady || player.mediaItemCount == 0) {
+            stopSelf()
+        }
+    }
+
+    override fun onDestroy() {
+        ExternalStreams.playing(null, null)
+        (mediaSession?.player as? ExoPlayer)?.takeIf { it.mediaItemCount > 0 }?.let { p ->
+            QueueStore.save(QueueStore.Saved((0 until p.mediaItemCount).map { SongRef.of(p.getMediaItemAt(it).toSong()) }, p.currentMediaItemIndex, p.currentPosition))
+        }
+        com.opentune.data.AppHooks.onPlayerStopped(this)
+        crossfade?.release()
+        crossfade = null
+        castMirror?.detach(resume = false)
+        castMirror = null
+        closeEffectSession()
+        finishListen()
+        // The listen just finished, and anything else not yet saved, before the process goes.
+        com.opentune.data.Core.flush()
+        loudnessEnhancer?.release()
+        loudnessEnhancer = null
+        audioManager?.unregisterAudioDeviceCallback(deviceCallback)
+        runCatching { unregisterReceiver(volumeReceiver) }
+        BitPerfectUsb.setWanted(false)
+        scope.cancel()
+        startupSelections.clear()
+        soundEffects?.release()
+        soundEffects = null
+        mediaSession?.run {
+            player.removeListener(playerListener)
+            player.release()
+            release()
+            mediaSession = null
+        }
+        super.onDestroy()
+    }
+
+    /**
+     * The session's callback, for the app's own controller and for media
+     * browsers like Android Auto.
+     *
+     * Items that arrive from a controller may have lost their URI on the way
+     * (Media3 only carries it across a binder in some cases), so it's rebuilt
+     * from the media id, which always survives. A browser's items carry the
+     * list they were shown in; [CarLibrary.resolve] queues that list.
+     */
+    private val sessionCallback = object : MediaLibrarySession.Callback {
+        /** Every controller (notification, Android Auto, Bluetooth) also gets Like and Shuffle. */
+        override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                .add(LIKE_COMMAND)
+                .add(SHUFFLE_COMMAND)
+                .build()
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(commands)
+                .setMediaButtonPreferences(mediaButtons())
+                .build()
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            val player = session.player
+            when (customCommand.customAction) {
+                ACTION_LIKE -> player.currentMediaItem?.toSong()?.let { song ->
+                    LibraryStore.setLiked(song, !LibraryStore.isLiked(song.videoId))
+                }
+                ACTION_SHUFFLE -> player.shuffleModeEnabled = !player.shuffleModeEnabled
+                else -> return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+            }
+            refreshButtons()
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+        }
+
+        /**
+         * "Resume" from the system's media controls or a Bluetooth play button
+         * when the app isn't running: the queue saved last time, where it was.
+         */
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            isForPlayback: Boolean,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val saved = QueueStore.load()
+                ?: return Futures.immediateFailedFuture(UnsupportedOperationException("Nothing to resume"))
+            val items = saved.songs.map { it.toSong().toMediaItem() }
+            if (items.isEmpty()) return Futures.immediateFailedFuture(UnsupportedOperationException("Nothing to resume"))
+            return Futures.immediateFuture(
+                MediaSession.MediaItemsWithStartPosition(items, saved.index.coerceIn(items.indices), saved.positionMs.coerceAtLeast(0)),
+            )
+        }
+
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+        ): ListenableFuture<MutableList<MediaItem>> = Futures.immediateFuture(
+            mediaItems.map(car::toQueueItem).toMutableList(),
+        )
+
+        override fun onSetMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+            startIndex: Int,
+            startPositionMs: Long,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
+            car.resolve(mediaItems, startIndex, startPositionMs)
+        }
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<MediaItem>> = Futures.immediateFuture(
+            LibraryResult.ofItem(car.root(), LibraryParams.Builder().setExtras(car.rootExtras()).build()),
+        )
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String,
+        ): ListenableFuture<LibraryResult<MediaItem>> = Futures.immediateFuture(
+            car.item(mediaId)?.let { LibraryResult.ofItem(it, null) } ?: LibraryResult.ofError(SessionError.ERROR_BAD_VALUE),
+        )
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
+            try {
+                LibraryResult.ofItemList(car.children(parentId, browser).page(page, pageSize), params)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Couldn't list $parentId for ${browser.packageName}", e)
+                LibraryResult.ofError(SessionError.ERROR_IO)
+            }
+        }
+
+        override fun onSearch(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<Void>> = scope.future {
+            val count = runCatching { car.search(query, browser).also { searchResults[query] = it }.size }
+                .onFailure { Log.w(TAG, "Search failed for ${browser.packageName}", it) }
+                .getOrDefault(0)
+            session.notifySearchResultChanged(browser, query, count, params)
+            LibraryResult.ofVoid()
+        }
+
+        override fun onGetSearchResult(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
+            val items = searchResults[query] ?: runCatching { car.search(query, browser) }.getOrDefault(emptyList())
+            LibraryResult.ofItemList(items.page(page, pageSize), params)
+        }
+    }
+
+    /** Like (heart) and Shuffle, as the notification and Android Auto show them now. */
+    private fun mediaButtons(): List<CommandButton> {
+        val player = mediaSession?.player
+        val liked = player?.currentMediaItem?.mediaId?.let(LibraryStore::isLiked) == true
+        val shuffle = player?.shuffleModeEnabled == true
+        return listOf(
+            CommandButton.Builder(if (liked) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED)
+                .setDisplayName(if (liked) "Remove from Liked" else "Like")
+                .setSessionCommand(LIKE_COMMAND)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
+                .build(),
+            CommandButton.Builder(if (shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
+                .setDisplayName(if (shuffle) "Shuffle off" else "Shuffle on")
+                .setSessionCommand(SHUFFLE_COMMAND)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
+                .build(),
+        )
+    }
+
+    private fun refreshButtons() {
+        mediaSession?.setMediaButtonPreferences(mediaButtons())
+        com.opentune.data.AppHooks.onPlayerChanged(this, mediaSession?.player)
+    }
+
+    /** The last browser search's results, between onSearch and onGetSearchResult. */
+    private val searchResults = object : LinkedHashMap<String, List<MediaItem>>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<MediaItem>>?) = size > 4
+    }
+
+    private fun List<MediaItem>.page(page: Int, pageSize: Int): List<MediaItem> =
+        if (pageSize <= 0 || pageSize == Int.MAX_VALUE) this else drop(page * pageSize).take(pageSize)
+
+    private val playerListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+                for (i in 0 until player.mediaItemCount) sessionIds += player.getMediaItemAt(i).mediaId
+                // Songs added after the current one started (radio, Play next) get readied too.
+                prefetchAhead()
+            }
+            if (events.containsAny(
+                    Player.EVENT_MEDIA_ITEM_TRANSITION,
+                    Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED,
+                    Player.EVENT_IS_PLAYING_CHANGED,
+                    Player.EVENT_MEDIA_METADATA_CHANGED,
+                )
+            ) {
+                refreshButtons()
+            }
+            if (events.containsAny(
+                    Player.EVENT_MEDIA_ITEM_TRANSITION,
+                    Player.EVENT_TIMELINE_CHANGED,
+                    Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED,
+                    Player.EVENT_REPEAT_MODE_CHANGED,
+                    // Asked again as playback starts and ends, in case an earlier ask came to nothing.
+                    Player.EVENT_PLAYBACK_STATE_CHANGED,
+                )
+            ) {
+                extendQueueIfNeeded()
+                warmNeighbours()
+            }
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            refreshArtistCredit(mediaItem)
+            // The same song put onto its better stream: the swap that did it is
+            // still running, waiting to bring the volume back up. A new upgrade
+            // check here used to cancel it and leave every song after silent.
+            val swap = mediaItem != null && mediaItem.mediaId == swappingTo
+            // A quality switch says what's playing once the new stream really is (see swapToUpgrade).
+            if (!swap) updateExternalStats()
+            applyLoudness()
+            if (!swap) scheduleUpgrade()
+            if (!swap) prefetchAhead()
+            // After this callback, not inside it: the queue changes under it otherwise.
+            if (!swap) scope.launch(Dispatchers.Main) { dropPlayedHandQueued() }
+            // Nothing but a blend or a swap turns the main player down; outside
+            // one, a new song always starts at full level.
+            (mediaSession?.player as? ExoPlayer)?.let { p ->
+                if (!swap && !swapRamping && crossfade?.blending != true && p.volume < 1f) {
+                    Log.w(TAG, "Player volume was left at ${p.volume}; back to full")
+                    p.volume = 1f
+                }
+            }
+            watchSegments(mediaItem)
+            // A podcast episode, or anything else much longer than a song, picks up where it was left.
+            mediaItem?.mediaId?.let { Podcasts.resumeAt(it) ?: com.opentune.data.library.ResumePoints.resumeAt(it) }?.let { at ->
+                mediaSession?.player?.takeIf { it.currentPosition < RESUME_SLACK_MS }?.seekTo(at)
+            }
+            // The same song on a better stream is not a new listen.
+            if (mediaItem != null && mediaItem.mediaId == swappingTo) {
+                swappingTo = null
+                return
+            }
+            finishListen()
+            startListen(mediaItem?.toSong(), mediaSession?.player?.isPlaying == true)
+            // Only time starts meant to sound now, not a skip made while paused.
+            startRequestedAt = if (mediaSession?.player?.playWhenReady == true) SystemClock.elapsedRealtime() else 0L
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            mediaSession?.player?.let { watchPlayed(it, isPlaying) }
+            if (!isPlaying) mediaSession?.player?.let(::saveEpisodePosition)
+            if (isPlaying && startRequestedAt > 0) {
+                NerdStats.onStartup(SystemClock.elapsedRealtime() - startRequestedAt)
+                startRequestedAt = 0
+            }
+            if (isPlaying) {
+                sendNowPlaying()
+                if (listenSince < 0) listenSince = SystemClock.elapsedRealtime()
+            } else {
+                pauseListen()
+            }
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            watchStall(playbackState)
+            if (playbackState == Player.STATE_READY) {
+                updateExternalStats()
+                // The figure arrives with the stream; on a first play it's
+                // only known once the track has resolved.
+                applyLoudness()
+                if (mediaSession?.player?.currentMediaItem?.localConfiguration?.uri?.let(::startupToken) != null && upgradeJob?.isActive != true) scheduleUpgrade()
+            }
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            val format = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }
+                ?.let { g -> (0 until g.length).firstOrNull(g::isTrackSelected)?.let(g::getTrackFormat) } ?: return
+            val item = mediaSession?.player?.currentMediaItem
+            val rendition = item?.localConfiguration?.uri?.let(::externalStreamKeyOf)?.let { ExternalStreams.get(item.mediaId, it) }
+            // During a replacement the tracks callback can still describe the old AAC/Opus
+            // period. awaitUpgradeReady owns validation until the new decoder is ready.
+            if (!swapRamping && swappingTo != item?.mediaId && rendition?.addonId != null && format.sampleMimeType != null &&
+                format.sampleMimeType !in setOf("audio/flac", "audio/alac", "audio/raw")) {
+                val rejectedItem = item ?: return
+                val rejectedUri = rejectedItem.localConfiguration?.uri
+                scope.launch {
+                    val active = mediaSession?.player as? ExoPlayer ?: return@launch
+                    if (swapRamping || swappingTo == rejectedItem.mediaId || active.currentMediaItem?.localConfiguration?.uri != rejectedUri) return@launch
+                    val codec = active.audioFormat?.sampleMimeType ?: return@launch
+                    if (active.playbackState != Player.STATE_READY || upgradeFormatReady(true, codec)) return@launch
+                    recover(PlaybackException("Add-on returned a lossy track for a lossless request", null,
+                        PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED))
+                }
+                return
+            }
+            // The DAC follows the song's rate by itself: it's set as each song's output opens.
+        }
+
+        override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            loudnessEnhancer?.release()
+            loudnessEnhancer = null
+            openEffectSession(audioSessionId)
+            applyLoudness()
+        }
+
+        /** A radio station names the song on air (ICY); shown as the station's second line. */
+        override fun onMetadata(metadata: androidx.media3.common.Metadata) {
+            val player = mediaSession?.player ?: return
+            val item = player.currentMediaItem ?: return
+            if (!Radio.isRadio(item.mediaId)) return
+            val onAir = (0 until metadata.length()).firstNotNullOfOrNull { i ->
+                (metadata[i] as? androidx.media3.extractor.metadata.icy.IcyInfo)?.title?.trim()?.takeIf { it.isNotEmpty() }
+            } ?: return
+            if (item.mediaMetadata.artist?.toString() == onAir) return
+            // Same URI, so ExoPlayer updates the item in place without rebuffering.
+            player.replaceMediaItem(
+                player.currentMediaItemIndex,
+                item.buildUpon().setMediaMetadata(item.mediaMetadata.buildUpon().setArtist(onAir).build()).build(),
+            )
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            val item = mediaSession?.player?.currentMediaItem
+            val external = item?.localConfiguration?.uri?.let(::externalStreamKeyOf) != null
+            if (external) Log.e(TAG, "External playback failed: ${error.errorCodeName}")
+            else Log.e(TAG, "Playback error on ${item?.mediaId}: ${error.errorCodeName}", error)
+            recover(error)
+        }
+    }
+
+    // ---- Listening history ---------------------------------------------------
+
+    private var listenSong: Song? = null
+    @Volatile private var historyGeneration = 0L
+    private var historyWork = SupervisorJob(scope.coroutineContext[Job])
+    private var youtubeListen: com.opentune.data.history.YouTubeHistorySession? = null
+    private var youtubeReport: Job? = null
+    private var youtubeSyncStartMs = 0L
+
+    private fun resetAccountSync() {
+        youtubeSyncStartMs = listenedSoFar()
+        val generation = historyGeneration
+        youtubeListen = listenSong?.let { com.opentune.data.history.YouTubeHistory.session(it.videoId) { historyGeneration == generation } }
+        youtubeReport = null
+    }
+    private var listenedMs = 0L
+    private var listenSince = -1L
+    private var listenRecord: Long? = null
+    private var listenDuration: Long? = null
+
+    private fun startListen(song: Song?, playing: Boolean) {
+        // A radio station isn't a song: it stays out of history and scrobbles.
+        listenSong = song?.takeUnless { Radio.isRadio(it.videoId) }
+        val generation = historyGeneration
+        youtubeListen = listenSong?.let { com.opentune.data.history.YouTubeHistory.session(it.videoId) { historyGeneration == generation } }
+        youtubeReport = null
+        youtubeSyncStartMs = 0
+        listenedMs = 0
+        listenSince = if (playing) SystemClock.elapsedRealtime() else -1
+        listenRecord = null
+        listenDuration = mediaSession?.player?.duration?.takeIf { it > 0 }
+        listenStartedAt = System.currentTimeMillis()
+        scrobbled = false
+        nowPlayingSent = false
+        if (playing) sendNowPlaying()
+    }
+
+    /** Wall-clock start of the current listen, for the scrobble's timestamp. */
+    private var listenStartedAt = 0L
+    private var scrobbled = false
+    private var nowPlayingSent = false
+
+    private fun sendNowPlaying() {
+        val song = listenSong ?: return
+        if (nowPlayingSent) return
+        nowPlayingSent = true
+        val duration = mediaSession?.player?.duration?.takeIf { it > 0 } ?: 0L
+        LastFm.nowPlaying(song, duration)
+        ListenBrainz.playingNow(song, duration)
+        if (Subsonic.isSubsonic(song.videoId)) scope.launch { Subsonic.scrobble(song.videoId, System.currentTimeMillis(), submission = false) }
+    }
+
+    private fun pauseListen() {
+        if (listenSince >= 0) listenedMs += SystemClock.elapsedRealtime() - listenSince
+        listenSince = -1
+    }
+
+    private fun listenedSoFar(): Long =
+        listenedMs + if (listenSince >= 0) SystemClock.elapsedRealtime() - listenSince else 0
+
+    private fun finishListen(report: Boolean = true) {
+        val heard = listenedSoFar()
+        listenRecord?.let { History.updateListened(it, heard) }
+        listenRecord = null
+        val session = youtubeListen
+        val duration = listenDuration
+        val syncHeard = (heard - youtubeSyncStartMs).coerceAtLeast(0)
+        if (report && session != null && !AppSettings.playback.value.pauseListeningHistory) {
+            scope.launch(historyWork + Dispatchers.IO) { session.heard(syncHeard, duration, final = true) }
+        }
+        youtubeListen = null
+    }
+
+    /** Keeps a podcast episode's place, or that of anything as long as one, so it resumes there. */
+    private fun saveEpisodePosition(player: Player) {
+        val id = player.currentMediaItem?.mediaId ?: return
+        val duration = player.duration.takeIf { it > 0 } ?: 0L
+        if (Podcasts.isEpisode(id)) Podcasts.savePosition(id, player.currentPosition, duration)
+        else com.opentune.data.library.ResumePoints.save(id, player.currentPosition, duration)
+    }
+
+    /** A track counts as played after 30 seconds, or half its length if shorter. */
+    private suspend fun trackListening(player: Player) {
+        var ticks = 0
+        while (scope.isActive) {
+            delay(5_000)
+            if (player.isPlaying && ++ticks % 3 == 0) saveEpisodePosition(player)
+            val song = listenSong ?: continue
+            val heard = listenedSoFar()
+            val known = player.duration.takeIf { it > 0 }
+            listenDuration = known
+            val session = youtubeListen
+            if (session != null && youtubeReport?.isActive != true && player.isPlaying) {
+                val syncHeard = (heard - youtubeSyncStartMs).coerceAtLeast(0)
+                youtubeReport = scope.launch(historyWork + Dispatchers.IO) { session.heard(syncHeard, known) }
+            }
+            // Last.fm's rule: a song over 30 s, heard for half its length or 4 minutes.
+            if (!scrobbled && known != null && known > 30_000 && heard >= minOf(known / 2, 240_000L)) {
+                scrobbled = true
+                LastFm.scrobble(song, listenStartedAt, known)
+                ListenBrainz.listened(song, listenStartedAt, known)
+                if (Subsonic.isSubsonic(song.videoId)) scope.launch { Subsonic.scrobble(song.videoId, listenStartedAt, submission = true) }
+            }
+            if (listenRecord != null) continue
+            val duration = known ?: Long.MAX_VALUE
+            val threshold = minOf(30_000L, duration / 2)
+            if (heard >= threshold) {
+                listenRecord = History.record(song, heard)
+                com.opentune.data.Usage.played()
+            }
+        }
+    }
+
+    // ---- Loudness ----------------------------------------------------------------
+
+    private var crossfade: Crossfade? = null
+
+    private var loudnessEnhancer: LoudnessEnhancer? = null
+    private var loudnessSession = C.AUDIO_SESSION_ID_UNSET
+
+    /**
+     * Loudness normalization the way YouTube does it: one fixed gain per
+     * track, from YouTube's own measurement of that track ([StreamResolver.loudnessDbFor]),
+     * applied with the platform's LoudnessEnhancer. Loud masters come down to
+     * the reference and quiet ones come up a little (at most +3 dB), with no
+     * pumping and nothing touching the peaks in between. Without a figure, or
+     * with the setting off, the gain is zero and the effect is off.
+     */
+    /**
+     * Tells the system a music session is open, so the phone's own sound
+     * effects (Dolby Atmos, Samsung's SoundAlive and Adapt Sound, the system
+     * equalizer and similar) attach to this app the way they do to the stock
+     * players. Without this many phones leave OpenTune unprocessed and it
+     * sounds flatter and quieter next to other apps.
+     */
+    private var effectSession = C.AUDIO_SESSION_ID_UNSET
+
+    private fun openEffectSession(session: Int) {
+        PhoneEqualizer.session = session
+        if (!AppSettings.playback.value.systemEffects || BitPerfectUsb.active) return closeEffectSession()
+        if (session == C.AUDIO_SESSION_ID_UNSET || session == effectSession) return
+        closeEffectSession()
+        effectSession = session
+        sendBroadcast(
+            Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION)
+                .putExtra(AudioEffect.EXTRA_AUDIO_SESSION, session)
+                .putExtra(AudioEffect.EXTRA_PACKAGE_NAME, packageName)
+                .putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC),
+        )
+    }
+
+    private fun closeEffectSession() {
+        if (effectSession == C.AUDIO_SESSION_ID_UNSET) return
+        sendBroadcast(
+            Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION)
+                .putExtra(AudioEffect.EXTRA_AUDIO_SESSION, effectSession)
+                .putExtra(AudioEffect.EXTRA_PACKAGE_NAME, packageName),
+        )
+        effectSession = C.AUDIO_SESSION_ID_UNSET
+    }
+
+    private var loudnessRetry: Job? = null
+
+    private fun applyLoudness() {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val session = player.audioSessionId
+        if (session == C.AUDIO_SESSION_ID_UNSET) return
+        openEffectSession(session)
+        val id = player.currentMediaItem?.mediaId
+        val rawUri = player.currentMediaItem?.localConfiguration?.uri
+        val pendingSelection = rawUri?.let(::startupToken)?.let { startupSelections[it]?.selected == null } == true
+        val lossless = rawUri?.let(::selectedUri)?.let(::externalStreamKeyOf) != null
+        // YouTube's gain belongs to its own master, not the external FLAC.
+        val db = if (lossless) null else id?.let { StreamResolver.loudnessDbFor(it) ?: Downloads.loudnessFor(it) }
+        // A track playing from the cache never resolved, so its figure may not
+        // be known yet. Look it up once, a moment in, then apply it.
+        loudnessRetry?.cancel()
+        if (!lossless && !pendingSelection && db == null && id != null && isYouTubeId(id) && AppSettings.playback.value.loudnessNormalization) {
+            loudnessRetry = scope.launch {
+                delay(LOUDNESS_RETRY_MS)
+                withContext(Dispatchers.IO) { runCatching { StreamResolver.resolve(id) } }
+                if (player.currentMediaItem?.mediaId == id && StreamResolver.loudnessDbFor(id) != null) applyLoudness()
+            }
+        }
+        // On the phone's own speaker, levelling only takes the loud masters
+        // down, and a small speaker needs every dB; there it waits for headphones.
+        val pb = AppSettings.playback.value
+        val speakerHold = pb.loudnessNormalization && !pb.normalizeOnSpeaker && onPhoneSpeaker()
+        NerdStats.onLoudnessOffOnSpeaker(speakerHold)
+        val on = pb.loudnessNormalization && db != null && !BitPerfectUsb.active
+        val enhancer = loudnessEnhancer?.takeIf { loudnessSession == session }
+            ?: runCatching { LoudnessEnhancer(session) }
+                .onFailure { Log.w(TAG, "LoudnessEnhancer unavailable", it) }
+                .getOrNull()
+                ?.also {
+                    loudnessEnhancer?.release()
+                    loudnessEnhancer = it
+                    loudnessSession = session
+                }
+            ?: return
+        runCatching {
+            if (on) {
+                val gainMb = (loudnessGainDb(db!!, pb.volumeLevel, speakerHold) * 100).roundToInt().coerceIn(MIN_LOUDNESS_GAIN_MB, MAX_LOUDNESS_GAIN_MB)
+                enhancer.setTargetGain(gainMb)
+                enhancer.enabled = true
+                NerdStats.onLoudnessGain(gainMb / 100f)
+            } else {
+                enhancer.setTargetGain(0)
+                enhancer.enabled = false
+                NerdStats.onLoudnessGain(null)
+            }
+        }.onFailure { Log.w(TAG, "Couldn't apply loudness gain", it) }
+    }
+
+    private val artistCredits = LinkedHashMap<String, com.opentune.data.model.Song>()
+    private var artistCreditJob: Pair<String, Job>? = null
+
+    /** Repair compilation placeholders using the watch entry for the same video, never a title guess. */
+    private fun refreshArtistCredit(item: MediaItem?) {
+        val id = item?.mediaId
+        if (id != null && artistCreditJob?.let { it.first == id && it.second.isActive } == true) return
+        artistCreditJob?.second?.cancel()
+        if (item == null || id == null || !isYouTubeId(id) ||
+            !com.opentune.data.model.isPlaceholderArtist(item.mediaMetadata.artist?.toString())) return
+        artistCreditJob = id to scope.launch {
+            // A metadata replacement must happen outside the player's transition callback.
+            kotlinx.coroutines.yield()
+            val credit = artistCredits[id] ?: try {
+                com.opentune.data.MusicRepository.watchQueue(id).firstOrNull {
+                    it.videoId == id && !com.opentune.data.model.isPlaceholderArtist(it.artist)
+                }?.also {
+                    if (artistCredits.size >= 128) artistCredits.remove(artistCredits.keys.first())
+                    artistCredits[id] = it
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) { null } ?: return@launch
+            val player = mediaSession?.player ?: return@launch
+            val current = player.currentMediaItem?.takeIf { it.mediaId == id } ?: return@launch
+            val corrected = current.withTrackArtistCredit(credit)
+            if (corrected !== current) player.replaceMediaItem(player.currentMediaItemIndex, corrected)
+        }
+    }
+
+    // ---- Quality upgrade -----------------------------------------------------------
+
+    private var upgradeJob: Job? = null
+
+    /** The song being swapped onto its better stream; its transition isn't a new listen. */
+    private var swappingTo: String? = null
+
+    /**
+     * As each song starts, looks for a better stream (a verified FLAC from the
+     * add-ons, JioSaavn, or [StreamResolver.findUpgrade]) and swaps to it in
+     * place once the song is sounding with a little buffered, so the search
+     * runs alongside the start rather than after it. Also run from the
+     * player's menu.
+     */
+    private fun scheduleUpgrade(
+        force: Boolean = false,
+        /** Asked for from the menu: "upgrading" shows and the outcome is told. A forced search after the add-ons change isn't. */
+        asked: Boolean = force,
+        /** Another go at a song already tried: it works in the background, without "upgrading". */
+        quiet: Boolean = false,
+    ) {
+        upgradeJob?.cancel()
+        NerdStats.onUpgrade(null)
+        if (!force && !AppSettings.playback.value.qualityUpgrade && !ExternalStreams.allowed()) return
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val item = player.currentMediaItem ?: return
+        val uri = item.localConfiguration?.uri ?: return
+        val id = videoIdOf(uri) ?: return
+        fun alreadyExternal(): Boolean {
+            val key = externalStreamKeyOf(selectedUri(uri)) ?: return false
+            // Only a stream known to be lossless: one no longer on record used to count too,
+            // and its song was never upgraded.
+            return ExternalStreams.get(id, key)?.lossless == true
+        }
+        if (alreadyExternal() && !force) return
+        // The search and its handoff are one upgrade; don't hide the pending FLAC
+        // lookup merely because the intermediate JioSaavn handoff completed.
+        upgradeAsked = asked
+        if (asked || (!quiet && ExternalStreams.allowed(true))) NerdStats.onUpgrade(id)
+        // Asked for from the menu: say how it went, whatever the outcome.
+        fun tell(message: String) { if (asked) PlaybackRequests.report(message) }
+        fun swapped(ok: Boolean) = tell(
+            if (ok) "Switched to ${ExternalStreams.selectionDetail(id) ?: NerdStats.externalSource.value ?: "a better stream"}"
+            else "The better stream didn't load in time, so this one keeps playing",
+        )
+        /**
+         * Before a swap: the song is playing with some of it buffered, so the
+         * second stream's fetch doesn't hold up the first one's start. Paused,
+         * or slow to start, it goes ahead after a while anyway.
+         */
+        suspend fun started() {
+            if (asked) return
+            kotlinx.coroutines.withTimeoutOrNull(UPGRADE_START_WAIT_MS) {
+                while (!(player.isPlaying && player.currentPosition >= UPGRADE_SETTLE_MS && player.totalBufferedDuration >= UPGRADE_BUFFERED_MS)) delay(50)
+            }
+        }
+        upgradeJob = scope.launch {
+            val startup = startupToken(uri)?.let { startupSelections[it] }
+            if (startup != null && startup.selected == null) {
+                if (kotlinx.coroutines.withTimeoutOrNull(30_000) {
+                    while (startup.selected == null) delay(100)
+                    true
+                } != true) return@launch
+            }
+            if (alreadyExternal() && !force) return@launch
+            val duration = player.duration.takeIf { it > 0 } ?: item.toSong().durationMillis()
+            // The FLAC search (every add-on at once) and JioSaavn go out together, and
+            // whichever answers first is acted on. JioSaavn usually does and is played
+            // while the FLAC is still being verified; a verified FLAC then takes over,
+            // so a lossy stream found first never keeps a lossless one from playing,
+            // and a FLAC found first doesn't wait for JioSaavn at all.
+            val flac = if (Podcasts.isEpisode(id)) null else async {
+                ExternalStreams.find(item.toSong(), duration, force = force,
+                    beforePlayback = AppSettings.effectiveAudioQuality == com.opentune.data.settings.AudioQuality.MAX,
+                    losslessOnly = true)
+            }
+            // A slow startup lookup can finish here without delaying audible playback.
+            val saavnSearch = if (!Podcasts.isEpisode(id) && externalStreamKeyOf(selectedUri(uri)) == null)
+                async { ExternalStreams.findJioSaavn(item.toSong(), duration) } else null
+            val flacFirst = flac != null && saavnSearch != null && kotlinx.coroutines.selects.select {
+                flac.onAwait { it != null }
+                saavnSearch.onAwait { false }
+            }
+            val saavn = if (flacFirst) { saavnSearch?.cancel(); null } else saavnSearch?.await()
+            // Give a near-ready FLAC the short grace period already used on main.
+            // YouTube continues playing; a later FLAC can still supersede silent JioSaavn preparation.
+            if (saavn != null && flac != null && !flac.isCompleted) kotlinx.coroutines.withTimeoutOrNull(SAAVN_HOLD_MS) { flac.join() }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            if (player.currentMediaItem?.localConfiguration?.uri != uri) { flac?.cancel(); return@launch }
+            // JioSaavn plays unless a FLAC is already here to play instead; a FLAC search that
+            // finished with nothing is exactly when JioSaavn is wanted.
+            val flacReady = flac != null && flac.isCompleted && flac.getCompleted() != null
+            if (saavn != null && !saavn.lossless && ExternalStreams.allowed(false) && !flacReady) {
+                started()
+                val left = player.duration - player.currentPosition
+                if (player.duration > 0 && left < UPGRADE_MIN_REMAINING_MS) { flac?.cancel(); tell("Too close to the end of the song to switch"); return@launch }
+                if (player.currentMediaItem?.localConfiguration?.uri == uri) swapToUpgrade(player, id, externalStreamUri(id, saavn.key),
+                    superseded = { flac != null && flac.isCompleted && !flac.isCancelled && flac.getCompleted() != null }, quiet = quiet)
+            }
+            var lossless = flac?.await()
+            // Came back empty only because add-ons erred (an HTTP 404 or 502, no answer):
+            // those add-ons alone are asked again within seconds, the ones that answered
+            // left be, and in the background, without "upgrading" coming back each time.
+            var retries = 0
+            while (lossless == null && flac != null && retries < LOSSLESS_RETRY_MS.size && ExternalStreams.missWasTransient(id)) {
+                val wait = LOSSLESS_RETRY_MS[retries++]
+                if (!asked) NerdStats.onUpgrade(null)
+                delay(wait)
+                if (player.currentMediaItem?.mediaId != id) return@launch
+                if (player.duration > 0 && player.duration - player.currentPosition < UPGRADE_MIN_REMAINING_MS + wait) break
+                lossless = ExternalStreams.find(item.toSong(), duration, beforePlayback = AppSettings.effectiveAudioQuality == com.opentune.data.settings.AudioQuality.MAX,
+                    losslessOnly = true)
+            }
+            // A FLAC is in hand, but some add-ons erred: they're asked again meanwhile, and a
+            // better file from one of them takes over through [ExternalStreams.improved].
+            if (lossless != null) retryErredAddons(item.toSong(), duration)
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            // Still this song, maybe now on the JioSaavn stream switched to above.
+            if (player.currentMediaItem?.mediaId != id) return@launch
+            val playing = player.currentMediaItem?.localConfiguration?.uri ?: return@launch
+            updateExternalStats()
+            if (lossless != null && ExternalStreams.allowed(lossless.lossless)) {
+                val existing = externalStreamKeyOf(selectedUri(playing))?.let { ExternalStreams.get(id, it) }
+                if (existing?.lossless == true && com.opentune.data.addons.AddonResolver.qualityScore(lossless.bits, lossless.sampleRate) <=
+                    com.opentune.data.addons.AddonResolver.qualityScore(existing.bits, existing.sampleRate)) { tell("Already playing the best quality there is for this song"); return@launch }
+                // The FLAC bridge prepares its own buffer while the current stream
+                // plays. Do not wait up to six seconds for the lossy buffer first.
+                if (player.currentMediaItem?.mediaId != id) return@launch
+                val left = player.duration - player.currentPosition
+                if (player.duration > 0 && left < UPGRADE_MIN_REMAINING_MS) { tell("Too close to the end of the song to switch"); return@launch }
+                val candidates = ExternalStreams.alternatives(id).ifEmpty { listOf(lossless) }
+                val ok = swapToBestAnswering(player, id, candidates, existing, quiet = quiet || (retries > 0 && !asked))
+                if (!ok && player.currentMediaItem?.mediaId == id) {
+                    ExternalStreams.swapFailed(id, swapNotes.map { (provider, why) -> "$provider: $why" })
+                    updateExternalStats()
+                }
+                swapped(ok)
+                return@launch
+            }
+            if (externalStreamKeyOf(selectedUri(playing)) != null) { tell("Already playing the best quality there is for this song"); return@launch }
+            if (isUpgradedUri(playing)) { tell("Already playing the best quality there is for this song"); return@launch }
+            if (!force && !AppSettings.playback.value.qualityUpgrade) return@launch
+            val found = withContext(Dispatchers.IO) { runCatching { StreamResolver.findUpgrade(id, force) }.getOrDefault(false) }
+            if (player.currentMediaItem?.mediaId != id) return@launch
+            if (!found) { tell("No better stream found; this is the best quality there is for this song"); return@launch }
+            started()
+            if (player.currentMediaItem?.mediaId != id) return@launch
+            val left = player.duration - player.currentPosition
+            if (player.duration > 0 && left < UPGRADE_MIN_REMAINING_MS) { tell("Too close to the end of the song to switch"); return@launch }
+            swapped(swapToUpgrade(player, id))
+        }
+        val currentJob = upgradeJob
+        currentJob?.invokeOnCompletion { if (upgradeJob === currentJob) NerdStats.onUpgrade(null) }
+    }
+
+    /**
+     * The safety net under the upgrade. Every few seconds while a song plays, with nothing
+     * already at work on it: if a better stream is known for it than the one playing, or its
+     * FLAC search never ran or came back empty only because servers erred, the upgrade runs
+     * again, a few times a song at most. Skipping fast, a search cut short, a switch that
+     * didn't load or a fallback all used to leave a song on a lower stream to its end, with
+     * a verified FLAC on record.
+     */
+    private suspend fun guardQuality() {
+        var song: String? = null
+        var tries = 0
+        var lastAt = 0L
+        while (true) {
+            delay(GUARD_EVERY_MS)
+            val player = mediaSession?.player as? ExoPlayer ?: continue
+            val item = player.currentMediaItem ?: continue
+            val id = item.mediaId
+            val now = SystemClock.elapsedRealtime()
+            if (id != song) { song = id; tries = 0; lastAt = now - GUARD_GAP_MS }
+            if (!player.isPlaying || upgradeJob?.isActive == true || swappingTo != null || swapRamping || crossfade?.blending == true) continue
+            if (!isYouTubeId(id) || Podcasts.isEpisode(id)) continue
+            val raw = item.localConfiguration?.uri ?: continue
+            if (raw.scheme == "file") continue
+            if (startupToken(raw) != null && startupToken(raw)?.let { startupSelections[it]?.selected } == null) continue
+            if (player.duration > 0 && player.duration - player.currentPosition < UPGRADE_MIN_REMAINING_MS + GUARD_EVERY_MS) continue
+            if (tries >= GUARD_TRIES) continue
+            val uri = selectedUri(raw)
+            val playing = externalStreamKeyOf(uri)?.let { ExternalStreams.get(id, it) }
+            fun score(r: ExternalStreams.Rendition) = com.opentune.data.addons.AddonResolver.qualityScore(r.bits, r.sampleRate)
+            val better = ExternalStreams.alternatives(id).filter { playing?.lossless != true || score(it) > score(playing) }
+            val known = better.isNotEmpty()
+            // A verified stream needs a handoff, not another catalog search or its retry backoff.
+            if (player.currentPosition < if (known) UPGRADE_SETTLE_MS else GUARD_SETTLE_MS) continue
+            if (now - lastAt < if (known) VERIFIED_RETRY_GAP_MS else GUARD_GAP_MS) continue
+            val wanted = when {
+                ExternalStreams.allowed(true) && playing?.lossless == true -> better.isNotEmpty()
+                ExternalStreams.allowed(true) -> better.isNotEmpty() || ExternalStreams.missWasTransient(id) || !ExternalStreams.losslessSearched(id)
+                ExternalStreams.allowed(false) -> playing == null && !isUpgradedUri(uri) && ExternalStreams.saavnFor(id) != null
+                else -> false
+            }
+            if (!wanted) continue
+            tries++
+            lastAt = now
+            Log.d(TAG, "Quality check for $id: ${if (better.isNotEmpty()) "a better verified stream is known" else "its search came to nothing"}; upgrading again (try $tries)")
+            if (known) {
+                upgradeAsked = false
+                val job = scope.launch {
+                    val switched = swapToBestAnswering(player, id, better, playing, quiet = true)
+                    if (!switched && player.currentMediaItem?.mediaId == id) {
+                        ExternalStreams.swapFailed(id, swapNotes.map { (provider, why) -> "$provider: $why" })
+                    }
+                    updateExternalStats()
+                }
+                upgradeJob = job
+                job.invokeOnCompletion { if (upgradeJob === job) NerdStats.onUpgrade(null) }
+            } else scheduleUpgrade(quiet = true)
+        }
+    }
+
+    /** Whether the song playing is on a verified lossless file that may still be played. */
+    private fun playingAllowedLossless(): Boolean {
+        val item = mediaSession?.player?.currentMediaItem ?: return false
+        val key = item.localConfiguration?.uri?.let(::selectedUri)?.let(::externalStreamKeyOf) ?: return false
+        val rendition = ExternalStreams.get(item.mediaId, key) ?: return false
+        return rendition.lossless && ExternalStreams.allowed(true) && runCatching { ExternalStreams.resolve(item.mediaId, key) }.isSuccess
+    }
+
+    /** The background re-asking of add-ons that erred, for the song it's for; see [retryErredAddons]. */
+    private var erredRetry: Pair<String, kotlinx.coroutines.Job>? = null
+
+    /**
+     * While [song] plays on the file found, the add-ons that erred in its search are
+     * asked again, alone, a few times a little apart, in the background: a better file
+     * from one of them is switched to through [ExternalStreams.improved].
+     */
+    private fun retryErredAddons(song: com.opentune.data.model.Song, duration: Long) {
+        if (!ExternalStreams.hasErred(song.videoId)) return
+        if (erredRetry?.let { it.first == song.videoId && it.second.isActive } == true) return
+        erredRetry?.second?.cancel()
+        erredRetry = song.videoId to scope.launch {
+            for (wait in ERRED_RETRY_MS) {
+                delay(wait)
+                val player = mediaSession?.player as? ExoPlayer ?: return@launch
+                if (player.currentMediaItem?.mediaId != song.videoId) return@launch
+                if (player.duration > 0 && player.duration - player.currentPosition < UPGRADE_MIN_REMAINING_MS) return@launch
+                val asked = runCatching { withContext(Dispatchers.IO) { ExternalStreams.retryErred(song, duration) } }.getOrDefault(true)
+                if (!asked) return@launch
+            }
+        }
+    }
+
+    /**
+     * Finds the better sources for the next [PREFETCH_AHEAD] songs while this
+     * one plays: JioSaavn first, a quick answer that lets the song start on it
+     * at once, then the lossless one, so each starts on the best found (or
+     * swaps to it as soon as it's sounding) instead of waiting for a lookup
+     * after it's begun. Only what's on for this network; local, server and
+     * downloaded songs are left alone.
+     */
+    private fun prefetchAhead() {
+        val lossless = ExternalStreams.allowed(true)
+        val saavn = ExternalStreams.allowed(false)
+        if (!lossless && !saavn) return
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val from = player.currentMediaItemIndex
+        val ahead = (1..PREFETCH_AHEAD).mapNotNull { i -> (from + i).takeIf { it in 0 until player.mediaItemCount } }
+            .map { player.getMediaItemAt(it) }
+            .filter { item ->
+                val id = item.mediaId
+                val uri = item.localConfiguration?.uri
+                isYouTubeId(id) && !Podcasts.isEpisode(id) && uri?.scheme != "file"
+            }
+        val ids = ahead.map { it.mediaId }.distinct()
+        // A song still ahead keeps the lookup it has: each skip used to cancel them all and ask
+        // every add-on again, so skipping a few in a row readied none, and the add-ons, asked
+        // the same over and over, began answering with errors.
+        // The song just skipped to keeps its own too: its upgrade waits on that same search.
+        val current = player.currentMediaItem?.mediaId
+        aheadJobs.keys.filterNot { it in ids || it == current }.forEach { aheadJobs.remove(it)?.cancel() }
+        val fresh = ahead.filter { aheadJobs[it.mediaId]?.isActive != true }.distinctBy { it.mediaId }
+        if (fresh.isEmpty()) return
+        // The FLAC search for the nearest few only: each one asks every add-on and reads the
+        // start of each file it verifies, and five songs' worth at once had the file servers
+        // answering HTTP 429 by the time a song came to play.
+        val near = ahead.take(PREFETCH_LOSSLESS_AHEAD).map { it.mediaId }.toSet()
+        fresh.forEach { item ->
+            aheadJobs[item.mediaId] = scope.launch(Dispatchers.IO) {
+                // Skipping through: a song passed by within a moment is never looked up.
+                delay(PREFETCH_SETTLE_MS)
+                aheadSlots.withPermit { readyAhead(item.toSong(), saavn, lossless && item.mediaId in near) }
+            }
+        }
+    }
+
+    /** The lookups for the songs ahead, by video id; a couple at a time, see [aheadSlots]. */
+    private val aheadJobs = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+    private val aheadSlots = kotlinx.coroutines.sync.Semaphore(PREFETCH_AT_ONCE)
+
+    /**
+     * Gets [song] ready to start in its best quality: JioSaavn first, quick to
+     * answer, then the verified lossless files. Their files aren't read again
+     * here: the search read each one's start to verify it, and reading it once
+     * more for every song ahead only used up the file servers' patience.
+     */
+    private suspend fun readyAhead(song: com.opentune.data.model.Song, saavn: Boolean, lossless: Boolean) {
+        suspend fun attempt(block: suspend () -> Unit) = try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
+        if (saavn) attempt { ExternalStreams.findJioSaavn(song, song.durationMillis()) }
+        if (lossless) attempt { ExternalStreams.find(song, song.durationMillis(), beforePlayback = true, losslessOnly = true) }
+    }
+
+    /**
+     * Moves [id] onto the best of [candidates] (verified files of the same
+     * recording) that actually serves its audio. All of them are pinged at
+     * once; the song moves onto the best that has answered, and again onto a
+     * better one that answers after, so a source that verified but won't
+     * hand over its stream never keeps another from playing. A file whose
+     * stream doesn't load is passed over for the next. True if it moved at all.
+     */
+    private suspend fun swapToBestAnswering(
+        player: ExoPlayer,
+        id: String,
+        candidates: List<ExternalStreams.Rendition>,
+        current: ExternalStreams.Rendition?,
+        quiet: Boolean = false,
+    ): Boolean {
+        // A verified file whose stream didn't load in time often does a few seconds later, once
+        // its server has it ready: tried again soon, in the background, rather than left till the next song.
+        swapNotes.clear()
+        repeat(SWAP_ROUNDS) { round ->
+            if (round > 0) {
+                if (!upgradeAsked) NerdStats.onUpgrade(null)
+                delay(SWAP_ROUND_GAP_MS)
+                if (player.currentMediaItem?.mediaId != id) return false
+                if (player.duration > 0 && player.duration - player.currentPosition < UPGRADE_MIN_REMAINING_MS) return false
+            }
+            if (swapRound(player, id, candidates, current, quiet || round > 0)) return true
+        }
+        return false
+    }
+
+    private suspend fun swapRound(
+        player: ExoPlayer,
+        id: String,
+        candidates: List<ExternalStreams.Rendition>,
+        current: ExternalStreams.Rendition?,
+        quiet: Boolean,
+    ): Boolean = kotlinx.coroutines.coroutineScope {
+        fun score(r: ExternalStreams.Rendition) = com.opentune.data.addons.AddonResolver.qualityScore(r.bits, r.sampleRate)
+        var playing = if (current?.lossless == true) score(current) else -1L
+        val upgrades = candidates.filter { score(it) > playing || current?.lossless != true }
+        if (upgrades.isEmpty()) return@coroutineScope false
+        val answers = kotlinx.coroutines.channels.Channel<ExternalStreams.Rendition?>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+        val pings = upgrades.map { r ->
+            launch(Dispatchers.IO) {
+                // Verified moments ago, its server is known to answer: loaded at once, not read again first.
+                val failure = if (ExternalStreams.verifiedRecently(r)) null else pingFailure(ExternalStreams.urlOf(r))
+                if (failure != null) swapNotes[r.provider] = failure
+                answers.send(r.takeIf { failure == null })
+            }
+        }
+        var waiting = pings.size
+        var moved = false
+        val pending = mutableListOf<ExternalStreams.Rendition>()
+        fun take(r: ExternalStreams.Rendition?) { waiting--; if (r != null) pending += r }
+        try {
+            while (true) {
+                if (pending.isEmpty()) {
+                    if (waiting == 0) break
+                    take(answers.receive())
+                }
+                // Whatever else has answered meanwhile is weighed too: the best of them goes first.
+                while (true) {
+                    val more = answers.tryReceive()
+                    if (!more.isSuccess) break
+                    take(more.getOrNull())
+                }
+                val best = pending.maxByOrNull(::score) ?: continue
+                pending.remove(best)
+                if (moved && score(best) <= playing) { pending.clear(); continue }
+                if (player.currentMediaItem?.mediaId != id) break
+                if (player.duration > 0 && player.duration - player.currentPosition < UPGRADE_MIN_REMAINING_MS) break
+                if (swapToUpgrade(player, id, externalStreamUri(id, best.key), quiet = quiet)) {
+                    moved = true
+                    playing = score(best)
+                    updateExternalStats()
+                    pending.removeAll { score(it) <= playing }
+                } else {
+                    swapNotes[best.provider] = loadFailure ?: "its stream didn't load"
+                    Log.w(TAG, "${best.provider}'s stream for $id didn't load (${swapNotes[best.provider]}); trying the next verified source")
+                }
+            }
+        } finally {
+            pings.forEach { it.cancel() }
+        }
+        moved
+    }
+
+    /** Why [url] couldn't be read from, or null when its start came back. */
+    private suspend fun pingFailure(url: String): String? = try {
+        when (kotlinx.coroutines.withTimeoutOrNull(PING_LIMIT_MS) { com.opentune.data.addons.AddonHttp.bytes(url, PING_BYTES, true).isNotEmpty() }) {
+            true -> null
+            false -> "its file came back empty"
+            null -> "its server didn't answer in ${PING_LIMIT_MS / 1000} s"
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+    catch (e: com.opentune.data.addons.AddonHttp.Failure) { "its server answered HTTP ${e.status}" }
+    catch (_: Exception) { "its server couldn't be reached" }
+
+    /** Why each verified source a switch tried didn't take, by provider, for the pipeline report. */
+    private val swapNotes = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** Why the last stream [prebuffer] or the bridge tried didn't load. */
+    private var loadFailure: String? = null
+
+    /** What went wrong on [p], which was asked to load from [from]: an error, or how little arrived in time. */
+    private fun whyNotLoaded(p: ExoPlayer, from: Long): String {
+        val error = p.playerError
+        if (error != null) {
+            var cause: Throwable? = error
+            while (cause != null) {
+                if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) return "its server answered HTTP ${cause.responseCode}"
+                cause = cause.cause
+            }
+            return "playback error (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})"
+        }
+        if (p.playbackState == Player.STATE_ENDED) return "its stream ended as soon as it started"
+        val got = (p.bufferedPosition - from).coerceAtLeast(0L) / 1000
+        return "only ${got}s of audio arrived in ${AUDITION_TIMEOUT_MS / 1000}s"
+    }
+
+    /** Builds the silent player [prebuffer] loads an upgrade with; set in [onCreate]. */
+    private var auditionPlayer: (() -> ExoPlayer)? = null
+
+    /**
+     * Loads [item] on a silent player from a little ahead of where [main] is,
+     * until enough past [main]'s position is fetched to cover the swap, so the
+     * swapped-in stream plays from the cache rather than the network. False
+     * when the stream fails, ends, or doesn't fill in time: then there's no swap.
+     */
+    private suspend fun prebuffer(main: ExoPlayer, item: MediaItem, superseded: () -> Boolean): Boolean {
+        val make = auditionPlayer ?: return true
+        val audition = make()
+        loadFailure = null
+        val from = main.currentPosition + AUDITION_LEAD_MS
+        return try {
+            audition.setMediaItem(item)
+            audition.seekTo(from)
+            audition.prepare()
+            val result = kotlinx.coroutines.withTimeoutOrNull(AUDITION_TIMEOUT_MS) {
+                awaitUpgradeBuffer(
+                    superseded = superseded,
+                    invalid = { audition.playerError != null || audition.playbackState == Player.STATE_ENDED || main.currentMediaItem?.mediaId != item.mediaId },
+                    ready = {
+                        val covered = audition.bufferedPosition >= main.currentPosition + AUDITION_AHEAD_MS ||
+                            (audition.duration > 0 && audition.bufferedPosition >= audition.duration - 500)
+                        audition.playbackState == Player.STATE_READY && covered
+                    },
+                )
+            }
+            (result == UpgradeBufferResult.READY).also {
+                if (!it && result != UpgradeBufferResult.SUPERSEDED && main.currentMediaItem?.mediaId == item.mediaId) loadFailure = whyNotLoaded(audition, from)
+            }
+        } finally {
+            audition.release()
+            // Let the cache's lock on what it wrote go before the main player reads it.
+            delay(250)
+        }
+    }
+
+    /** Moves [player]'s volume to [to] over [ms], in small steps. */
+    private suspend fun rampVolume(player: ExoPlayer, to: Float, ms: Long) {
+        val from = player.volume
+        val steps = 8
+        for (i in 1..steps) {
+            player.volume = from + (to - from) * i / steps
+            delay(ms / steps)
+        }
+    }
+
+    /**
+     * Swaps the playing song onto its better stream without a stall: the new
+     * stream is fetched ahead by [prebuffer], the volume dips for a moment to
+     * hide the seam, and the song carries on from where it was. Returns
+     * whether it swapped.
+     */
+    private suspend fun swapToUpgrade(
+        player: ExoPlayer, id: String, uri: android.net.Uri = youtubeFallbackUri(id, upgraded = true),
+        superseded: () -> Boolean = { false },
+        /** A background retry: the switch happens without "upgrading" showing. */
+        quiet: Boolean = false,
+    ): Boolean {
+        if (superseded()) return false
+        if (!quiet) NerdStats.onUpgrade(id)
+        return try {
+            // Done: a note from an earlier try that it couldn't be is no longer true.
+            switchStream(player, id, uri, superseded).also { if (it) ExternalStreams.swapSucceeded(id) }
+        } finally {
+            if (!upgradeAsked && upgradeJob?.isActive != true) NerdStats.onUpgrade(null)
+        }
+    }
+
+    /** Whether the running upgrade was asked for from the menu, so "upgrading" stays up through all of it. */
+    private var upgradeAsked = false
+
+    /** What [uri] plays, for the log: the external source's label, or YouTube's better stream. */
+    private fun streamName(id: String, uri: android.net.Uri): String =
+        externalStreamKeyOf(uri)?.let { ExternalStreams.get(id, it)?.label } ?: "YouTube's better stream"
+
+    private suspend fun switchStream(player: ExoPlayer, id: String, uri: android.net.Uri, superseded: () -> Boolean): Boolean {
+        Log.d(TAG, "Switching $id to ${streamName(id, uri)}${if (player.isPlaying) "" else " (not playing yet, so without the bridge)"}")
+        val index = player.currentMediaItemIndex
+        val item = player.currentMediaItem?.takeIf { it.mediaId == id } ?: return false
+        item.localConfiguration?.uri?.let(::selectedUri)?.let { beforeSwap = id to it }
+        val next = item.buildUpon().setUri(uri).setMimeType(externalStreamKeyOf(uri)?.let { ExternalStreams.get(id, it)?.mimeType }).build()
+        loadFailure = null
+        return performUpgradeHandoff(
+            bridge = {
+                if (player.isPlaying && !BitPerfectUsb.active) bridgedSwap(player, index, id, next, superseded)
+                else UpgradeBridgeResult.UNAVAILABLE
+            },
+            stillCurrent = {
+                !superseded() && player.currentMediaItemIndex == index && player.currentMediaItem?.mediaId == id &&
+                    player.currentMediaItem?.localConfiguration?.uri == item.localConfiguration?.uri && crossfade?.blending != true
+            },
+            prebuffer = { prebuffer(player, next, superseded) },
+            replace = { replaceUpgrade(player, index, id, next) },
+        )
+    }
+
+    private suspend fun replaceUpgrade(player: ExoPlayer, index: Int, id: String, next: MediaItem): Boolean {
+        val original = player.currentMediaItem ?: return false
+        // The queue may have moved on, or a blend begun, while it loaded.
+        if (player.currentMediaItemIndex != index || player.currentMediaItem?.mediaId != id || crossfade?.blending == true) return false
+        val smooth = player.isPlaying && !BitPerfectUsb.active
+        // Outside a blend (ruled out above) the main player plays at full level.
+        val level = 1f
+        swapRamping = smooth
+        try {
+            if (smooth) rampVolume(player, 0f, SWAP_DIP_MS)
+            val position = player.currentPosition
+            // Through the switch the song is silent but carries on; the lyrics carry on with it.
+            if (smooth) {
+                val at = SystemClock.elapsedRealtime()
+                PlaybackRequests.soundingPosition = { position + (SystemClock.elapsedRealtime() - at) }
+            }
+            swappingTo = id
+            // If the player updates the item in place there's no transition to clear this.
+            scope.launch { delay(2_000); if (swappingTo == id) swappingTo = null }
+            player.replaceMediaItem(index, next)
+            applyLoudness()
+            if (player.currentMediaItemIndex != index || player.currentPosition < position - 1_000) player.seekTo(index, position)
+            if (!awaitUpgradeReady(player, next)) {
+                restoreFailedUpgrade(player, index, original, next, position)
+                return false
+            }
+            PlaybackRequests.soundingPosition = null
+            if (smooth) rampVolume(player, level, SWAP_RISE_MS)
+            // Only now does the label say the better quality: it's what's heard.
+            updateExternalStats()
+            Log.d(TAG, "Swapped $id to ${streamName(id, next.localConfiguration!!.uri)} at ${position}ms")
+            return true
+        } finally {
+            PlaybackRequests.soundingPosition = null
+            swapRamping = false
+            // Cancelled or failed between the dip and the rise: never leave the music silent.
+            if (smooth && crossfade?.blending != true && player.volume < level) player.volume = level
+        }
+    }
+
+    /** Do not report a queue URI change as success before the new stream is decoding. */
+    private suspend fun awaitUpgradeReady(player: ExoPlayer, next: MediaItem): Boolean =
+        kotlinx.coroutines.withTimeoutOrNull(BRIDGE_CATCH_UP_MS) {
+            val uri = next.localConfiguration?.uri
+            val lossless = uri?.let(::externalStreamKeyOf)?.let { ExternalStreams.get(next.mediaId, it)?.lossless } == true
+            while (true) {
+                if (player.currentMediaItem?.mediaId != next.mediaId ||
+                    player.currentMediaItem?.localConfiguration?.uri != uri || player.playerError != null ||
+                    player.playbackState == Player.STATE_ENDED) return@withTimeoutOrNull false
+                if (player.playbackState == Player.STATE_READY) {
+                    val codec = player.audioFormat?.sampleMimeType
+                    if (upgradeFormatReady(lossless, codec)) return@withTimeoutOrNull true
+                }
+                delay(30)
+            }
+            @Suppress("UNREACHABLE_CODE") false
+        } == true
+
+    private fun restoreFailedUpgrade(player: ExoPlayer, index: Int, original: MediaItem, attempted: MediaItem, position: Long) {
+        loadFailure = "the main player did not start decoding the requested stream"
+        // Never overwrite a user skip or the error listener's newer fallback.
+        if (player.currentMediaItemIndex == index && player.currentMediaItem?.mediaId == original.mediaId &&
+            player.currentMediaItem?.localConfiguration?.uri == attempted.localConfiguration?.uri) {
+            swappingTo = original.mediaId
+            scope.launch { delay(2_000); if (swappingTo == original.mediaId) swappingTo = null }
+            player.replaceMediaItem(index, original)
+            player.seekTo(index, position)
+            if (player.playbackState == Player.STATE_IDLE) player.prepare()
+        }
+        updateExternalStats()
+    }
+
+    /** True while a swap has the volume dipped, so nothing else puts it back mid-ramp. */
+    private var swapRamping = false
+
+    /**
+     * The swap with nothing to hear: a second player (the "bridge") loads the
+     * better stream ahead, starts it silently in step with the song, and takes
+     * the sound over in a short crossfade. The main player changes streams
+     * while silent, catches up with the bridge, and takes the sound back the
+     * same way. Its rebuffering after the change happens while the bridge is
+     * the one sounding, so no gap or dip reaches the ears.
+     *
+     * A loaded stream that cannot align is reused by the plain replacement.
+     * A failed load moves to the next verified candidate instead of loading the same file twice.
+     */
+    private suspend fun bridgedSwap(player: ExoPlayer, index: Int, id: String, next: MediaItem, superseded: () -> Boolean): UpgradeBridgeResult {
+        val make = auditionPlayer ?: return UpgradeBridgeResult.UNAVAILABLE
+        val original = player.currentMediaItem?.takeIf { it.mediaId == id } ?: return UpgradeBridgeResult.ABORTED
+        val bridge = make()
+        swapRamping = true
+        var handedOver = false
+        try {
+            if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) bridge.setAudioSessionId(player.audioSessionId)
+            bridge.playbackParameters = player.playbackParameters
+            bridge.setMediaItem(next)
+            val from = player.currentPosition + AUDITION_LEAD_MS
+            bridge.seekTo(from)
+            bridge.prepare()
+            val prepared = kotlinx.coroutines.withTimeoutOrNull(AUDITION_TIMEOUT_MS) {
+                awaitUpgradeBuffer(
+                    superseded = superseded,
+                    invalid = { bridge.playerError != null || bridge.playbackState == Player.STATE_ENDED || player.currentMediaItem?.mediaId != id },
+                    ready = {
+                        val covered = bridge.bufferedPosition >= player.currentPosition + AUDITION_AHEAD_MS ||
+                            (bridge.duration > 0 && bridge.bufferedPosition >= bridge.duration - 500)
+                        bridge.playbackState == Player.STATE_READY && covered
+                    },
+                )
+            }
+            if (prepared == UpgradeBufferResult.SUPERSEDED || superseded()) return UpgradeBridgeResult.ABORTED
+            val loaded = prepared == UpgradeBufferResult.READY
+            if (!loaded) {
+                if (player.currentMediaItem?.mediaId == id) loadFailure = whyNotLoaded(bridge, from)
+                Log.w(TAG, "The better stream for $id didn't load ($loadFailure); trying another verified source")
+                return UpgradeBridgeResult.ABORTED
+            }
+            // The queue may have moved on or a blend begun while it loaded.
+            if (player.currentMediaItemIndex != index || player.currentMediaItem?.mediaId != id || crossfade?.blending == true) return UpgradeBridgeResult.ABORTED
+            // Paused while it loaded: the plain swap needs no bridge.
+            if (!player.isPlaying) return UpgradeBridgeResult.READY_FOR_REPLACEMENT
+
+            // 1. The bridge plays, silent, in step with the song as it is heard now.
+            bridge.volume = 0f
+            bridge.playWhenReady = true
+            val alignment = lineUp(follower = bridge, leader = player)
+            if (superseded()) return UpgradeBridgeResult.ABORTED
+            if (player.currentMediaItemIndex != index || player.currentMediaItem?.mediaId != id ||
+                player.currentMediaItem?.localConfiguration?.uri != original.localConfiguration?.uri || crossfade?.blending == true
+            ) return UpgradeBridgeResult.ABORTED
+            if (!player.isPlaying) return UpgradeBridgeResult.READY_FOR_REPLACEMENT
+            if (alignment == UpgradeAlignment.SEEK) {
+                Log.w(TAG, "Couldn't line the better stream for $id up with the song; trying the plain swap")
+                return UpgradeBridgeResult.READY_FOR_REPLACEMENT
+            }
+            // 2. The sound moves onto it. From here the bridge is what's heard, so it's
+            // also where the lyrics and seek bar read the song's position.
+            PlaybackRequests.soundingPosition = { bridge.currentPosition }
+            if (alignment == UpgradeAlignment.BLEND) crossfadeVolumes(from = player, to = bridge, BRIDGE_FADE_MS)
+            else {
+                rampVolume(player, 0f, BRIDGE_CUT_MS)
+                rampVolume(bridge, 1f, BRIDGE_CUT_MS)
+            }
+            handedOver = true
+
+            // 3. Silent now, the main player changes streams and catches up with the bridge.
+            swappingTo = id
+            scope.launch { delay(4_000); if (swappingTo == id) swappingTo = null }
+            player.replaceMediaItem(index, next)
+            applyLoudness()
+            player.seekTo(index, bridge.currentPosition + BRIDGE_SEEK_LEAD_MS)
+            if (!awaitUpgradeReady(player, next)) {
+                restoreFailedUpgrade(player, index, original, next, bridge.currentPosition)
+                return UpgradeBridgeResult.ABORTED
+            }
+            // Lined up within a few milliseconds, or the two would be heard as an echo.
+            val aligned = lineUp(follower = player, leader = bridge) == UpgradeAlignment.BLEND
+            if (!awaitUpgradeReady(player, next)) {
+                restoreFailedUpgrade(player, index, original, next, bridge.currentPosition)
+                return UpgradeBridgeResult.ABORTED
+            }
+
+            // 4. The sound comes back to the main player, now on the better stream: blended
+            // when the two play the same moment, otherwise one out before the other comes
+            // in, so two copies of the song are never heard at once out of step.
+            if (aligned) crossfadeVolumes(from = bridge, to = player, BRIDGE_FADE_MS)
+            else {
+                Log.w(TAG, "Main player for $id didn't line up with the bridge; handing back without a blend")
+                rampVolume(bridge, 0f, BRIDGE_CUT_MS)
+                rampVolume(player, 1f, BRIDGE_CUT_MS)
+            }
+            PlaybackRequests.soundingPosition = null
+            handedOver = false
+            updateExternalStats()
+            Log.d(TAG, "Swapped $id to ${next.localConfiguration?.uri?.let { streamName(id, it) }} at ${player.currentPosition}ms, bridged")
+            return UpgradeBridgeResult.COMPLETED
+        } finally {
+            PlaybackRequests.soundingPosition = null
+            swapRamping = false
+            bridge.release()
+            // However it ended, the main player sounds at full level again.
+            if (crossfade?.blending != true && player.volume < 1f) player.volume = 1f
+            if (handedOver) Log.w(TAG, "Bridge for $id ended early; the main player took the sound back")
+        }
+    }
+
+    /** Small offsets take a short fade immediately; only a large offset needs another seek. */
+    private suspend fun lineUp(follower: ExoPlayer, leader: ExoPlayer): UpgradeAlignment = boundedUpgradeAlignment {
+        var lead = BRIDGE_SEEK_LEAD_MS
+        repeat(BRIDGE_ALIGN_TRIES) {
+            if (!settledPlaying(follower)) return@boundedUpgradeAlignment UpgradeAlignment.SEEK
+            val drift = follower.currentPosition - leader.currentPosition
+            val alignment = upgradeAlignment(drift)
+            if (alignment != UpgradeAlignment.SEEK) return@boundedUpgradeAlignment alignment
+            lead = (lead - drift).coerceIn(0L, 2_000L)
+            follower.seekTo(leader.currentPosition + lead)
+        }
+        if (settledPlaying(follower)) upgradeAlignment(follower.currentPosition - leader.currentPosition)
+        else UpgradeAlignment.SEEK
+    }
+
+    /** Waits for [p] to be playing from a buffer, then a moment more for its position to settle. */
+    private suspend fun settledPlaying(p: ExoPlayer): Boolean {
+        val ok = kotlinx.coroutines.withTimeoutOrNull(3_000) {
+            while (p.playbackState != Player.STATE_READY || !p.isPlaying) delay(15)
+            true
+        } == true
+        if (ok) delay(BRIDGE_SETTLE_MS)
+        return ok
+    }
+
+    /** Equal-power fade from [from] to [to] over [ms]: the level stays even through it. */
+    private suspend fun crossfadeVolumes(from: ExoPlayer, to: ExoPlayer, ms: Long) {
+        val start = SystemClock.elapsedRealtime()
+        while (true) {
+            val p = ((SystemClock.elapsedRealtime() - start).toFloat() / ms).coerceIn(0f, 1f)
+            from.volume = kotlin.math.cos(p * Math.PI / 2).toFloat()
+            to.volume = kotlin.math.sin(p * Math.PI / 2).toFloat()
+            if (p >= 1f) break
+            delay(10)
+        }
+    }
+
+    private fun updateExternalStats() {
+        val item = mediaSession?.player?.currentMediaItem
+        val uri = item?.localConfiguration?.uri?.let(::selectedUri)
+        val key = uri?.let(::externalStreamKeyOf)
+        val rendition = if (item != null && key != null) ExternalStreams.get(item.mediaId, key) else null
+        // The lookup label can say "lossless requested" long after decoding starts.
+        // Stats describe the playing source; codec/quality come from the decoder.
+        ExternalStreams.playing(item?.mediaId, key)
+        NerdStats.onExternalSource(rendition?.provider)
+        val downloaded = item?.let { com.opentune.data.download.Downloads.entryNow(it.mediaId) }
+            ?.takeIf { uri?.scheme == "file" && it.path == uri.path }
+        val provider = when {
+            item == null -> "No track selected"
+            rendition != null -> rendition.provider
+            uri?.let(::startupToken) != null -> "Loading audio…"
+            LocalMusic.isLocal(item.mediaId) -> "Local file"
+            Radio.isRadio(item.mediaId) -> "Internet radio"
+            Subsonic.isSubsonic(item.mediaId) -> "Your music server"
+            uri?.scheme == "file" -> downloaded?.source?.let { "$it · downloaded" } ?: "Downloaded file"
+            else -> StreamResolver.engineFor(item.mediaId, uri?.let(::isUpgradedUri) == true)?.let { "YouTube · $it" } ?: "YouTube · cached stream or resolving"
+        }
+        NerdStats.onPlaybackSource(NerdStats.Source(provider, rendition?.bits ?: downloaded?.bits, rendition?.sampleRate ?: downloaded?.sampleRate,
+            rendition?.kbps ?: if (rendition == null && item != null && uri?.let(::videoIdOf) != null)
+                StreamResolver.bitrateFor(item.mediaId, isUpgradedUri(uri)) else null,
+            selectionDetail = if (item != null && uri?.let(::videoIdOf) != null && uri.let(::startupToken) == null)
+                ExternalStreams.selectionDetail(item.mediaId) else null, mediaId = item?.mediaId))
+    }
+
+    // ---- Latency -----------------------------------------------------------------
+
+    /** When the current item was asked for, to time how long it took to sound. */
+    private var startRequestedAt = 0L
+
+    private var warmJob: Job? = null
+
+    /** Video ids whose stream URL was warmed, and when; StreamResolver holds them 20 minutes. */
+    private val warmedAt = ConcurrentHashMap<String, Long>()
+
+    /**
+     * Resolve stream URLs for the tracks either side of this one in play
+     * order (the next two and the previous one) before they're asked for.
+     * Finding a working stream is the slow part of starting a track, a few
+     * YouTube requests; with the URL already in [StreamResolver]'s cache a
+     * skip or a jump back only has to fetch audio. ExoPlayer's own preload
+     * then buffers the very next one.
+     */
+    private fun warmNeighbours() {
+        // Maximum also starts immediately; warm its normal stream while quality
+        // searches run independently, so next/previous do not repeat resolution.
+        if (!AppSettings.playback.value.preloadUpcoming) return
+        val player = mediaSession?.player ?: return
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return
+        val current = player.currentMediaItemIndex
+        val previous = timeline.getPreviousWindowIndex(current, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+        val indices = player.upcomingPlayOrder().drop(1).take(WARM_AHEAD) +
+            listOfNotNull(previous.takeIf { it != C.INDEX_UNSET })
+        val now = SystemClock.elapsedRealtime()
+        val ids = indices.map { player.getMediaItemAt(it).mediaId }
+            .filter { isYouTubeId(it) && now - (warmedAt[it] ?: 0L) > WARM_TTL_MS }
+            .distinct()
+        if (ids.isEmpty()) return
+        ids.forEach { warmedAt[it] = now }
+        if (warmedAt.size > 64) warmedAt.entries.removeAll { now - it.value > WARM_TTL_MS }
+
+        val songs = indices.map { player.getMediaItemAt(it).toSong() }.filter { it.videoId in ids }.distinctBy { it.videoId }
+        val previousJob = warmJob
+        warmJob = scope.launch(Dispatchers.IO) {
+            previousJob?.join()
+            // Prepare the preferred source independently of YouTube URL warm-up.
+            if (AppSettings.effectiveAudioQuality == com.opentune.data.settings.AudioQuality.MAX) launch {
+                for (song in songs) kotlinx.coroutines.withTimeoutOrNull(3_000) {
+                    ExternalStreams.findJioSaavn(song, song.durationMillis())
+                }
+            }
+            // One at a time: these compete with the playing track for bandwidth.
+            for (id in ids) {
+                runCatching { StreamResolver.resolve(id) }
+                    .onFailure { e ->
+                        if (e is CancellationException) throw e
+                        Log.w(TAG, "Warm-up for $id failed: ${e.message}")
+                        warmedAt.remove(id)
+                    }
+            }
+        }
+    }
+
+    // ---- SponsorBlock ------------------------------------------------------------
+
+    private var segmentsJob: Job? = null
+
+    /**
+     * Looks up [item]'s SponsorBlock segments and, while it plays, jumps
+     * over each one the first time playback enters it. Seeking back into a
+     * segment afterwards plays it: that was asked for.
+     */
+    private fun watchSegments(item: MediaItem?) {
+        segmentsJob?.cancel()
+        val id = item?.mediaId ?: return
+        val pb = AppSettings.playback.value
+        if (!pb.sponsorBlock || !isYouTubeId(id)) return
+        segmentsJob = scope.launch {
+            val segments = SponsorBlock.segments(id, pb.sponsorBlockCategories)
+            if (segments.isEmpty()) return@launch
+            val player = mediaSession?.player ?: return@launch
+            val skipped = HashSet<String>()
+            while (player.currentMediaItem?.mediaId == id && skipped.size < segments.size) {
+                delay(if (player.isPlaying) SEGMENT_POLL_MS else SEGMENT_IDLE_POLL_MS)
+                if (!player.isPlaying) continue
+                val at = player.currentPosition
+                val duration = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+                val segment = segments.firstOrNull {
+                    it.uuid !in skipped && at >= it.startMs && at < it.endMs - SEGMENT_END_SLACK_MS && SponsorBlock.fits(it, duration)
+                } ?: continue
+                skipped += segment.uuid
+                Log.i(TAG, "SponsorBlock: skipping ${segment.category} ${segment.startMs}-${segment.endMs} ms")
+                if (duration > 0 && segment.endMs >= duration - SEGMENT_END_SLACK_MS) {
+                    // The segment runs to the end: that's the song over.
+                    if (player.hasNextMediaItem()) player.seekToNextMediaItem() else player.seekTo(duration)
+                } else {
+                    player.seekTo(segment.endMs)
+                }
+                com.opentune.data.Pills.done("Skipped ${SponsorBlock.CATEGORIES[segment.category]?.one ?: "a segment"}", this@PlaybackService)
+            }
+        }
+    }
+
+    // ---- Output device ---------------------------------------------------------
+
+    private val deviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
+            applyPreferredDevice()
+            // A DAC plugged in mid-song: the song moves onto it exclusively at once.
+            if (devicesListed && BitPerfectUsb.wanted && addedDevices.orEmpty().any { it.type in USB_OUTPUTS }) {
+                (mediaSession?.player as? ExoPlayer)?.let(::reopenOutput)
+            }
+            // The callback reports every device already there as it's
+            // registered; only one that turns up afterwards is a connection.
+            if (!devicesListed) {
+                devicesListed = true
+                return
+            }
+            if (addedDevices.orEmpty().any { it.isSink && it.type in LISTENING_DEVICES }) resumeOnConnect()
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+            applyPreferredDevice()
+            if (removedDevices.orEmpty().any { it.type in USB_OUTPUTS }) BitPerfectUsb.devicesChanged()
+        }
+    }
+    private var devicesListed = false
+
+    /**
+     * Headphones or a Bluetooth device came on: play the paused queue, if
+     * the setting is on and there's something to play. Audio routes to the
+     * new device the moment it appears, so this doesn't start on the speaker.
+     */
+    private fun resumeOnConnect() {
+        val player = mediaSession?.player ?: return
+        if (!AppSettings.playback.value.resumeOnConnect || player.mediaItemCount == 0 || player.playWhenReady) return
+        Log.i(TAG, "Output device connected; resuming")
+        if (player.playbackState == Player.STATE_IDLE) player.prepare()
+        player.play()
+    }
+
+    /** Bumped when the volume keys move, so the bit-perfect software volume follows. */
+    private val volumeTick = MutableStateFlow(0)
+
+    /** Set while paused by "Pause at zero volume", so raising it again resumes. */
+    private var pausedAtZero = false
+
+    private val volumeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            volumeTick.value++
+            if (intent?.getIntExtra(EXTRA_VOLUME_STREAM, AudioManager.STREAM_MUSIC) == AudioManager.STREAM_MUSIC) onMusicVolume()
+        }
+    }
+
+    private fun onMusicVolume() {
+        val player = mediaSession?.player ?: return
+        val volume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: return
+        if (!AppSettings.playback.value.pauseAtZeroVolume) {
+            pausedAtZero = false
+            return
+        }
+        if (volume == 0 && player.playWhenReady) {
+            pausedAtZero = true
+            player.pause()
+        } else if (volume > 0 && pausedAtZero) {
+            pausedAtZero = false
+            player.play()
+        }
+    }
+
+    private var exclusiveWas: Boolean? = null
+
+    /**
+     * Turns exclusive USB output on or off. With [reopen], a song already
+     * playing has its output opened again where it is (a seek in place does
+     * it), so the change is heard now and not from the next song.
+     */
+    private fun applyBitPerfect(reopen: Boolean = false) {
+        val pb = AppSettings.playback.value
+        BitPerfectUsb.setWanted(pb.bitPerfectUsb)
+        applyLoudness()
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        openEffectSession(player.audioSessionId)
+        val changed = exclusiveWas != null && exclusiveWas != pb.bitPerfectUsb
+        exclusiveWas = pb.bitPerfectUsb
+        if (reopen && (changed || pb.bitPerfectUsb)) reopenOutput(player)
+    }
+
+    private fun stretching(): Boolean = isStretched(
+        AppSettings.sound.value, AppSettings.playback.value.skipSilence, com.opentune.data.together.Together.room.value != null,
+    )
+
+    /**
+     * The player's output set up afresh at the same place, for a change in
+     * whether the song is stretched: a seek keeps the output as it is, so the
+     * player is stopped and prepared again. Only when float could be in use.
+     */
+    private fun rebuildOutput() {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val pb = AppSettings.playback.value
+        if (!pb.floatOutput && !pb.bitPerfectUsb) return
+        if (player.currentMediaItem == null) return
+        if (player.playbackState != Player.STATE_READY && player.playbackState != Player.STATE_BUFFERING) return
+        val at = player.currentPosition
+        player.stop()
+        player.prepare()
+        player.seekTo(at)
+    }
+
+    /** The song's output closed and opened again at the same place, so it opens on the current route. */
+    private fun reopenOutput(player: ExoPlayer) {
+        if (player.playbackState != Player.STATE_READY && player.playbackState != Player.STATE_BUFFERING) return
+        if (player.currentMediaItem == null) return
+        player.seekTo(player.currentPosition)
+    }
+
+    /**
+     * Whether sound is going to the phone's own speaker: no headphones,
+     * Bluetooth audio, USB, HDMI, dock or line output is connected. Android
+     * routes media to any of those as soon as it appears.
+     */
+    private fun onPhoneSpeaker(): Boolean {
+        val outputs = audioManager?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) ?: return false
+        return outputs.none { it.isSink && it.type in EXTERNAL_OUTPUTS }
+    }
+
+    /** Route to a USB DAC when one is plugged in and the setting asks for it. */
+    private fun applyPreferredDevice() {
+        applyBitPerfect()
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val usb = if (AppSettings.playback.value.preferUsbDac) {
+            audioManager?.getDevices(AudioManager.GET_DEVICES_OUTPUTS)?.firstOrNull {
+                it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET
+            }
+        } else {
+            null
+        }
+        player.setPreferredAudioDevice(usb)
+    }
+
+    // ---- Autoplay ----------------------------------------------------------------
+
+    /**
+     * Append radio for the last queued track once playback nears the end, so
+     * the music doesn't stop. Starting a single song goes through here too:
+     * a one-track queue is already "near the end". With repeat on the queue
+     * never ends, so there is nothing to extend.
+     */
+    private fun extendQueueIfNeeded() {
+        val player = mediaSession?.player ?: return
+        if (!AppSettings.playback.value.autoplay || player.repeatMode != Player.REPEAT_MODE_OFF) return
+        val remaining = player.upcomingPlayOrder().size - 1
+        if (!Autoplay.shouldExtend(remaining, player.mediaItemCount)) return
+        val seedItem = player.getMediaItemAt(player.mediaItemCount - 1)
+        val seed = seedItem.mediaId
+        // Radio is a YouTube feature; a local file has none. A song on your own
+        // server carries on with more of the server's songs, picked at random.
+        if (LocalMusic.isLocal(seed) || Radio.isRadio(seed)) return
+        if (seed in exhaustedSeeds) return
+        if (radioJob?.isActive == true && radioSeed == seed) return
+
+        // A request for an older seed is answering a queue that no longer exists.
+        radioJob?.cancel()
+        radioSeed = seed
+        radioJob = scope.launch {
+            // A song started on its own asks for radio while its own stream is
+            // still loading, which is when a request is most likely to fail; a
+            // failure must not leave the song to end in silence, so ask again.
+            // The last song leads; a couple of earlier ones in the queue, by other
+            // artists, are asked for too, so what comes next follows the whole
+            // queue rather than only its last song.
+            val engine = AppSettings.playback.value.recommender
+            val queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toSong() }
+            val others = if (Subsonic.isSubsonic(seed)) emptyList() else Autoplay.seeds(queue) { s ->
+                isYouTubeId(s.videoId) && !Podcasts.isEpisode(s.videoId)
+            }.drop(1)
+            val queuedAtStart = queue.mapTo(HashSet()) { it.videoId }
+            fun usable(song: Song): Boolean = song.videoId !in queuedAtStart &&
+                !LibraryStore.isDisliked(song.videoId) && !LibraryStore.hidden.value.hides(song.videoId, song.artist)
+            fun ask() = (listOf(seedItem.toSong()) + others).mapIndexed { index, song ->
+                async {
+                    var answer = emptyList<Song>()
+                    val waits = if (index == 0) RADIO_RETRY_MS else longArrayOf(0)
+                    for ((attempt, wait) in waits.withIndex()) {
+                        if (wait > 0) delay(wait)
+                        answer = try {
+                            kotlinx.coroutines.withTimeoutOrNull(RADIO_REQUEST_MS) {
+                                if (Subsonic.isSubsonic(song.videoId)) Subsonic.randomSongs(RADIO_FROM_SERVER)
+                                else Recommendations.after(song, engine).songs
+                            }.orEmpty()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Radio for ${song.videoId} failed (try ${attempt + 1})", e)
+                            emptyList()
+                        }
+                        if (answer.any(::usable)) break
+                    }
+                    answer
+                }
+            }
+            // A fast secondary seed is useful even if the primary is retrying.
+            // Preserve seed order for ranking, but don't await every slow catalogue.
+            // Nothing at all (the network was down, every catalogue busy) is asked
+            // again a little later while the song plays, rather than waiting for the
+            // next thing the player happens to do: that left a single song with no
+            // queue after it until something, such as opening the player, stirred it.
+            var ready: List<List<Song>> = emptyList()
+            for ((round, pause) in RADIO_AGAIN_MS.withIndex()) {
+                if (pause > 0) delay(pause)
+                val count = player.mediaItemCount
+                if (!AppSettings.playback.value.autoplay || count == 0 || player.getMediaItemAt(count - 1).mediaId != seed) return@launch
+                ready = Autoplay.readyRadios(ask(), ::usable)
+                if (ready.any { it.isNotEmpty() }) break
+                Log.i(TAG, "No radio for $seed yet (round ${round + 1}), asking again shortly")
+            }
+            if (ready.all { it.isEmpty() }) return@launch
+            val radio = Autoplay.blend(ready, queue)
+            if (!AppSettings.playback.value.autoplay || AppSettings.playback.value.recommender != engine ||
+                player.repeatMode != Player.REPEAT_MODE_OFF) return@launch
+            // The queue may have been replaced while the request was out; radio
+            // for a track that's no longer last doesn't belong at the end.
+            val count = player.mediaItemCount
+            if (count == 0 || player.getMediaItemAt(count - 1).mediaId != seed) return@launch
+
+            val queued = (0 until count).mapTo(HashSet()) { player.getMediaItemAt(it).mediaId }
+            // Disliked and hidden songs and artists are never queued on their own.
+            val liked = LibraryStore.hidden.value.songs(radio.filterNot { LibraryStore.isDisliked(it.videoId) })
+            // Songs already heard this session are skipped when asked, unless that leaves nothing to play.
+            val additions = Autoplay.newTracks(if (AppSettings.playback.value.noRepeatInSession) queued + sessionIds else queued, liked)
+                .ifEmpty { Autoplay.newTracks(queued, liked) }
+            if (additions.isEmpty()) {
+                exhaustedSeeds += seed
+                return@launch
+            }
+            val ended = player.playbackState == Player.STATE_ENDED
+            player.addMediaItems(additions.map { it.copy(queueTier = QueueTier.AUTOPLAY).toMediaItem() })
+            // The song finished before the next ones came; carry on into them.
+            if (ended && player.playWhenReady) {
+                player.seekToNextMediaItem()
+                player.prepare()
+                player.play()
+            }
+        }
+    }
+
+    /**
+     * What to do when the current track fails:
+     *  - an upgraded stream goes back to the stream the track started on, at
+     *    the same place, rather than costing the track;
+     *  - anything that may pass is retried once;
+     *  - then the track is skipped, but only up to [MAX_FAILED_IN_ROW] tracks
+     *    in a row. Past that, every stream is failing for the same reason
+     *    (network, a YouTube change), and skipping on would only run through
+     *    the queue and autoplay without a sound. Playback stops on the error
+     *    instead, so it's shown, and play tries again.
+     */
+    private var stallJob: Job? = null
+
+    /**
+     * A better stream that stops to buffer mid-song and doesn't come back
+     * within [STALL_FALLBACK_MS] goes back to the stream the song started on,
+     * from where it stopped, the way a failed one does: a hi-res file over a
+     * weak connection shouldn't leave the music standing still.
+     */
+    private fun watchStall(state: Int) {
+        stallJob?.cancel()
+        if (state != Player.STATE_BUFFERING) return
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val item = player.currentMediaItem ?: return
+        val uri = item.localConfiguration?.uri ?: return
+        if (!isUpgradedUri(uri) && externalStreamKeyOf(uri) == null) return
+        // Only mid-song: the start and a seek buffer by design.
+        if (player.currentPosition < STALL_MIN_POSITION_MS) return
+        val at = player.currentPosition
+        stallJob = scope.launch {
+            delay(STALL_FALLBACK_MS)
+            if (player.playbackState != Player.STATE_BUFFERING || !player.playWhenReady) return@launch
+            if (player.currentMediaItem?.localConfiguration?.uri != uri || kotlin.math.abs(player.currentPosition - at) > 1_000) return@launch
+            Log.w(TAG, "Better stream for ${item.mediaId} stalled for ${STALL_FALLBACK_MS}ms at ${at}ms; back to the one before it")
+            StreamResolver.dropUpgrade(item.mediaId)
+            val stalled = selectedUri(uri)
+            externalStreamKeyOf(stalled)?.let { ExternalStreams.failed(item.mediaId, it) }
+            val index = player.currentMediaItemIndex
+            swappingTo = item.mediaId
+            player.replaceMediaItem(index, item.buildUpon().setUri(fallbackUri(item.mediaId, stalled)).setMimeType(null).build())
+            updateExternalStats()
+            applyLoudness()
+            player.seekTo(index, at)
+            player.prepare()
+            PlaybackRequests.report("The better stream kept stopping, so this song went back to the one before it")
+            upgradeAgainSoon(item.mediaId)
+        }
+    }
+
+    /** The stream the song last switched from, to go back to if the new one fails. */
+    private var beforeSwap: Pair<String, android.net.Uri>? = null
+
+    /**
+     * Where [mediaId] goes when its better stream [failed] or stalled: back to the stream it
+     * played before the switch (a lower FLAC, or JioSaavn), else JioSaavn while it has the
+     * song, and YouTube's own only when there's neither. It went straight to YouTube when
+     * JioSaavn's link was more than a few minutes old.
+     */
+    private fun fallbackUri(mediaId: String, failed: android.net.Uri?): android.net.Uri {
+        beforeSwap?.takeIf { it.first == mediaId }?.second?.takeIf { it != failed }
+            ?.let(::externalStreamKeyOf)?.takeIf { ExternalStreams.get(mediaId, it) != null }
+            ?.let { return externalStreamUri(mediaId, it) }
+        ExternalStreams.saavnFor(mediaId)?.let { return externalStreamUri(mediaId, it.key) }
+        return youtubeFallbackUri(mediaId)
+    }
+
+    /**
+     * After a fallback, the upgrade runs again once the song is sounding: the file that
+     * failed is off the list, so the next verified one is tried, rather than the song
+     * staying on the fallback to its end.
+     */
+    private fun upgradeAgainSoon(mediaId: String) {
+        scope.launch {
+            delay(FALLBACK_RETRY_MS)
+            val player = mediaSession?.player ?: return@launch
+            if (player.currentMediaItem?.mediaId == mediaId && upgradeJob?.isActive != true) scheduleUpgrade(quiet = true)
+        }
+    }
+
+    private var offlineRecovery: Job? = null
+
+    private fun recover(error: PlaybackException) {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val item = player.currentMediaItem ?: return
+        val mediaId = item.mediaId
+        val uri = item.localConfiguration?.uri?.let(::selectedUri)
+        if (uri?.scheme == "file" && error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND &&
+            com.opentune.data.isYouTubeId(mediaId) && com.opentune.data.download.Downloads.entryNow(mediaId) == null) {
+            // The user removed an offline copy after it was queued. Stream it
+            // without recreating the download they deliberately removed.
+            val index = player.currentMediaItemIndex
+            val position = player.currentPosition
+            player.replaceMediaItem(index, item.buildUpon().setUri(streamUri(mediaId, upgraded = false)).setMimeType(null).build())
+            player.seekTo(index, position)
+            player.prepare()
+            return
+        }
+        if (uri?.scheme == "file" &&
+            error.errorCode in setOf(PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED, PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED) &&
+            com.opentune.data.download.Downloads.entryNow(mediaId)?.path == uri.path) {
+            // Old versions could mark a bad ranged response as complete. Repair it
+            // and let playback use the network instead of retrying the same file.
+            com.opentune.data.download.Downloads.markBroken(mediaId)
+            com.opentune.data.download.Downloads.enqueue(this, item.toSong())
+            val index = player.currentMediaItemIndex
+            val position = player.currentPosition
+            player.replaceMediaItem(index, item.buildUpon().setUri(streamUri(mediaId, upgraded = false)).setMimeType(null).build())
+            player.seekTo(index, position)
+            player.prepare()
+            return
+        }
+        // A downloaded song that couldn't stream (no internet, or the connection dropped)
+        // plays on from its file.
+        val file = if (uri?.scheme != "file") com.opentune.data.download.Downloads.fileFor(mediaId) else null
+        if (file != null && (error.errorCode in IO_ERRORS || !AppSettings.isOnline())) {
+            Log.w(TAG, "Stream for $mediaId failed (${error.errorCodeName}); playing its download")
+            val index = player.currentMediaItemIndex
+            val position = player.currentPosition
+            player.replaceMediaItem(index, item.buildUpon().setUri(android.net.Uri.fromFile(file)).setMimeType(null).build())
+            updateExternalStats()
+            applyLoudness()
+            player.seekTo(index, position)
+            player.prepare()
+            return
+        }
+        // Loss of connectivity is not evidence that this recording or source is bad.
+        // Keep the queue, source and position; resume only if the listener still wants play.
+        if (!AppSettings.isOnline() && error.errorCode in IO_ERRORS) {
+            offlineRecovery?.cancel()
+            offlineRecovery = scope.launch {
+                while (player.currentMediaItem?.mediaId == mediaId && player.playWhenReady) {
+                    delay(2_000)
+                    if (AppSettings.isOnline()) {
+                        if (player.currentMediaItem?.mediaId == mediaId && player.playWhenReady && player.playerError != null) player.prepare()
+                        break
+                    }
+                }
+            }
+            return
+        }
+        if (uri != null && (isUpgradedUri(uri) || externalStreamKeyOf(uri) != null)) {
+            Log.w(TAG, "Upgraded stream for $mediaId failed (${error.errorCodeName}); back to the one before it")
+            StreamResolver.dropUpgrade(mediaId)
+            externalStreamKeyOf(uri)?.let { ExternalStreams.failed(mediaId, it) }
+            val index = player.currentMediaItemIndex
+            val position = player.currentPosition
+            swappingTo = mediaId
+            player.replaceMediaItem(index, item.buildUpon().setUri(fallbackUri(mediaId, uri)).setMimeType(null).build())
+            updateExternalStats()
+            applyLoudness()
+            player.seekTo(index, position)
+            player.prepare()
+            upgradeAgainSoon(mediaId)
+            return
+        }
+        val permanent = generateSequence<Throwable>(error) { it.cause }
+            .any { it is StreamResolver.PermanentlyUnplayableException }
+
+        if (!permanent && retriedMediaId != mediaId) {
+            Log.w(TAG, "Retrying $mediaId after ${error.errorCodeName}")
+            retriedMediaId = mediaId
+            player.prepare()
+            return
+        }
+        failedInRow++
+        if (failedInRow >= MAX_FAILED_IN_ROW) {
+            Log.w(TAG, "$failedInRow tracks in a row failed (last: $mediaId, ${error.errorCodeName}); stopping")
+            failedInRow = 0
+            return
+        }
+        if (player.hasNextMediaItem()) {
+            Log.w(TAG, "Skipping $mediaId after ${error.errorCodeName}")
+            player.seekToNextMediaItem()
+            player.prepare()
+        }
+    }
+
+    /** Tracks in a row that failed and were skipped; see [recover]. */
+    private var failedInRow = 0
+    private var playedCheck: Job? = null
+
+    /**
+     * A track counts as working once it has really played for a while, not
+     * when it first reports ready: a stream refused a few seconds in is
+     * ready first and fails after. Until then its retry stays spent and
+     * the failures in a row stand.
+     */
+    private fun watchPlayed(player: Player, playing: Boolean) {
+        playedCheck?.cancel()
+        if (!playing) return
+        val id = player.currentMediaItem?.mediaId ?: return
+        playedCheck = scope.launch {
+            delay(PLAYED_OK_MS)
+            if (player.isPlaying && player.currentMediaItem?.mediaId == id) {
+                failedInRow = 0
+                retriedMediaId = null
+            }
+        }
+    }
+
+    private companion object {
+        const val TAG = "PlaybackService"
+
+        /** Bounds on the loudness gain, in millibels: down 15 dB, up 3 dB at most. */
+        const val LOUDNESS_RETRY_MS = 6_000L
+        /**
+         * The volume broadcast comes from the system, so the receiver is
+         * exported; a spoofed one only makes the gain re-read the real volume.
+         */
+        val VOLUME_RECEIVER_FLAGS = if (android.os.Build.VERSION.SDK_INT >= 33) Context.RECEIVER_EXPORTED else 0
+        const val QUEUE_SAVE_MS = 5_000L
+        /** A swap waits for the song to have played this much, with [UPGRADE_BUFFERED_MS] ahead of it... */
+        const val UPGRADE_SETTLE_MS = 300L
+        const val UPGRADE_BUFFERED_MS = 2_000L
+        /** ...or for this long at most, when it's paused or slow to start. */
+        const val UPGRADE_START_WAIT_MS = 6_000L
+        /** How many songs ahead the lossless source is looked up. */
+        const val PREFETCH_AHEAD = 5
+        /** How many of those also get the FLAC search ahead of time; the rest get JioSaavn and are searched as they start. */
+        const val PREFETCH_LOSSLESS_AHEAD = 2
+        /** A near-ready verified FLAC gets priority before beginning an intermediate handoff. */
+        const val SAAVN_HOLD_MS = 3_000L
+        /** How often [guardQuality] looks, how far into a song it starts, how long between its tries, and how many a song gets. */
+        const val GUARD_EVERY_MS = 1_000L
+        const val VERIFIED_RETRY_GAP_MS = 2_000L
+        const val GUARD_SETTLE_MS = 8_000L
+        const val GUARD_GAP_MS = 12_000L
+        const val GUARD_TRIES = 4
+        /** After a fallback, how long the song sounds before the upgrade runs again. */
+        const val FALLBACK_RETRY_MS = 3_000L
+        /** Songs ahead looked up at once; the nearest go first. */
+        const val PREFETCH_AT_ONCE = 2
+        /** How long the queue has to rest on a song before the ones after it are looked up. */
+        const val PREFETCH_SETTLE_MS = 1_500L
+        /** Songs a server queue carries on with when it runs out. */
+        const val RADIO_FROM_SERVER = 25
+        const val RADIO_REQUEST_MS = 12_000L
+        /** With "end of song", how long the song fades out before it stops. */
+        const val END_FADE_MS = 15_000L
+        /** Waits before each ask for radio: at once, then twice more if it fails. */
+        val RADIO_RETRY_MS = longArrayOf(0L, 3_000L, 10_000L)
+        /** Whole rounds of asking, when a round brings nothing: now, then again while the song plays. */
+        val RADIO_AGAIN_MS = longArrayOf(0L, 20_000L, 45_000L, 90_000L)
+        /** An episode only jumps to its saved place if it hasn't got going yet. */
+        const val RESUME_SLACK_MS = 5_000L
+        const val SEGMENT_POLL_MS = 250L
+        const val SEGMENT_IDLE_POLL_MS = 1_000L
+        const val SEGMENT_END_SLACK_MS = 500L
+        /** The stream a VOLUME_CHANGED_ACTION is about (a hidden AudioManager extra). */
+        const val EXTRA_VOLUME_STREAM = "android.media.EXTRA_VOLUME_STREAM_TYPE"
+        /**
+         * Outputs a person listens on privately, as opposed to the phone's
+         * speaker. The BLE types are plain ints that older Android never reports.
+         */
+        @android.annotation.SuppressLint("InlinedApi")
+        val LISTENING_DEVICES = setOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_BLE_HEADSET,
+            AudioDeviceInfo.TYPE_BLE_SPEAKER,
+        )
+        /** A USB DAC or headset, the outputs exclusive mode takes. */
+        val USB_OUTPUTS = setOf(AudioDeviceInfo.TYPE_USB_DEVICE, AudioDeviceInfo.TYPE_USB_HEADSET)
+        /** Outputs that take media away from the phone's speaker. */
+        val EXTERNAL_OUTPUTS = LISTENING_DEVICES + setOf(
+            AudioDeviceInfo.TYPE_USB_DEVICE,
+            AudioDeviceInfo.TYPE_USB_ACCESSORY,
+            AudioDeviceInfo.TYPE_HDMI,
+            AudioDeviceInfo.TYPE_LINE_ANALOG,
+            AudioDeviceInfo.TYPE_LINE_DIGITAL,
+            AudioDeviceInfo.TYPE_AUX_LINE,
+            AudioDeviceInfo.TYPE_DOCK,
+        )
+        const val ACTION_LIKE = "com.opentune.LIKE"
+        const val ACTION_SHUFFLE = "com.opentune.SHUFFLE"
+        val LIKE_COMMAND = SessionCommand(ACTION_LIKE, Bundle.EMPTY)
+        val SHUFFLE_COMMAND = SessionCommand(ACTION_SHUFFLE, Bundle.EMPTY)
+        /** Failed tracks in a row before playback stops on the error. */
+        const val MAX_FAILED_IN_ROW = 3
+        /** Playing this long means the track's stream really works. */
+        const val PLAYED_OK_MS = 10_000L
+        const val UPGRADE_MIN_REMAINING_MS = 20_000L
+        /** A FLAC search that failed only on server errors: its erring add-ons are asked again after each of these waits. */
+        val LOSSLESS_RETRY_MS = longArrayOf(3_000L, 6_000L, 12_000L)
+        /** With a FLAC already found, the add-ons that erred are asked again after each of these waits. */
+        val ERRED_RETRY_MS = longArrayOf(4_000L, 10_000L, 20_000L, 40_000L)
+        /** A source's file is pinged with a read this size... */
+        const val PING_BYTES = 65_536
+        /** ...and counted as not answering after this long. */
+        const val PING_LIMIT_MS = 8_000L
+        /** An upgrade is fetched this far past the playing position before it's swapped in. */
+        const val AUDITION_AHEAD_MS = 2_000L
+        /** It starts loading a little ahead, for the time the loading itself takes. */
+        const val AUDITION_LEAD_MS = 1_500L
+        const val AUDITION_TIMEOUT_MS = 12_000L
+        /** Network and input errors (Media3's 2000s): what a lost connection fails with. */
+        val IO_ERRORS = 2000..2999
+        /** Tries at switching to the verified files, this far apart, before giving up for the song. */
+        const val SWAP_ROUNDS = 4
+        const val SWAP_ROUND_GAP_MS = 3_000L
+        /** The volume dip around a swap: quickly down, gently back. */
+        /** Each crossfade between the main player and the bridge. */
+        const val BRIDGE_FADE_MS = 160L
+        /** Each half of a hand-back without a blend: one player out, then the other in. */
+        const val BRIDGE_CUT_MS = 70L
+        /** Bound attempts before using the already buffered stream with a short fade. */
+        const val BRIDGE_ALIGN_TRIES = 2
+        /** A first guess at how long a seek takes to sound, landed ahead by. */
+        const val BRIDGE_SEEK_LEAD_MS = 120L
+        const val BRIDGE_SETTLE_MS = 120L
+        /** How long the bridge carries the song while the main player loads the new stream. */
+        const val BRIDGE_CATCH_UP_MS = 8_000L
+        const val SWAP_DIP_MS = 120L
+        const val SWAP_RISE_MS = 260L
+        /** Stuck buffering this long mid-song, a better stream gives way to the regular one. */
+        const val STALL_FALLBACK_MS = 6_000L
+        const val STALL_MIN_POSITION_MS = 3_000L
+        const val FAR_BUFFER_MS = 15 * 60 * 1000
+        const val FAR_BUFFER_BYTES = 48 * 1024 * 1024
+        const val BACK_BUFFER_MS = 30_000
+        const val MIN_LOUDNESS_GAIN_MB = -1500
+        const val MAX_LOUDNESS_GAIN_MB = 900
+
+        /** How much of the next track ExoPlayer buffers ahead of time. */
+        const val PRELOAD_US = 10_000_000L
+
+        /** Tracks ahead of the current one whose stream URLs are resolved early. */
+        const val WARM_AHEAD = 2
+
+        /** A little under StreamResolver's 20-minute URL lifetime. */
+        const val WARM_TTL_MS = 15 * 60 * 1000L
+    }
+}
+
+/**
+ * The gain, in dB, for a song YouTube measured at [loudnessDb] against its
+ * reference: brought to the reference, moved by [level]'s offset, and lifted
+ * no more than its cap. With [speakerHold] (the phone speaker, normalization
+ * held off there) it's never negative: a song is only lifted, never cut.
+ */
+internal fun loudnessGainDb(loudnessDb: Double, level: com.opentune.data.settings.VolumeLevel, speakerHold: Boolean): Double {
+    val target = (-loudnessDb + level.offsetDb).coerceAtMost(level.maxGainDb.toDouble())
+    return if (speakerHold) target.coerceAtLeast(0.0) else target
+}
+
+
