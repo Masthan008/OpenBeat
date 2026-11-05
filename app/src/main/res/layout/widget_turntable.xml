@@ -87,5 +87,12 @@
             style="@style/WidgetButton"
             android:contentDescription="@string/widget_next"
             android:src="@drawable/ic_widget_next" />
+
+        <ImageButton
+            android:id="@+id/widget_like"
+            style="@style/WidgetButton"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@string/widget_like"
+            android:src="@drawable/ic_widget_heart" />
     </LinearLayout>
 </RelativeLayout>

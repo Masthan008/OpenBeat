@@ -526,11 +526,7 @@ fun AppRoot(vm: PlayerViewModel) {
         nav.navigate("mood/${Uri.encode(mood.browseId)}?params=${Uri.encode(mood.params.orEmpty())}&title=${Uri.encode(mood.title)}")
     }
 
-    // The opening animation, once per launch: the app comes forward out of
-    // the mark as the screen dives into it.
-    var opening by remember { mutableStateOf(false) }
-    var dive by remember { androidx.compose.runtime.mutableFloatStateOf(if (opening) 0f else 1f) }
-    LaunchedEffect(Unit) { com.opentune.ui.components.Opening.played = true }
+    // Opening animation is rendered by MainActivity at root level.
 
     // Back on the first page while music plays: the app shrinks up into a pill at the
     // top, towards the notification's player, and goes to the background. Coming
@@ -574,11 +570,6 @@ fun AppRoot(vm: PlayerViewModel) {
     ) {
         com.opentune.ui.components.ConnectionBanner(
             Modifier.fillMaxSize().tvMediaKeys(handleTvMedia).graphicsLayer {
-                if (dive < 1f) {
-                    val s = 1.14f - 0.14f * (1f - (1f - dive) * (1f - dive))
-                    scaleX = s
-                    scaleY = s
-                }
                 val p = leave.value
                 if (p > 0f) {
                     // Shrinking toward the top centre, cropped down to a pill as it goes.

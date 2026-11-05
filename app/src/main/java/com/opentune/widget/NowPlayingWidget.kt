@@ -153,25 +153,27 @@ open class NowPlayingWidget : AppWidgetProvider() {
 
         /** Brings every placed widget up to date with [player]; cheap when nothing changed. */
         fun refresh(context: Context, player: Player?) {
-            val item = player?.currentMediaItem
-            val song = item?.toSong()
-            val state = State(
-                videoId = song?.videoId,
-                title = song?.title.orEmpty(),
-                artist = song?.artist.orEmpty(),
-                thumbnailUrl = song?.thumbnailUrl,
-                playing = player?.isPlaying == true,
-                liked = song?.videoId?.let(LibraryStore::isLiked) == true,
-            )
-            if (state == last) return
-            last = state
-            save(context, state)
-            render(context, state)
-            if (state.thumbnailUrl != coverFor) {
-                coverFor = state.thumbnailUrl
-                loadCover(context.applicationContext, state)
+            runCatching {
+                val item = player?.currentMediaItem
+                val song = item?.toSong()
+                val state = State(
+                    videoId = song?.videoId,
+                    title = song?.title.orEmpty(),
+                    artist = song?.artist.orEmpty(),
+                    thumbnailUrl = song?.thumbnailUrl,
+                    playing = player?.isPlaying == true,
+                    liked = song?.videoId?.let(LibraryStore::isLiked) == true,
+                )
+                if (state == last) return@runCatching
+                last = state
+                save(context, state)
+                render(context, state)
+                if (state.thumbnailUrl != coverFor) {
+                    coverFor = state.thumbnailUrl
+                    loadCover(context.applicationContext, state)
+                }
+                fetchLyrics(context.applicationContext, state, player?.currentPosition ?: 0L)
             }
-            fetchLyrics(context.applicationContext, state, player?.currentPosition ?: 0L)
         }
 
         /** The player has gone: keep the song shown, with Play rather than Pause. */
@@ -211,7 +213,8 @@ open class NowPlayingWidget : AppWidgetProvider() {
         }
 
         private fun render(context: Context, state: State) {
-            val manager = AppWidgetManager.getInstance(context)
+            runCatching {
+                val manager = AppWidgetManager.getInstance(context)
             val cover = coverFile(context).takeIf {
                 state.videoId != null && it.exists() && state.thumbnailUrl != null &&
                     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("cover-thumbnail", null) == state.thumbnailUrl
@@ -258,6 +261,7 @@ open class NowPlayingWidget : AppWidgetProvider() {
                     views.setOnClickPendingIntent(R.id.widget_like, widgetAction(context, provider, ACTION_LIKE, id * 10 + 4))
                     manager.updateAppWidget(id, views)
                 }
+            }
             }
         }
 

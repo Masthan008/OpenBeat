@@ -96,9 +96,8 @@ class MainActivity : ComponentActivity() {
             val song by vm.currentSong.collectAsState()
             OpenTuneTheme(theme, artworkSeed = rememberArtworkSeed(song?.thumbnailUrl)) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    var opening by remember {
-                        mutableStateOf(!sessionOpeningDone && ui.openingAnimation && !ui.reduceAnimation)
-                    }
+                    val openingAllowed = !com.opentune.ui.components.Opening.played && AppSettings.ui.value.openingAnimation && !AppSettings.ui.value.reduceAnimation
+                    var opening by remember { mutableStateOf(openingAllowed) }
                     var dive by remember { androidx.compose.runtime.mutableFloatStateOf(if (opening) 0f else 1f) }
 
                     // Some TVs crop the picture's edges: keep pages and buttons inside the safe area.

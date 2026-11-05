@@ -71,7 +71,10 @@ object AdBreakManager {
     fun install(application: Application) {
         appContext = application.applicationContext
         prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        completedSongs = prefs?.getInt(KEY_COMPLETED_SONGS, 0) ?: 0
+        // Reset counters on fresh app session so previous session counts never trigger immediate ads on first song
+        completedSongs = 0
+        activePlaybackSeconds = 0L
+        prefs?.edit()?.putInt(KEY_COMPLETED_SONGS, 0)?.apply()
 
         application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
@@ -187,24 +190,28 @@ object AdBreakManager {
         isBreakActive = true
         Log.i(TAG, "Triggering ad break. Reason: $reason (Songs: $completedSongs, ActiveSecs: $activePlaybackSeconds)")
 
-        // Pause playback immediately
         scope.launch(Dispatchers.Main) {
-            try {
-                activePlayer?.pause()
-            } catch (t: Throwable) {
-                Log.w(TAG, "Failed to pause player for ad break", t)
-            }
-
-            val activity = currentActivity
-            if (activity != null && !activity.isFinishing && !activity.isDestroyed && rewardedAd != null) {
-                showRewardedAd(activity, reason)
-            } else {
-                // Launch dedicated break screen activity
-                val intent = Intent(context, AdBreakActivity::class.java).apply {
-                    putExtra(AdBreakActivity.EXTRA_REASON, reason)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            runCatching {
+                try {
+                    activePlayer?.pause()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to pause player for ad break", t)
                 }
-                context.startActivity(intent)
+
+                val activity = currentActivity
+                if (activity != null && !activity.isFinishing && !activity.isDestroyed && rewardedAd != null) {
+                    showRewardedAd(activity, reason)
+                } else {
+                    val targetContext = currentActivity ?: context
+                    val intent = Intent(targetContext, AdBreakActivity::class.java).apply {
+                        putExtra(AdBreakActivity.EXTRA_REASON, reason)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    }
+                    targetContext.startActivity(intent)
+                }
+            }.onFailure {
+                isBreakActive = false
+                Log.w(TAG, "Failed to trigger break safely: ${it.message}")
             }
         }
     }

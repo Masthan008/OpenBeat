@@ -13,6 +13,7 @@ import com.opentune.data.MusicRepository
 import com.opentune.data.subsonic.Subsonic
 import com.opentune.ui.ScreenCache
 import okio.Path.Companion.toOkioPath
+import kotlinx.coroutines.launch
 
 class OpenTuneApp : Application(), SingletonImageLoader.Factory {
     /**
@@ -43,12 +44,14 @@ class OpenTuneApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // First, so a crash anywhere after this is kept for Export diagnostics.
         com.opentune.data.CrashLog.install(this)
-        // Initialize Google Mobile Ads and AdBreakManager safely
-        runCatching {
-            com.google.android.gms.ads.MobileAds.initialize(this) {}
-            com.opentune.ads.AdBreakManager.install(this)
-        }.onFailure {
-            com.opentune.data.DebugLog.w("OpenTuneApp", "MobileAds initialization skipped: ${it.message}")
+        // Initialize Google Mobile Ads and AdBreakManager safely off the UI thread
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob()).launch {
+            runCatching {
+                com.google.android.gms.ads.MobileAds.initialize(this@OpenTuneApp) {}
+                com.opentune.ads.AdBreakManager.install(this@OpenTuneApp)
+            }.onFailure {
+                com.opentune.data.DebugLog.w("OpenTuneApp", "MobileAds initialization skipped: ${it.message}")
+            }
         }
 
         // The home-screen widget follows the shared player service.
