@@ -14,12 +14,12 @@ android {
         applicationId = "com.opentune"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0.0"
+        versionCode = 46
+        versionName = "1.0.4"
         // This version's store changelog, shown as What's new when a release
         // goes out before the app's own notes for it are written.
         val changelog = rootProject.file("fastlane/metadata/android/en-US/changelogs/$versionCode.txt")
-            .takeIf { it.exists() }?.readText().orEmpty().trim()
+            .takeIf { it.exists() }?.readText().orEmpty().replace("\r", "").trim()
         buildConfigField("String", "CHANGELOG", "\"" + changelog.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

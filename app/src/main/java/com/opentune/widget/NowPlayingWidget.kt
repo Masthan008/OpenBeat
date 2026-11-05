@@ -158,6 +158,9 @@ open class NowPlayingWidget : AppWidgetProvider() {
                 NowPlayingWidget::class.java to R.layout.widget_now_playing,
                 AlbumArtWidget::class.java to R.layout.widget_album_art,
                 StudioWidget::class.java to R.layout.widget_studio,
+                MiniPlayerWidget::class.java to R.layout.widget_mini_player,
+                TurntableWidget::class.java to R.layout.widget_turntable,
+                LyricsGlanceWidget::class.java to R.layout.widget_lyrics_glance,
             )
             for ((provider, layout) in designs) {
                 val ids = manager.getAppWidgetIds(ComponentName(context, provider))
@@ -224,3 +227,6 @@ open class NowPlayingWidget : AppWidgetProvider() {
 /** Artwork-first and spacious transport variants, sharing playback and durable state. */
 class AlbumArtWidget : NowPlayingWidget()
 class StudioWidget : NowPlayingWidget()
+class MiniPlayerWidget : NowPlayingWidget()
+class TurntableWidget : NowPlayingWidget()
+class LyricsGlanceWidget : NowPlayingWidget()

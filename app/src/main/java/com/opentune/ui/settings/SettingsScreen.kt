@@ -1574,8 +1574,8 @@ private fun settingsSections(
                 },
                 Entry("Source code", "github open source license gpl") {
                     NavRow("Source code", {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/justshivv/Opentune".toUri())) }
-                    }, summary = "github.com/justshivv/Opentune · GPL v3", icon = Icons.Rounded.Code)
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/Masthan008/OpenBeat".toUri())) }
+                    }, summary = "github.com/Masthan008/OpenBeat · GPL v3", icon = Icons.Rounded.Code)
                 },
                 Entry("Export diagnostics", "log share troubleshooting bug report") {
                     NavRow("Export diagnostics", {

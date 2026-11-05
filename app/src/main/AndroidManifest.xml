@@ -283,6 +283,22 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_now_playing_info" />
         </receiver>
+        <receiver android:name=".widget.MiniPlayerWidget" android:exported="false" android:label="@string/widget_mini_player_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_mini_player_info" />
+        </receiver>
+        <receiver android:name=".widget.TurntableWidget" android:exported="false" android:label="@string/widget_turntable_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_turntable_info" />
+        </receiver>
+        <receiver android:name=".widget.LyricsGlanceWidget" android:exported="false" android:label="@string/widget_lyrics_glance_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_lyrics_glance_info" />
+        </receiver>
+        <receiver android:name=".widget.SpeedDialWidget" android:exported="false" android:label="@string/widget_speed_dial_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_speed_dial_info" />
+        </receiver>
 
         <!-- "Name that song": a home-screen widget and a Quick Settings tile. -->
         <receiver

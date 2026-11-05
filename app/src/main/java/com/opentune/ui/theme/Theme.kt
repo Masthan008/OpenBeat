@@ -227,6 +227,40 @@ val Outfit = FontFamily(
     },
 )
 
+@OptIn(ExperimentalTextApi::class)
+val InterFont = FontFamily(
+    listOf(300, 400, 500, 600, 700, 800).map { w ->
+        Font(R.font.inter_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+val PoppinsFont = FontFamily(
+    Font(R.font.poppins_regular, FontWeight.Normal),
+    Font(R.font.poppins_semibold, FontWeight.SemiBold),
+    Font(R.font.poppins_semibold, FontWeight.Bold),
+)
+
+@OptIn(ExperimentalTextApi::class)
+val PlusJakartaFont = FontFamily(
+    listOf(400, 500, 600, 700, 800).map { w ->
+        Font(R.font.plus_jakarta_sans_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+@OptIn(ExperimentalTextApi::class)
+val JetBrainsMonoFont = FontFamily(
+    listOf(400, 500, 600, 700).map { w ->
+        Font(R.font.jetbrains_mono_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+@OptIn(ExperimentalTextApi::class)
+val LexendFont = FontFamily(
+    listOf(300, 400, 500, 600, 700).map { w ->
+        Font(R.font.lexend_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
 private fun TextStyle.outfit(weight: FontWeight? = null, spacing: Float? = null) =
     copy(fontFamily = Outfit, fontWeight = weight ?: fontWeight, letterSpacing = spacing?.sp ?: letterSpacing)
 
@@ -276,6 +310,11 @@ internal fun rememberAppFont(settings: ThemeSettings): FontFamily {
         when (settings.font) {
             com.opentune.data.settings.AppFont.SYSTEM -> FontFamily.SansSerif
             com.opentune.data.settings.AppFont.OUTFIT -> Outfit
+            com.opentune.data.settings.AppFont.INTER -> InterFont
+            com.opentune.data.settings.AppFont.POPPINS -> PoppinsFont
+            com.opentune.data.settings.AppFont.PLUS_JAKARTA -> PlusJakartaFont
+            com.opentune.data.settings.AppFont.JETBRAINS_MONO -> JetBrainsMonoFont
+            com.opentune.data.settings.AppFont.LEXEND -> LexendFont
             com.opentune.data.settings.AppFont.SERIF -> FontFamily.Serif
             com.opentune.data.settings.AppFont.MONO -> FontFamily.Monospace
             com.opentune.data.settings.AppFont.CUSTOM -> runCatching {

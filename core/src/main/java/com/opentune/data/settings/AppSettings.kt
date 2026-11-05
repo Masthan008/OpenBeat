@@ -69,7 +69,16 @@ enum class PlayerStyle(val label: String, val summary: String) {
 
 @Serializable
 enum class AppFont(val label: String) {
-    SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+    SYSTEM("System sans"),
+    OUTFIT("Outfit"),
+    INTER("Inter"),
+    POPPINS("Poppins"),
+    PLUS_JAKARTA("Plus Jakarta Sans"),
+    JETBRAINS_MONO("JetBrains Mono"),
+    LEXEND("Lexend"),
+    SERIF("Serif"),
+    MONO("Monospace"),
+    CUSTOM("Imported font"),
 }
 
 @Serializable
