@@ -10,7 +10,7 @@ for attempt in range(6):
             html = response.read().decode()
         assert 'id="owner-login"' in html and 'data-host="pages"' in html
         assert 'id="owner-dashboard" hidden' in html and 'name="password"' in html
-        manifest = __import__('json').loads((Path(__file__).resolve().parents[1] / 'site/usage/assets.json').read_text())
+        manifest = __import__('json').loads((Path(__file__).resolve().parents[1] / 'site/usage/assets.json').read_text(encoding='utf-8'))
         for name, expected in manifest['assets'].items():
             with urlopen(base + name, timeout=20) as response:
                 assert sha256(response.read()).hexdigest() == expected

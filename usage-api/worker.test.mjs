@@ -272,13 +272,13 @@ test('public counts include current apps (India time) and older ones (UTC), each
   assert.equal(counts.monthly,3);
   assert.equal(counts.daily,3);
   assert.equal(counts.installations,3);
-  const shield=await (await worker.fetch(new Request('https://example.test/v1/badge'),{DB:db})).json();
+  const shield=await (await worker.fetch(new Request('https://example.test/v1/badge'),{DB:db,NOW:now})).json();
   assert.equal(shield.message,'3');
 });
 
 test('the public count and badge endpoints need no sign-in',async()=>{
   const db=database(); await ingest(db,body(1),now);
-  const env={DB:db};
+  const env={DB:db,NOW:now};
   const open=await worker.fetch(new Request('https://example.test/v1/public'),env);
   assert.equal(open.status,200);
   assert.equal((await open.json()).installations,1);
@@ -292,7 +292,7 @@ test('the public count and badge endpoints need no sign-in',async()=>{
 
 test('the private dashboard data still needs a sign-in',async()=>{
   const db=database(); await ingest(db,body(1),now);
-  const locked=await worker.fetch(new Request('https://example.test/v1/summary'),{DB:db});
+  const locked=await worker.fetch(new Request('https://example.test/v1/summary'),{DB:db,NOW:now});
   assert.notEqual(locked.status,200);
 });
 

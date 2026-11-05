@@ -267,10 +267,10 @@ export default {
       }
       if (request.method==='GET' && path==='/v1/public') {
         let zone;try { zone=reportZone(url.searchParams.get('timeZone') || 'Asia/Kolkata'); } catch(e) {return json({error:e.message},400);}
-        return json(await rememberFor(env.DB, 'public:'+zone, 300_000, () => publicCounts(env.DB,new Date(),zone)));
+        return json(await rememberFor(env.DB, 'public:'+zone, 300_000, () => publicCounts(env.DB,env.NOW||new Date(),zone)));
       }
       if (request.method==='GET' && path==='/v1/badge') {
-        return json(badge(await rememberFor(env.DB, 'public:Asia/Kolkata', 300_000, () => publicCounts(env.DB,new Date())),url.searchParams));
+        return json(badge(await rememberFor(env.DB, 'public:Asia/Kolkata', 300_000, () => publicCounts(env.DB,env.NOW||new Date())),url.searchParams));
       }
       if (request.method!=='POST' || !['/v1/activity','/v1/download'].includes(path)) return json({error:'Not found'},404);
       if (!request.headers.get('Content-Type')?.startsWith('application/json')) return json({error:'JSON required'},415);

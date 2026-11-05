@@ -10,18 +10,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def prepare(commit, output):
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('Use the full 40-character source commit SHA')
-    gradle = (ROOT / 'app/build.gradle.kts').read_text()
+    gradle = (ROOT / 'app/build.gradle.kts').read_text(encoding='utf-8')
     version = re.search(r'versionName = "([^"]+)"', gradle)[1]
     code = int(re.search(r'versionCode = (\d+)', gradle)[1])
     metadata = ROOT / 'fastlane/metadata/android'
     locale = metadata / 'en-US'
     for name, maximum in [('title.txt', 30), ('short_description.txt', 80), ('full_description.txt', 4000)]:
-        value = (locale / name).read_text().strip()
+        value = (locale / name).read_text(encoding='utf-8').strip()
         if not value or len(value) > maximum:
             raise ValueError(f'{name} must contain 1–{maximum} characters')
     output.mkdir(parents=True, exist_ok=True)
     shutil.copytree(metadata, output / 'fastlane/metadata/android', dirs_exist_ok=True)
-    template = (ROOT / 'distribution/fdroid/com.opentune.yml.in').read_text()
+    template = (ROOT / 'distribution/fdroid/com.opentune.yml.in').read_text(encoding='utf-8')
     for key, value in {'VERSION': version, 'VERSION_CODE': str(code), 'COMMIT': commit}.items():
         template = template.replace('@' + key + '@', value)
     (output / 'fdroid').mkdir(exist_ok=True)

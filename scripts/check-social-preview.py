@@ -61,4 +61,4 @@ if __name__ == '__main__':
         assert kind == 'image/jpeg'
         validate(page.decode(), data)
     else:
-        validate((ROOT / 'site/index.html').read_text(), (ROOT / 'site/img/share-card-v3.jpg').read_bytes())
+        validate((ROOT / 'site/index.html').read_text(encoding='utf-8'), (ROOT / 'site/img/share-card-v3.jpg').read_bytes())

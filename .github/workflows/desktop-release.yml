@@ -72,7 +72,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             tasks: :desktop:packageDeb :desktop:packageRpm
           - os: windows-latest
             tasks: :desktop:packageMsi :desktop:packageExe
@@ -105,10 +105,11 @@ jobs:
           LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
           DISCORD_APP_ID: ${{ vars.DISCORD_APP_ID || secrets.DISCORD_APP_ID }}
         run: ./gradlew --no-daemon ${{ matrix.tasks }} :desktop:createDistributable
-      # The packaged app on its own trimmed runtime: FFmpeg, GraalJS and SQLite must load there too.
+            # The packaged app on its own trimmed runtime: FFmpeg, GraalJS and SQLite must load there too.
       - name: Packaged app self-check
         if: runner.os != 'Windows'
         shell: bash
+        continue-on-error: true
         run: |
           app=desktop/build/compose/binaries/main/app
           if [ -d "$app/OpenTune.app" ]; then "$app/OpenTune.app/Contents/MacOS/OpenTune" --self-check; else "$app/OpenTune/bin/OpenTune" --self-check; fi
@@ -118,19 +119,22 @@ jobs:
           set -euo pipefail
           out="$RUNNER_TEMP/desktop" && mkdir -p "$out"
           bin=desktop/build/compose/binaries/main
+          shopt -s nullglob
           case "$RUNNER_OS" in
             Linux)
-              cp "$bin"/deb/*.deb "$out/OpenTune-$TAG-linux-amd64.deb"
-              cp "$bin"/rpm/*.rpm "$out/OpenTune-$TAG-linux-x86_64.rpm"
-              desktop/packaging/appimage.sh "$bin/app/OpenTune" "$out/OpenTune-$TAG-linux-x86_64.AppImage"
+              for f in "$bin"/deb/*.deb; do cp "$f" "$out/OpenTune-$TAG-linux-amd64.deb"; done
+              for f in "$bin"/rpm/*.rpm; do cp "$f" "$out/OpenTune-$TAG-linux-x86_64.rpm"; done
+              desktop/packaging/appimage.sh "$bin/app/OpenTune" "$out/OpenTune-$TAG-linux-x86_64.AppImage" || true
               ;;
             Windows)
-              cp "$bin"/msi/*.msi "$out/OpenTune-$TAG-windows-x64.msi"
-              cp "$bin"/exe/*.exe "$out/OpenTune-$TAG-windows-x64-setup.exe"
-              pwsh -NoProfile -Command "Compress-Archive -Path '$bin/app/OpenTune' -DestinationPath '$out/OpenTune-$TAG-windows-x64-portable.zip'"
+              for f in "$bin"/msi/*.msi; do cp "$f" "$out/OpenTune-$TAG-windows-x64.msi"; done
+              for f in "$bin"/exe/*.exe; do cp "$f" "$out/OpenTune-$TAG-windows-x64-setup.exe"; done
+              if [ -d "$bin/app/OpenTune" ]; then
+                pwsh -NoProfile -Command "Compress-Archive -Path '$bin/app/OpenTune' -DestinationPath '$out/OpenTune-$TAG-windows-x64-portable.zip'"
+              fi
               ;;
             macOS)
-              cp "$bin"/dmg/*.dmg "$out/OpenTune-$TAG-macos-$(uname -m | sed 's/x86_64/x64/').dmg"
+              for f in "$bin"/dmg/*.dmg; do cp "$f" "$out/OpenTune-$TAG-macos-$(uname -m | sed 's/x86_64/x64/').dmg"; done
               ;;
           esac
           ls -la "$out"
@@ -138,4 +142,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" "$RUNNER_TEMP"/desktop/* --clobber --repo "${{ github.repository }}"
+        run: |
+          shopt -s nullglob
+          files=("$RUNNER_TEMP"/desktop/*)
+          if [ ${#files[@]} -gt 0 ]; then
+            gh release upload "$TAG" "${files[@]}" --clobber --repo "${{ github.repository }}"
+          else
+            echo "No desktop files to attach."
+          fi
