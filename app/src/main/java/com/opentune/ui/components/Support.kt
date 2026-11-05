@@ -70,7 +70,6 @@ object Support {
      */
     enum class Invite(internal val daysBefore: Int, internal val askedKey: String, internal val doneKey: String) {
         STAR(5, "askedAt", "done"),
-        DISCORD(10, "discordAskedAt", "discordDone"),
     }
     private val MIN_GAP_MS = TimeUnit.DAYS.toMillis(30)
     private val APART_MS = TimeUnit.DAYS.toMillis(14)
@@ -118,7 +117,7 @@ fun SupportDialog(onDismiss: () -> Unit) {
         title = { Text("Support OpenBeat") },
         text = {
             Column {
-                Text("OpenBeat has no ads and nothing to sell. If it has added a little something to your days, a small thank-you helps keep it going, and every one is truly appreciated.")
+                Text("OpenBeat is built for music lovers. If it has added a little something to your days, a small thank-you helps support backend and streaming infrastructure maintenance.")
                 Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Support.AMOUNTS.forEach { a ->
                         FilterChip(selected = text == a.toString(), onClick = { text = a.toString() }, label = { Text("₹$a") })
@@ -160,26 +159,20 @@ fun InviteCard(invite: Support.Invite, onDismiss: () -> Unit) {
         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
         onDismiss()
     }
-    val discord = invite == Support.Invite.DISCORD
     FloatingDialog(
         onDismissRequest = onDismiss,
-        icon = { if (discord) Icon(com.opentune.ui.settings.discordLogo, null) else Icon(Icons.Rounded.Star, null) },
-        title = { Text(if (discord) "Come say hi on Discord" else "Made for music. Built together.") },
+        icon = { Icon(Icons.Rounded.Star, null) },
+        title = { Text("Made for music. Built together.") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    if (discord) "Talk to other listeners, swap add-ons, report bugs and hear about new features first. It's where OpenBeat gets shaped."
-                    else "OpenBeat is free and open source. A star on GitHub helps more listeners find the app, and takes a second."
-                )
+                Text("OpenBeat is free and open source. A star on GitHub helps more listeners find the app, and takes a second.")
                 androidx.compose.material3.FilledTonalButton(
-                    onClick = { open(if (discord) Support.DISCORD else Support.REPO) },
+                    onClick = { open(Support.REPO) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = if (discord) androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
-                        containerColor = com.opentune.ui.settings.DISCORD_BLURPLE, contentColor = androidx.compose.ui.graphics.Color.White,
-                    ) else androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(),
+                    colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(),
                 ) {
-                    Icon(if (discord) com.opentune.ui.settings.discordLogo else Icons.Rounded.Star, null, Modifier.size(18.dp))
-                    Text(if (discord) "Join the Discord" else "Star on GitHub", Modifier.padding(start = 8.dp))
+                    Icon(Icons.Rounded.Star, null, Modifier.size(18.dp))
+                    Text("Star on GitHub", Modifier.padding(start = 8.dp))
                 }
                 androidx.compose.material3.TextButton(onClick = { Support.answered(context, invite, never = true); onDismiss() }) {
                     Text("Don't show again")

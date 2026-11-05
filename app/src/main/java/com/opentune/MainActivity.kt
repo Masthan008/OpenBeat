@@ -6,6 +6,11 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +37,9 @@ import com.opentune.ui.theme.OpenTuneTheme
 import com.opentune.ui.theme.rememberArtworkSeed
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        var sessionOpeningDone: Boolean = false
+    }
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(com.opentune.ui.theme.AppLanguages.wrap(newBase))
     }
@@ -45,7 +53,11 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            sessionOpeningDone = false
+        }
         com.opentune.data.innertube.Innertube.regionOverride = runCatching {
             getSystemService(android.telephony.TelephonyManager::class.java)?.networkCountryIso?.takeIf { it.length == 2 }
         }.getOrNull() ?: android.content.res.Resources.getSystem().configuration.locales[0].country.takeIf { it.length == 2 }
@@ -86,35 +98,64 @@ class MainActivity : ComponentActivity() {
             val song by vm.currentSong.collectAsState()
             OpenTuneTheme(theme, artworkSeed = rememberArtworkSeed(song?.thumbnailUrl)) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    var opening by remember {
+                        mutableStateOf(!sessionOpeningDone && ui.openingAnimation && !ui.reduceAnimation)
+                    }
+                    var dive by remember { androidx.compose.runtime.mutableFloatStateOf(if (opening) 0f else 1f) }
+
                     // Some TVs crop the picture's edges: keep pages and buttons inside the safe area.
                     androidx.compose.foundation.layout.Box(if (tv) Modifier.padding(horizontal = 28.dp, vertical = 16.dp) else Modifier) {
-                    // More than two releases behind, the app is only its update screen until it's updated.
-                    val required by com.opentune.data.UpdateLock.required.collectAsState()
-                    val behind by com.opentune.data.UpdateLock.behind.collectAsState()
-                    LaunchedEffect(required) { if (required != null && vm.isPlaying.value) vm.togglePlayPause() }
-                    if (required != null) com.opentune.ui.settings.UpdateRequiredScreen(required!!, behind) else {
-                    // A fresh install's welcome comes first; Home, built after it, starts from the picks.
-                    androidx.compose.animation.AnimatedContent(
-                        ui.welcome == WelcomeState.DUE,
-                        transitionSpec = {
-                            if (ui.reduceAnimation) {
-                                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160)) togetherWith
-                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
-                            } else {
-                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320, delayMillis = 80)) +
-                                    androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(420), initialScale = 0.96f)) togetherWith
-                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    if (dive < 1f) {
+                                        val s = 1.14f - 0.14f * (1f - (1f - dive) * (1f - dive))
+                                        scaleX = s
+                                        scaleY = s
+                                    }
+                                }
+                        ) {
+                            // More than two releases behind, the app is only its update screen until it's updated.
+                            val required by com.opentune.data.UpdateLock.required.collectAsState()
+                            val behind by com.opentune.data.UpdateLock.behind.collectAsState()
+                            LaunchedEffect(required) { if (required != null && vm.isPlaying.value) vm.togglePlayPause() }
+                            if (required != null) com.opentune.ui.settings.UpdateRequiredScreen(required!!, behind) else {
+                            // A fresh install's welcome comes first; Home, built after it, starts from the picks.
+                            androidx.compose.animation.AnimatedContent(
+                                ui.welcome == WelcomeState.DUE,
+                                transitionSpec = {
+                                    if (ui.reduceAnimation) {
+                                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160)) togetherWith
+                                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                                    } else {
+                                        (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320, delayMillis = 80)) +
+                                            androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(420), initialScale = 0.96f)) togetherWith
+                                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                                    }
+                                },
+                                label = "welcome",
+                            ) { welcome ->
+                                val page: @androidx.compose.runtime.Composable () -> Unit = {
+                                    if (welcome) WelcomeScreen(onDone = {}) else AppRoot(vm)
+                                }
+                                if (tv) com.opentune.ui.tv.TvRemoteSurface(page) else page()
                             }
-                        },
-                        label = "welcome",
-                    ) { welcome ->
-                        val page: @androidx.compose.runtime.Composable () -> Unit = {
-                            if (welcome) WelcomeScreen(onDone = {}) else AppRoot(vm)
+                            }
+                            com.opentune.ui.account.ConfirmPairing()
                         }
-                        if (tv) com.opentune.ui.tv.TvRemoteSurface(page) else page()
-                    }
-                    }
-                    com.opentune.ui.account.ConfirmPairing()
+
+                        if (opening) {
+                            com.opentune.ui.components.OpeningReveal(
+                                onDive = { dive = it },
+                                onDone = {
+                                    opening = false
+                                    dive = 1f
+                                    sessionOpeningDone = true
+                                    com.opentune.ui.components.Opening.played = true
+                                }
+                            )
+                        }
                     }
                 }
             }

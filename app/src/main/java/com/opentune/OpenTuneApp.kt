@@ -43,8 +43,15 @@ class OpenTuneApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // First, so a crash anywhere after this is kept for Export diagnostics.
         com.opentune.data.CrashLog.install(this)
+        // Initialize Google Mobile Ads and AdBreakManager
+        com.google.android.gms.ads.MobileAds.initialize(this) {}
+        com.opentune.ads.AdBreakManager.install(this)
+
         // The home-screen widget follows the shared player service.
-        com.opentune.data.AppHooks.onPlayerChanged = { context, player -> com.opentune.widget.NowPlayingWidget.refresh(context, player) }
+        com.opentune.data.AppHooks.onPlayerChanged = { context, player ->
+            com.opentune.widget.NowPlayingWidget.refresh(context, player)
+            com.opentune.ads.AdBreakManager.onPlayerChanged(player)
+        }
         com.opentune.data.AppHooks.onPlayerStopped = { context -> com.opentune.widget.NowPlayingWidget.stopped(context) }
         java.util.Locale.setDefault(com.opentune.ui.theme.AppLanguages.wrap(this).resources.configuration.locales[0])
         com.opentune.data.Core.init(this)

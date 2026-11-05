@@ -224,7 +224,7 @@ fun WelcomeScreen(
     }
 
     // The opening animation dives into the welcome, as it would into Home.
-    var opening by remember { mutableStateOf(!com.opentune.ui.components.Opening.played && ui.openingAnimation && !ui.reduceAnimation) }
+    var opening by remember { mutableStateOf(false) }
     var dive by remember { mutableFloatStateOf(if (opening) 0f else 1f) }
     LaunchedEffect(Unit) { com.opentune.ui.components.Opening.played = true }
 
@@ -312,9 +312,7 @@ fun WelcomeScreen(
             }
         }
     }
-    if (opening) {
-        com.opentune.ui.components.OpeningReveal(onDive = { dive = it }, onDone = { opening = false; dive = 1f })
-    }
+    // OpeningReveal elevated to MainActivity root
 }
 
 /** Room the steps leave for the bars over them. */

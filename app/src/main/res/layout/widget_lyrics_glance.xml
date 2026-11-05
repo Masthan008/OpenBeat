@@ -14,10 +14,11 @@
         android:scaleType="centerCrop"
         android:src="@drawable/ic_widget_cover" />
 
-    <View
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#D90E1015" />
+        android:background="#D90E1015"
+        android:importantForAccessibility="no" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -57,7 +58,7 @@
                 android:contentDescription="@string/widget_like"
                 android:src="@drawable/ic_widget_heart" />
 
-            <View
+            <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1" />

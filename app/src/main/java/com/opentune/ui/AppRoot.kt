@@ -528,7 +528,7 @@ fun AppRoot(vm: PlayerViewModel) {
 
     // The opening animation, once per launch: the app comes forward out of
     // the mark as the screen dives into it.
-    var opening by remember { mutableStateOf(!com.opentune.ui.components.Opening.played && chromeUi.openingAnimation && !chromeUi.reduceAnimation) }
+    var opening by remember { mutableStateOf(false) }
     var dive by remember { androidx.compose.runtime.mutableFloatStateOf(if (opening) 0f else 1f) }
     LaunchedEffect(Unit) { com.opentune.ui.components.Opening.played = true }
 
@@ -958,9 +958,7 @@ fun AppRoot(vm: PlayerViewModel) {
                 com.opentune.ui.components.PillHost(chromeUi.reduceAnimation, Modifier.align(Alignment.TopCenter))
             }
         }
-        if (opening) {
-            com.opentune.ui.components.OpeningReveal(onDive = { dive = it }, onDone = { opening = false; dive = 1f })
-        }
+        // OpeningReveal elevated to MainActivity root
     }
 }
 

@@ -1563,7 +1563,7 @@ private fun settingsSections(
                         icon = Icons.Rounded.Info,
                     )
                 },
-                Entry("OpenBeat community", "github discord community addons developer") { CommunityBanner() },
+                Entry("Supporting OpenBeat infrastructure", "ads transparency backend server costs") { AdExplanationBanner() },
                 Entry("Support OpenBeat", "donate upi pay money tip support developer") {
                     NavRow("Support OpenBeat", { supportDialog = true }, summary = "A small thank-you helps keep OpenBeat going", icon = Icons.Rounded.Favorite)
                 },

@@ -108,8 +108,8 @@ private fun smooth(from: Float, to: Float, x: Float): Float {
 
 /** The width of the white edge around the mark. */
 private val RIM = 2.5.dp
-private const val SETTLE_MS = 620
-private const val HOLD_MS = 120L
-private const val DIVE_MS = 900
+private const val SETTLE_MS = 420
+private const val HOLD_MS = 80L
+private const val DIVE_MS = 550
 /** How many times its size the mark grows to by the end of the dive, enough for its band to fill the screen. */
 private const val ZOOM = 90f

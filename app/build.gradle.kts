@@ -131,6 +131,11 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
 
+    // Splash screen API (Android 12+)
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    // Google Mobile Ads (AdMob)
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
+
     // ---- Images ----
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")

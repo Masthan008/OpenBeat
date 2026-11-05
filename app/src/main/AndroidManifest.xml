@@ -262,6 +262,19 @@
             android:theme="@style/Theme.OpenTune"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Google Mobile Ads Application ID (AdMob sample test ID; replace with live ID in production) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <!-- 30-second non-skippable audio/video ad break -->
+        <activity
+            android:name=".ads.AdBreakActivity"
+            android:exported="false"
+            android:theme="@style/Theme.OpenTune"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout" />
+
         <!-- The home-screen widget. -->
 
         <receiver android:name=".widget.AlbumArtWidget" android:exported="false" android:label="@string/widget_album_art_label">
