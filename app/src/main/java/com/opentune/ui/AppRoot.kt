@@ -534,7 +534,12 @@ fun AppRoot(vm: PlayerViewModel) {
     val leave = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) { leave.snapTo(0f) } }
     val atRoot = entry != null && nav.previousBackStackEntry == null
-    BackHandler(enabled = isPlaying && atRoot && !sheetOpen && !chromeUi.reduceAnimation && leave.targetValue == 0f) {
+    // Guard: only send-to-background after the user has opened the player at least once this
+    // session. Without this, tapping the first song sets isPlaying=true before playerOpen
+    // becomes true, and a recomposition-timed back event immediately moves the task to background.
+    var playerEverOpened by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(playerOpen) { if (playerOpen) playerEverOpened = true }
+    BackHandler(enabled = isPlaying && atRoot && !sheetOpen && playerEverOpened && !chromeUi.reduceAnimation && leave.targetValue == 0f) {
         val activity = appContext as? android.app.Activity
         uiScope.launch {
             // Long enough to read as one gesture, on a curve that starts briskly and

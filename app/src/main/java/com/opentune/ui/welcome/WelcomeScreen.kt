@@ -224,9 +224,10 @@ fun WelcomeScreen(
     }
 
     // The opening animation dives into the welcome, as it would into Home.
+    // Opening.played is set by MainActivity's onDone callback — not here — so that
+    // the animation can still play the first time a fresh-install user sees this screen.
     var opening by remember { mutableStateOf(false) }
     var dive by remember { mutableFloatStateOf(if (opening) 0f else 1f) }
-    LaunchedEffect(Unit) { com.opentune.ui.components.Opening.played = true }
 
     Box(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).graphicsLayer {

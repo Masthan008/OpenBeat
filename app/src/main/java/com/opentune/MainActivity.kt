@@ -36,9 +36,6 @@ import com.opentune.ui.theme.OpenTuneTheme
 import com.opentune.ui.theme.rememberArtworkSeed
 
 class MainActivity : ComponentActivity() {
-    companion object {
-        var sessionOpeningDone: Boolean = false
-    }
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(com.opentune.ui.theme.AppLanguages.wrap(newBase))
     }
@@ -53,9 +50,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) {
-            sessionOpeningDone = false
-        }
         com.opentune.data.innertube.Innertube.regionOverride = runCatching {
             getSystemService(android.telephony.TelephonyManager::class.java)?.networkCountryIso?.takeIf { it.length == 2 }
         }.getOrNull() ?: android.content.res.Resources.getSystem().configuration.locales[0].country.takeIf { it.length == 2 }
@@ -148,7 +142,6 @@ class MainActivity : ComponentActivity() {
                                 onDone = {
                                     opening = false
                                     dive = 1f
-                                    sessionOpeningDone = true
                                     com.opentune.ui.components.Opening.played = true
                                 }
                             )
