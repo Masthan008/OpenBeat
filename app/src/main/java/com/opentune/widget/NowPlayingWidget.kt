@@ -28,14 +28,18 @@ import com.opentune.data.library.LibraryStore
 import com.opentune.data.model.Song
 import com.opentune.data.model.artworkAt
 import com.opentune.data.subsonic.Subsonic
+import com.opentune.playback.PlaybackService
+import com.opentune.playback.PlayerConnection
 import com.opentune.playback.toSong
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 /**
  * The home-screen widget: cover, title and artist, previous / play-pause /
@@ -65,12 +69,63 @@ open class NowPlayingWidget : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action != ACTION_LIKE) return
-        val state = load(context)
-        val id = state.videoId ?: return
-        val song = Song(id, state.title, state.artist, state.thumbnailUrl)
-        LibraryStore.setLiked(song, !LibraryStore.isLiked(id))
-        render(context, state.copy(liked = LibraryStore.isLiked(id)))
+        when (intent.action) {
+            ACTION_PLAY_PAUSE -> {
+                val player = PlaybackService.activeSession?.player
+                if (player != null) {
+                    if (player.isPlaying) player.pause() else player.play()
+                } else {
+                    val conn = PlayerConnection(context.applicationContext)
+                    scope.launch {
+                        try {
+                            withTimeout(3000L) { conn.connected.first { it } }
+                            conn.togglePlayPause()
+                        } catch (t: Throwable) {
+                            sendMediaButtonFallback(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+                        }
+                    }
+                }
+            }
+            ACTION_NEXT -> {
+                val player = PlaybackService.activeSession?.player
+                if (player != null) {
+                    player.seekToNext()
+                } else {
+                    val conn = PlayerConnection(context.applicationContext)
+                    scope.launch {
+                        try {
+                            withTimeout(3000L) { conn.connected.first { it } }
+                            conn.skipNext()
+                        } catch (t: Throwable) {
+                            sendMediaButtonFallback(context, KeyEvent.KEYCODE_MEDIA_NEXT)
+                        }
+                    }
+                }
+            }
+            ACTION_PREVIOUS -> {
+                val player = PlaybackService.activeSession?.player
+                if (player != null) {
+                    player.seekToPrevious()
+                } else {
+                    val conn = PlayerConnection(context.applicationContext)
+                    scope.launch {
+                        try {
+                            withTimeout(3000L) { conn.connected.first { it } }
+                            conn.skipPrevious()
+                        } catch (t: Throwable) {
+                            sendMediaButtonFallback(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                        }
+                    }
+                }
+            }
+            ACTION_LIKE -> {
+                val state = load(context)
+                val id = state.videoId ?: return
+                val song = Song(id, state.title, state.artist, state.thumbnailUrl)
+                LibraryStore.setLiked(song, !LibraryStore.isLiked(id))
+                render(context, state.copy(liked = LibraryStore.isLiked(id)))
+            }
+        }
     }
 
     private data class State(
@@ -83,7 +138,13 @@ open class NowPlayingWidget : AppWidgetProvider() {
     )
 
     companion object {
-        private const val ACTION_LIKE = "com.opentune.widget.LIKE"
+        const val ACTION_PLAY_PAUSE = "com.opentune.widget.PLAY_PAUSE"
+        const val ACTION_NEXT = "com.opentune.widget.NEXT"
+        const val ACTION_PREVIOUS = "com.opentune.widget.PREVIOUS"
+        const val ACTION_LIKE = "com.opentune.widget.LIKE"
+        private var lyricsJob: Job? = null
+        private var cachedLyricLine: String? = null
+        private var lyricsForId: String? = null
         private const val PREFS = "widget"
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private var last: State? = null
@@ -110,6 +171,7 @@ open class NowPlayingWidget : AppWidgetProvider() {
                 coverFor = state.thumbnailUrl
                 loadCover(context.applicationContext, state)
             }
+            fetchLyrics(context.applicationContext, state, player?.currentPosition ?: 0L)
         }
 
         /** The player has gone: keep the song shown, with Play rather than Pause. */
@@ -170,8 +232,14 @@ open class NowPlayingWidget : AppWidgetProvider() {
                     val width = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300)
                     val compact = provider == NowPlayingWidget::class.java
                     val empty = state.videoId == null
-                    views.setTextViewText(R.id.widget_title, if (empty) context.getString(R.string.widget_nothing_playing) else state.title)
-                    views.setTextViewText(R.id.widget_artist, if (empty) context.getString(R.string.widget_open) else state.artist)
+                    if (provider == LyricsGlanceWidget::class.java) {
+                        views.setTextViewText(R.id.widget_artist, if (empty) "NOW PLAYING · LYRICS" else "${state.title} · ${state.artist}")
+                        val lyric = cachedLyricLine ?: if (empty) context.getString(R.string.widget_nothing_playing) else state.title
+                        views.setTextViewText(R.id.widget_title, lyric)
+                    } else {
+                        views.setTextViewText(R.id.widget_title, if (empty) context.getString(R.string.widget_nothing_playing) else state.title)
+                        views.setTextViewText(R.id.widget_artist, if (empty) context.getString(R.string.widget_open) else state.artist)
+                    }
                     if (cover != null) views.setImageViewBitmap(R.id.widget_cover, cover) else views.setImageViewResource(R.id.widget_cover, R.drawable.ic_widget_cover)
                     views.setImageViewResource(R.id.widget_play, if (state.playing) R.drawable.ic_widget_pause else R.drawable.ic_widget_play)
                     views.setContentDescription(R.id.widget_play, context.getString(if (state.playing) R.string.widget_pause else R.string.widget_play))
@@ -182,25 +250,70 @@ open class NowPlayingWidget : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_previous, if (compact && width < 360) View.GONE else View.VISIBLE)
 
                     views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
-                        context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                        context, id, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                     ))
-                    views.setOnClickPendingIntent(R.id.widget_previous, mediaKey(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS))
-                    views.setOnClickPendingIntent(R.id.widget_play, mediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
-                    views.setOnClickPendingIntent(R.id.widget_next, mediaKey(context, KeyEvent.KEYCODE_MEDIA_NEXT))
-                    views.setOnClickPendingIntent(R.id.widget_like, PendingIntent.getBroadcast(
-                        context, 1, Intent(context, NowPlayingWidget::class.java).setAction(ACTION_LIKE),
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    ))
+                    views.setOnClickPendingIntent(R.id.widget_previous, widgetAction(context, provider, ACTION_PREVIOUS, id * 10 + 1))
+                    views.setOnClickPendingIntent(R.id.widget_play, widgetAction(context, provider, ACTION_PLAY_PAUSE, id * 10 + 2))
+                    views.setOnClickPendingIntent(R.id.widget_next, widgetAction(context, provider, ACTION_NEXT, id * 10 + 3))
+                    views.setOnClickPendingIntent(R.id.widget_like, widgetAction(context, provider, ACTION_LIKE, id * 10 + 4))
                     manager.updateAppWidget(id, views)
                 }
             }
         }
 
-        private fun mediaKey(context: Context, keyCode: Int): PendingIntent {
-            val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        private fun widgetAction(context: Context, provider: Class<*>, action: String, requestCode: Int): PendingIntent {
+            val intent = Intent(context, provider).setAction(action)
+            return PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        }
+
+        private fun sendMediaButtonFallback(context: Context, keyCode: Int) {
+            val down = Intent(Intent.ACTION_MEDIA_BUTTON)
                 .setComponent(ComponentName(context, MediaButtonReceiver::class.java))
                 .putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            return PendingIntent.getBroadcast(context, keyCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val up = Intent(Intent.ACTION_MEDIA_BUTTON)
+                .setComponent(ComponentName(context, MediaButtonReceiver::class.java))
+                .putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_UP, keyCode))
+            context.sendBroadcast(down)
+            context.sendBroadcast(up)
+        }
+
+        private fun fetchLyrics(context: Context, state: State, positionMs: Long = 0L) {
+            val id = state.videoId ?: run {
+                cachedLyricLine = null
+                lyricsForId = null
+                return
+            }
+            if (lyricsForId == id && cachedLyricLine != null) return
+            lyricsForId = id
+            lyricsJob?.cancel()
+            lyricsJob = scope.launch(Dispatchers.IO) {
+                val dur = PlaybackService.activeSession?.player?.duration?.coerceAtLeast(0L) ?: 0L
+                val lyrics = runCatching {
+                    com.opentune.data.lyrics.LyricsRepository.lyricsFor(id, state.title, state.artist, dur)
+                }.getOrNull()
+
+                val line = when (lyrics) {
+                    is com.opentune.data.lyrics.Lyrics.Synced -> {
+                        val pos = PlaybackService.activeSession?.player?.currentPosition ?: positionMs
+                        lyrics.lines.findLast { it.startMs <= pos }?.text
+                            ?: lyrics.lines.firstOrNull()?.text
+                            ?: state.title
+                    }
+                    is com.opentune.data.lyrics.Lyrics.Plain -> {
+                        lyrics.text.lineSequence().firstOrNull { it.isNotBlank() } ?: state.title
+                    }
+                    else -> state.title
+                }
+                cachedLyricLine = line
+                withContext(Dispatchers.Main) {
+                    render(context, last ?: state)
+                }
+            }
         }
 
         private fun coverFile(context: Context) = File(context.cacheDir, "widget-cover.jpg")

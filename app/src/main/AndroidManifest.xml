@@ -265,7 +265,7 @@
         <!-- Google Mobile Ads Application ID (AdMob sample test ID; replace with live ID in production) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="${admobAppId}" />
 
         <!-- 30-second non-skippable audio/video ad break -->
         <activity
@@ -278,11 +278,23 @@
         <!-- The home-screen widget. -->
 
         <receiver android:name=".widget.AlbumArtWidget" android:exported="false" android:label="@string/widget_album_art_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                        <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_album_art_info" />
         </receiver>
         <receiver android:name=".widget.StudioWidget" android:exported="false" android:label="@string/widget_studio_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                        <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_studio_info" />
         </receiver>
         <receiver
@@ -297,19 +309,43 @@
                 android:resource="@xml/widget_now_playing_info" />
         </receiver>
         <receiver android:name=".widget.MiniPlayerWidget" android:exported="false" android:label="@string/widget_mini_player_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                        <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_mini_player_info" />
         </receiver>
         <receiver android:name=".widget.TurntableWidget" android:exported="false" android:label="@string/widget_turntable_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                        <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_turntable_info" />
         </receiver>
         <receiver android:name=".widget.LyricsGlanceWidget" android:exported="false" android:label="@string/widget_lyrics_glance_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                        <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_lyrics_glance_info" />
         </receiver>
         <receiver android:name=".widget.SpeedDialWidget" android:exported="false" android:label="@string/widget_speed_dial_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                        <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.opentune.widget.PLAY_PAUSE" />
+                <action android:name="com.opentune.widget.NEXT" />
+                <action android:name="com.opentune.widget.PREVIOUS" />
+                <action android:name="com.opentune.widget.LIKE" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_speed_dial_info" />
         </receiver>
 

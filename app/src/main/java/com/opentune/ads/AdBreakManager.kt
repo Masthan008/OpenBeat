@@ -40,7 +40,7 @@ object AdBreakManager {
     private const val ACTIVE_SECONDS_TARGET = 15 * 60L // 900 seconds (15 minutes)
 
     /** Official Google AdMob sample test Ad Unit ID for Rewarded Interstitial. */
-    const val AD_UNIT_ID = "ca-app-pub-3940256099942544/5354046379"
+    val AD_UNIT_ID: String get() = com.opentune.BuildConfig.ADMOB_REWARDED_AD_UNIT_ID
 
     private var appContext: Context? = null
     private var prefs: SharedPreferences? = null

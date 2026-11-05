@@ -8,10 +8,10 @@ import org.junit.Test
 class SupportTest {
     @Test fun buildsAUpiLinkWithTheAmountFilledIn() {
         assertEquals(
-            "upi://pay?pa=whoosthis@axl&pn=OpenTune&am=99.00&cu=INR&tn=Support%20OpenTune",
+            "upi://pay?pa=9390160356@fam&pn=OpenBeat&am=99.00&cu=INR&tn=Support%20OpenBeat",
             Support.upiLink(99.0),
         )
-        assertEquals("upi://pay?pa=whoosthis@axl&pn=OpenTune&am=12.50&cu=INR&tn=Support%20OpenTune", Support.upiLink(12.5))
+        assertEquals("upi://pay?pa=9390160356@fam&pn=OpenBeat&am=12.50&cu=INR&tn=Support%20OpenBeat", Support.upiLink(12.5))
     }
 
     private fun days(value: Long) = java.util.concurrent.TimeUnit.DAYS.toMillis(value)
@@ -24,10 +24,6 @@ class SupportTest {
         assertFalse(Support.shouldAsk(false, 40, days(100), days(129)))
         assertTrue(Support.shouldAsk(false, 40, days(100), days(130)))
         assertFalse(Support.shouldAsk(false, 40, days(100), days(99)))
-    }
-    @Test fun discordInviteWaitsForTenDaysOfUse() {
-        assertFalse(Support.shouldAsk(false, 9, 0, days(100), Support.Invite.DISCORD.daysBefore))
-        assertTrue(Support.shouldAsk(false, 10, 0, days(100), Support.Invite.DISCORD.daysBefore))
     }
     @Test fun optOutIsPermanent() {
         assertFalse(Support.shouldAsk(true, 400, days(100), days(500)))

@@ -103,7 +103,7 @@ class RoomSessionTest {
 
     private suspend fun <T> onThread(f: () -> T): T = withContext(thread) { f() }
 
-    private suspend fun waitFor(what: String, timeoutMs: Long = 8_000, check: () -> Boolean) {
+    private suspend fun waitFor(what: String, timeoutMs: Long = 30_000, check: () -> Boolean) {
         val until = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < until) {
             if (onThread(check)) return

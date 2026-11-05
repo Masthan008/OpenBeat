@@ -22,6 +22,11 @@ android {
             .takeIf { it.exists() }?.readText().orEmpty().replace("\r", "").trim()
         buildConfigField("String", "CHANGELOG", "\"" + changelog.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
 
+        val admobAppId = (project.findProperty("ADMOB_APP_ID") as? String)?.takeIf { it.isNotBlank() } ?: "ca-app-pub-3940256099942544~3347511713"
+        val admobRewardedAdUnitId = (project.findProperty("ADMOB_REWARDED_AD_UNIT_ID") as? String)?.takeIf { it.isNotBlank() } ?: "ca-app-pub-3940256099942544/5354046379"
+        manifestPlaceholders["admobAppId"] = admobAppId
+        buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$admobRewardedAdUnitId\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

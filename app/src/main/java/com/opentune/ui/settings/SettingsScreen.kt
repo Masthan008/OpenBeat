@@ -1567,16 +1567,8 @@ private fun settingsSections(
                 Entry("Support OpenBeat", "donate upi pay money tip support developer") {
                     NavRow("Support OpenBeat", { supportDialog = true }, summary = "A small thank-you helps keep OpenBeat going", icon = Icons.Rounded.Favorite)
                 },
-                Entry("Star on GitHub", "star github rate like") {
-                    NavRow("Star on GitHub", {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, com.opentune.ui.components.Support.REPO.toUri())) }
-                    }, summary = "Helps other people find OpenBeat", icon = Icons.Rounded.Star)
-                },
-                Entry("Source code", "github open source license gpl") {
-                    NavRow("Source code", {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/Masthan008/OpenBeat".toUri())) }
-                    }, summary = "github.com/Masthan008/OpenBeat · GPL v3", icon = Icons.Rounded.Code)
-                },
+
+
                 Entry("Export diagnostics", "log share troubleshooting bug report") {
                     NavRow("Export diagnostics", {
                         scope.launch {

@@ -136,6 +136,7 @@ class PlaybackService : MediaLibraryService() {
     private fun selectedUri(uri: Uri): Uri = startupToken(uri)?.let { startupSelections[it]?.selected } ?: uri
 
     override fun onCreate() {
+        activeInstance = this
         super.onCreate()
         val context: Context = this
 
@@ -437,6 +438,7 @@ class PlaybackService : MediaLibraryService() {
         mediaSession = MediaLibrarySession.Builder(this, player, sessionCallback)
             .setSessionActivity(sessionActivity)
             .build()
+        activeSession = mediaSession
         // Earlier versions posted the song as a Live Update on its own channel. That's
         // gone; clear the channel so it doesn't linger in the phone's settings.
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -631,6 +633,8 @@ class PlaybackService : MediaLibraryService() {
             player.release()
             release()
             mediaSession = null
+            activeSession = null
+            activeInstance = null
         }
         super.onDestroy()
     }
@@ -2517,7 +2521,24 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private companion object {
+    companion object {
+        @Volatile var activeSession: MediaLibrarySession? = null
+        @Volatile var activeInstance: PlaybackService? = null
+
+        fun togglePlayPause() {
+            activeSession?.player?.let { p ->
+                if (p.isPlaying) p.pause() else p.play()
+            }
+        }
+
+        fun skipNext() {
+            activeSession?.player?.seekToNext()
+        }
+
+        fun skipPrevious() {
+            activeSession?.player?.seekToPrevious()
+        }
+
         const val TAG = "PlaybackService"
 
         /** Bounds on the loudness gain, in millibels: down 15 dB, up 3 dB at most. */
