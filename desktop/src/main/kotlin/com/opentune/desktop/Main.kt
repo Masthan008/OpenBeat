@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
     application {
         Window(
             onCloseRequest = ::exitApplication,
-            title = "OpenTune",
+            title = "OpenBlast",
             icon = rememberLogo(Logo.APP),
             state = rememberWindowState(size = DpSize(1180.dp, 760.dp)),
             // On Windows the app draws its own title bar (see WindowsFrame), and on Windows 11 the
@@ -61,7 +61,7 @@ fun main(args: Array<String>) {
 }
 
 /**
- * `OpenTune --self-check`: loads what the installer must carry (FFmpeg,
+ * `OpenBlast --self-check`: loads what the installer must carry (FFmpeg,
  * GraalJS, SQLite), prints what it found and exits, failing if any is
  * missing. For checking a packaged build, where the trimmed Java runtime
  * could be short of a module the tests' full one has.

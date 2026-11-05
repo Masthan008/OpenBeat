@@ -24,13 +24,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * "Listening to OpenTune" on the listener's Discord profile, through the
+ * "Listening to OpenBlast" on the listener's Discord profile, through the
  * Discord app running on the same computer (its local RPC socket), the way
  * Discord means apps to do it. No account token is involved, and it works only
  * while the Discord app is open. Paused or stopped, the card comes down.
  *
  * Discord heads the card with the registered name of the application whose id
- * the handshake gives, so it has to be OpenTune's own: the build's
+ * the handshake gives, so it has to be OpenBlast's own: the build's
  * (DISCORD_APP_ID) or one pasted in Settings. With neither, nothing is shown
  * rather than the card carrying another app's name.
  */
@@ -54,7 +54,7 @@ object DiscordPresence {
     /** An application id pasted in Settings, for a build without one of its own. */
     private val _ownAppId = MutableStateFlow(saved().optString("appId"))
     val ownAppId: StateFlow<String> = _ownAppId.asStateFlow()
-    /** Whether this build carries OpenTune's Discord application. */
+    /** Whether this build carries OpenBlast's Discord application. */
     val buildHasApp: Boolean get() = com.opentune.core.BuildConfig.DISCORD_APP_ID.matches(APP_ID)
 
     /** The application the card goes out under, or null when there's none to use. */

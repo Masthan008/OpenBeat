@@ -36,7 +36,7 @@ export async function startPairing(): Promise<Pairing> {
   const publicKey = await crypto.subtle.exportKey('jwk', keys.publicKey);
   const result = await call('/auth/web/start', { key: publicKey });
   if (typeof result.id !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(result.id) || typeof result.poll !== 'string' || typeof result.code !== 'string' || typeof result.expires !== 'number') throw new Error('Invalid browser verification response');
-  return { id: result.id, poll: result.poll, code: result.code, expires: result.expires, link: 'opentune://addon-approve?id=' + result.id, key: keys.privateKey };
+  return { id: result.id, poll: result.poll, code: result.code, expires: result.expires, link: 'openblast://addon-approve?id=' + result.id, key: keys.privateKey };
 }
 export async function pollPairing(pair: Pairing): Promise<boolean> {
   if (Date.now() >= pair.expires) throw new Error('Request expired. Start verification again.');
@@ -59,7 +59,7 @@ export function needsVerification(url: string): boolean {
 export async function verificationHeaders(url: string): Promise<Record<string, string>> {
   if (!needsVerification(url)) return {};
   const value = await stored();
-  if (!value || value.expires <= Date.now() + value.offset) throw new Error('Open Settings › Audio sources and verify this browser with the official OpenTune app');
+  if (!value || value.expires <= Date.now() + value.offset) throw new Error('Open Settings › Audio sources and verify this browser with the official OpenBlast app');
   const time = String(Date.now() + value.offset), nonce = b64(crypto.getRandomValues(new Uint8Array(24))), u = new URL(url);
   const message = ['OpenTune-Addon-v1', value.session, time, nonce, 'GET', u.pathname + u.search, await hash('')].join('\n');
   const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, value.key, bytes(message));

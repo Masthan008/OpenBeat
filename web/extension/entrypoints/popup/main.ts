@@ -194,7 +194,7 @@ function setDiscord(state: DiscordState): void {
 
 document.getElementById('version')!.textContent = `v${browser.runtime.getManifest().version}`;
 const site = document.getElementById('site') as HTMLAnchorElement;
-site.href = browser.runtime.getManifest().homepage_url ?? 'https://justshivv.github.io/Opentune/player/';
+site.href = browser.runtime.getManifest().homepage_url ?? 'https://masthan008.github.io/OpenBeat/player/';
 
 render();
 call('yt.authState', {})

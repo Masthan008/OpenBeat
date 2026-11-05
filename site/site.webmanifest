@@ -1,6 +1,6 @@
 {
-  "name": "OpenTune",
-  "short_name": "OpenTune",
+  "name": "OpenBlast",
+  "short_name": "OpenBlast",
   "description": "A free, open-source music player for Android.",
   "start_url": "./",
   "scope": "./",

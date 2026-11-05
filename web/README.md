@@ -1,8 +1,8 @@
-# OpenTune web preview
+# OpenBlast web preview
 
 This extends the existing GPL-3.0 BitChord React player and WXT browser extension at commit `edc1e6f36febf71a118e649411d2fc21b70ead45`. It reuses that implementation rather than rebuilding the web app. Upstream design/research notes are preserved under `docs/` with their original attribution.
 
-OpenTune changes include branding, GitHub/Discord community links, URL audio add-ons, measured direct-FLAC validation, background quality upgrades, a separate extension identity, and GitHub Pages routing under `/Opentune/player/`. Chrome and Firefox extensions use the same protocol. Google/Spotify session cookies remain inside the extension; the player receives metadata and request results.
+OpenBlast changes include branding, GitHub/Discord community links, URL audio add-ons, measured direct-FLAC validation, background quality upgrades, a separate extension identity, and GitHub Pages routing under `/Opentune/player/`. Chrome and Firefox extensions use the same protocol. Google/Spotify session cookies remain inside the extension; the player receives metadata and request results.
 
 ## Build
 
@@ -13,7 +13,7 @@ cd web
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm test
-pnpm --filter @opentune/extension icons
+pnpm --filter @openblast/extension icons
 pnpm build:site
 ```
 
@@ -29,7 +29,7 @@ This browser preview supports **direct FLAC with CORS-enabled media**. Android a
 
 ## Known platform limits
 
-- Browser playback requires the OpenTune extension. It is not yet published to browser stores; install a preview package in developer mode. Firefox release installation requires Mozilla signing; temporary loading is suitable for testing.
+- Browser playback requires the OpenBlast extension. It is not yet published to browser stores; install a preview package in developer mode. Firefox release installation requires Mozilla signing; temporary loading is suitable for testing.
 - Native phone-to-TV QR sign-in is implemented in the Android app, using encrypted local-network pairing. It is not a web OAuth substitute and is not available in the JavaFX desktop or Wear UI.
 - Android uses Nostr rooms; the inherited browser room protocol is different. Browser rooms require a separately configured compatible server. No upstream public server is silently selected, and cross-platform room interoperability is not claimed.
 - Discord community links work normally. Upstream optional Discord account automation is disabled by default at build time.

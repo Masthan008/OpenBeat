@@ -30,9 +30,9 @@ export default defineConfig({
     },
   }),
   manifest: ({ browser }) => ({
-    name: 'OpenTune',
-    description: 'Connects the OpenTune web player to YouTube Music, Spotify and Discord.',
-    homepage_url: 'https://justshivv.github.io/Opentune/player/',
+    name: 'OpenBlast',
+    description: 'Connects the OpenBlast web player to YouTube Music, Spotify and Discord.',
+    homepage_url: 'https://masthan008.github.io/OpenBeat/player/',
     // `cookies` reads the YouTube session for signed-in requests (phase 5);
     // the cookies themselves never leave the extension (lib/ytAuth.ts).
     // `scripting` reads the Discord token from a discord.com tab, and only on
@@ -62,7 +62,7 @@ export default defineConfig({
       ? {
           browser_specific_settings: {
             gecko: {
-              id: 'web-extension@opentune.app',
+              id: 'web-extension@openblast.app',
               strict_min_version: '128.0',
               data_collection_permissions: { required: ['none'] },
             },

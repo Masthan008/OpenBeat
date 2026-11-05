@@ -5,7 +5,7 @@ plugins {
 }
 
 /*
- * OpenTune on the watch: a player of its own, on the watch's Wi-Fi or LTE
+ * OpenBlast on the watch: a player of its own, on the watch's Wi-Fi or LTE
  * and Bluetooth headphones, built on the same :core as the phone app. Its
  * version is the phone app's, read from app/build.gradle.kts.
  */

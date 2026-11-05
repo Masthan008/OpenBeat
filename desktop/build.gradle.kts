@@ -96,13 +96,13 @@ val generateBuildConfig = tasks.register("generateBuildConfig") {
     val out = layout.buildDirectory.dir("generated/buildconfig")
     outputs.dir(out)
     inputs.property("version", appVersionName)
-    // OpenTune's Last.fm application, as the phone builds take it (core/build.gradle.kts); empty
+    // OpenBlast's Last.fm application, as the phone builds take it (core/build.gradle.kts); empty
     // in a local build, where Settings asks for the listener's own key instead.
     val lastFmKey = providers.environmentVariable("LASTFM_API_KEY").orElse("").map { it.trim() }
     val lastFmSecret = providers.environmentVariable("LASTFM_API_SECRET").orElse("").map { it.trim() }
     inputs.property("lastFmKey", lastFmKey)
     inputs.property("lastFmSecret", lastFmSecret)
-    // OpenTune's own Discord application (discord.com/developers, named "OpenTune"): Discord titles
+    // OpenBlast's own Discord application (discord.com/developers, named "OpenBlast"): Discord titles
     // the card with the application's name. Empty in a local build, where Settings takes one.
     val discordAppId = providers.environmentVariable("DISCORD_APP_ID").orElse("").map { it.trim() }
     inputs.property("discordAppId", discordAppId)
@@ -268,11 +268,11 @@ compose.desktop {
             // What each system's own installer tools make; the AppImage and the portable zip are wrapped
             // around createDistributable's app image by CI (see packaging/appimage.sh).
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Rpm)
-            packageName = "OpenTune"
+            packageName = "OpenBlast"
             // Installers need MAJOR.MINOR.BUILD with MAJOR above 0; the app's own version shows inside.
             packageVersion = "1.0.$appVersionCode"
             description = "A music player for YouTube Music"
-            vendor = "OpenTune"
+            vendor = "OpenBlast"
             // What jlink's scan suggests, plus scripting for Rhino, java.sql for the library and EC ciphers for HTTPS.
             modules("java.instrument", "java.management", "java.net.http", "java.scripting", "java.sql", "jdk.crypto.ec", "jdk.dynalink", "jdk.httpserver", "jdk.jfr", "jdk.unsupported")
             macOS {
@@ -281,7 +281,7 @@ compose.desktop {
             }
             windows {
                 iconFile.set(project.file("packaging/icons/AppIcon.ico"))
-                menuGroup = "OpenTune"
+                menuGroup = "OpenBlast"
                 upgradeUuid = "6c1f6c2e-5a3b-4d34-9a51-0e9c1d8f2a71"
             }
             linux {

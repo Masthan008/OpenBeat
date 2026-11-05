@@ -65,7 +65,7 @@ export class RoomCode {
   }
   /** The website's invite page, which opens the room in the app or here. */
   get link(): string {
-    return `https://justshivv.github.io/Opentune/together/#code=${this.raw}`;
+    return `https://masthan008.github.io/OpenBeat/together/#code=${this.raw}`;
   }
 
   seal(plain: string) {
@@ -96,7 +96,7 @@ export class RoomCode {
   static parse(text: string | null | undefined): string | null {
     if (!text) return null;
     let value = text.trim();
-    const link = value.match(/^(?:https:\/\/justshivv\.github\.io\/Opentune\/together\/?#code=|opentune:\/\/together\/)([A-Za-z0-9-]+)/i);
+    const link = value.match(/^(?:https:\/\/(?:masthan008|justshivv)\.github\.io\/(?:OpenBeat|Opentune)\/together\/?#code=|(?:openblast|opentune):\/\/together\/)([A-Za-z0-9-]+)/i);
     if (link) value = link[1]!;
     else if (/^[a-z]+:\/\//i.test(value)) return null;
     if (!/^[A-Za-z0-9\s-]+$/.test(value)) return null;

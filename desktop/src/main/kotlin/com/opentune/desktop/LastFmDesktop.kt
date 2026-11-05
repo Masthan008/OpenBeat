@@ -94,7 +94,7 @@ object LastFmDesktop {
 
     /**
      * Opens Last.fm's approval page in the browser and waits for the listener to
-     * allow OpenTune there; [done] gets null on success, else what went wrong.
+     * allow OpenBlast there; [done] gets null on success, else what went wrong.
      */
     fun signIn(done: (String?) -> Unit) {
         val keys = loginKeys() ?: return done("Add a Last.fm API key and secret first.")

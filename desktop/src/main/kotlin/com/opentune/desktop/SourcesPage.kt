@@ -60,8 +60,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Audio sources, as the phone's Add-ons page and the web player's Audio
- * sources: JioSaavn, the add-ons OpenTune publishes and your own, and
- * verifying this computer for OpenTune's own source.
+ * sources: JioSaavn, the add-ons OpenBlast publishes and your own, and
+ * verifying this computer for OpenBlast's own source.
  */
 @Composable
 internal fun SourcesSection() {
@@ -85,7 +85,7 @@ internal fun SourcesSection() {
         AnimatedVisibility(lossless, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (sources.isEmpty()) {
-                    Text("No add-ons yet. OpenTune's own appear here when they're published; you can add others below.",
+                    Text("No add-ons yet. OpenBlast's own appear here when they're published; you can add others below.",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 sources.forEachIndexed { i, source -> SourceRow(source, first = i == 0, last = i == sources.lastIndex) }
@@ -122,8 +122,8 @@ private fun SourceRow(source: Addons.Source, first: Boolean, last: Boolean) {
             Text(source.name, style = MaterialTheme.typography.bodyLarge)
             Text(
                 when {
-                    source.ownerOff -> "Turned off by OpenTune for now"
-                    source.admin -> "Added by OpenTune"
+                    source.ownerOff -> "Turned off by OpenBlast for now"
+                    source.admin -> "Added by OpenBlast"
                     else -> runCatching { java.net.URI(source.url).host }.getOrDefault(source.url)
                 },
                 style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant,
@@ -163,7 +163,7 @@ private fun AddSource() {
     }
 }
 
-/** Approving this computer from the phone, for OpenTune's own add-on: a QR code the phone's camera opens in the app. */
+/** Approving this computer from the phone, for OpenBlast's own add-on: a QR code the phone's camera opens in the app. */
 @Composable
 private fun VerifyComputer() {
     val until by AddonPairing.until.collectAsState()
@@ -187,9 +187,9 @@ private fun VerifyComputer() {
     }
     Surface(color = scheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("OpenTune's own source", style = MaterialTheme.typography.titleMedium)
+            Text("OpenBlast's own source", style = MaterialTheme.typography.titleMedium)
             Text(
-                "It plays only for devices the official app vouches for. Approve this computer once from OpenTune on your Android phone or TV; access lasts up to 12 hours.",
+                "It plays only for devices the official app vouches for. Approve this computer once from OpenBlast on your Android phone or TV; access lasts up to 12 hours.",
                 style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant,
             )
             val now = System.currentTimeMillis()
@@ -201,7 +201,7 @@ private fun VerifyComputer() {
                         Text("Code", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
                         Text(waiting.code, fontFamily = FontFamily.Monospace, fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
                         Text(
-                            "Scan this with your phone's camera, then allow it in OpenTune when the app shows this same code.",
+                            "Scan this with your phone's camera, then allow it in OpenBlast when the app shows this same code.",
                             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(320.dp),
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

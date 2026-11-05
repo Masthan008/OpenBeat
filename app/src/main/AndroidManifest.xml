@@ -72,6 +72,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="openblast" android:host="addon-approve" />
                 <data android:scheme="opentune" android:host="addon-approve" />
             </intent-filter>
         </activity>
@@ -108,19 +109,22 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="openblast" android:host="pair" />
                 <data android:scheme="opentune" android:host="pair" />
             </intent-filter>
             <intent-filter tools:ignore="AppLinkWarning">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="masthan008.github.io" android:pathPrefix="/OpenBeat/pair/" />
                 <data android:scheme="https" android:host="justshivv.github.io" android:pathPrefix="/Opentune/pair/" />
             </intent-filter>
-            <!-- Invites to a Listen together room: opentune://together/<code>. -->
+            <!-- Invites to a Listen together room: openblast://together/<code>. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="openblast" android:host="together" />
                 <data android:scheme="opentune" android:host="together" />
             </intent-filter>
             <!-- GitHub Pages cannot publish assetlinks.json at the domain root;
@@ -129,6 +133,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="masthan008.github.io" android:pathPrefix="/OpenBeat/together/" />
                 <data android:scheme="https" android:host="justshivv.github.io" android:pathPrefix="/Opentune/together/" />
             </intent-filter>
             <!-- "Play … on OpenTune" from the Assistant. -->

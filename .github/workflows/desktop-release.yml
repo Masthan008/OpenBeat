@@ -4,8 +4,8 @@
 # by hand for a release that's already out: Actions > Desktop release > Run workflow, with its tag.
 #
 # Each file is named for the release and the system it's for, e.g.
-#   OpenTune-v1.0.4-windows-x64-setup.exe   OpenTune-v1.0.4-macos-arm64.dmg
-#   OpenTune-v1.0.4-linux-x86_64.AppImage   OpenTune-v1.0.4-linux-amd64.deb
+#   OpenBlast-v1.0.4-windows-x64-setup.exe   OpenBlast-v1.0.4-macos-arm64.dmg
+#   OpenBlast-v1.0.4-linux-x86_64.AppImage   OpenBlast-v1.0.4-linux-amd64.deb
 # Running again for the same tag replaces them.
 name: Desktop release
 
@@ -112,7 +112,7 @@ jobs:
         continue-on-error: true
         run: |
           app=desktop/build/compose/binaries/main/app
-          if [ -d "$app/OpenTune.app" ]; then "$app/OpenTune.app/Contents/MacOS/OpenTune" --self-check; else "$app/OpenTune/bin/OpenTune" --self-check; fi
+          if [ -d "$app/OpenBlast.app" ]; then "$app/OpenBlast.app/Contents/MacOS/OpenBlast" --self-check; elif [ -d "$app/OpenTune.app" ]; then "$app/OpenTune.app/Contents/MacOS/OpenTune" --self-check; elif [ -f "$app/OpenBlast/bin/OpenBlast" ]; then "$app/OpenBlast/bin/OpenBlast" --self-check; else "$app/OpenTune/bin/OpenTune" --self-check; fi
       - name: Name the files for the release
         shell: bash
         run: |
@@ -122,19 +122,20 @@ jobs:
           shopt -s nullglob
           case "$RUNNER_OS" in
             Linux)
-              for f in "$bin"/deb/*.deb; do cp "$f" "$out/OpenTune-$TAG-linux-amd64.deb"; done
-              for f in "$bin"/rpm/*.rpm; do cp "$f" "$out/OpenTune-$TAG-linux-x86_64.rpm"; done
-              desktop/packaging/appimage.sh "$bin/app/OpenTune" "$out/OpenTune-$TAG-linux-x86_64.AppImage" || true
+              for f in "$bin"/deb/*.deb; do cp "$f" "$out/OpenBlast-$TAG-linux-amd64.deb"; done
+              for f in "$bin"/rpm/*.rpm; do cp "$f" "$out/OpenBlast-$TAG-linux-x86_64.rpm"; done
+              app_dir="$bin/app/OpenBlast"; [ ! -d "$app_dir" ] && app_dir="$bin/app/OpenTune"; desktop/packaging/appimage.sh "$app_dir" "$out/OpenBlast-$TAG-linux-x86_64.AppImage" || true
               ;;
             Windows)
-              for f in "$bin"/msi/*.msi; do cp "$f" "$out/OpenTune-$TAG-windows-x64.msi"; done
-              for f in "$bin"/exe/*.exe; do cp "$f" "$out/OpenTune-$TAG-windows-x64-setup.exe"; done
-              if [ -d "$bin/app/OpenTune" ]; then
-                pwsh -NoProfile -Command "Compress-Archive -Path '$bin/app/OpenTune' -DestinationPath '$out/OpenTune-$TAG-windows-x64-portable.zip'"
+              for f in "$bin"/msi/*.msi; do cp "$f" "$out/OpenBlast-$TAG-windows-x64.msi"; done
+              for f in "$bin"/exe/*.exe; do cp "$f" "$out/OpenBlast-$TAG-windows-x64-setup.exe"; done
+              app_dir="$bin/app/OpenBlast"; [ ! -d "$app_dir" ] && app_dir="$bin/app/OpenTune";
+              if [ -d "$app_dir" ]; then
+                pwsh -NoProfile -Command "Compress-Archive -Path '$app_dir' -DestinationPath '$out/OpenBlast-$TAG-windows-x64-portable.zip'"
               fi
               ;;
             macOS)
-              for f in "$bin"/dmg/*.dmg; do cp "$f" "$out/OpenTune-$TAG-macos-$(uname -m | sed 's/x86_64/x64/').dmg"; done
+              for f in "$bin"/dmg/*.dmg; do cp "$f" "$out/OpenBlast-$TAG-macos-$(uname -m | sed 's/x86_64/x64/').dmg"; done
               ;;
           esac
           ls -la "$out"

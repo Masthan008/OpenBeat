@@ -6,7 +6,7 @@
  */
 export type Invitation = 'star' | 'discord';
 
-export const GITHUB_URL = 'https://github.com/justshivv/Opentune';
+export const GITHUB_URL = 'https://github.com/Masthan008/OpenBeat';
 export const DISCORD_URL = 'https://discord.gg/6udrCVh5n';
 
 const KEY = 'opentune:invitations';

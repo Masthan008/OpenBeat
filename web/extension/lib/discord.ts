@@ -35,10 +35,10 @@ declare const __DISCORD_APP_ID__: string;
 export const APPLICATION_ID: string = __DISCORD_APP_ID__;
 const GATEWAY = 'wss://gateway.discord.gg/?v=9&encoding=json';
 const API = 'https://discord.com/api/v9';
-const PROJECT_URL = 'https://github.com/justshivv/Opentune';
+const PROJECT_URL = 'https://github.com/Masthan008/OpenBeat';
 const DEFAULT_BUTTON_1 = 'Listen on YouTube Music';
-const DEFAULT_BUTTON_2 = 'Visit OpenTune';
-const APP_NAME = 'OpenTune';
+const DEFAULT_BUTTON_2 = 'Visit OpenBlast';
+const APP_NAME = 'OpenBlast';
 
 const INITIAL_RECONNECT_MS = 1_000;
 const MAX_RECONNECT_MS = 60_000;

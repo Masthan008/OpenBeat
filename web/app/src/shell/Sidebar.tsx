@@ -169,10 +169,10 @@ export function Sidebar() {
         aria-label="Main"
       >
         <div className="ot-side-top mt-2 flex h-18 items-center justify-between pr-3 pl-7">
-          <PrefetchLink to="/home" className="ot-side-wordmark inline-flex items-center gap-2 rounded-[6px]" aria-label="OpenTune, Home" onClick={close}>
+          <PrefetchLink to="/home" className="ot-side-wordmark inline-flex items-center gap-2 rounded-[6px]" aria-label="OpenBlast, Home" onClick={close}>
             {/* White on dark, as Apple's own wordmark; it follows the label colour so it stays visible in light. */}
             <LogoMark size={22} className="text-primary" />
-            <span className="type-[700_19px/24px] tracking-[-0.01em]">OpenTune</span>
+            <span className="type-[700_19px/24px] tracking-[-0.01em]">OpenBlast</span>
           </PrefetchLink>
           {/* Folds the sidebar to a rail of icons and back. Phones have the drawer instead. */}
           <button
@@ -191,7 +191,7 @@ export function Sidebar() {
           {spotifySignedIn && <SpotifyNav onNavigate={close} />}
         </div>
         <div className="ot-side-bottom flex flex-col gap-2 pt-3 pr-3 pb-5 pl-5">
-          <PrefetchNavLink to="/extension" className={`${item} relative`} onClick={close} title={tip('OpenTune Extension')}>
+          <PrefetchNavLink to="/extension" className={`${item} relative`} onClick={close} title={tip('OpenBlast Extension')}>
             {/* Chrome's own toolbar glyph for extensions (Material "extension"). */}
             <span className={icon}>
               <MdOutlineExtension size={18} />

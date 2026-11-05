@@ -302,7 +302,7 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
       {appearance.playerBackground === 'mesh'
         ? <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing && appearance.motion} />
         : <div className={`ot-player-backdrop ot-${appearance.playerBackground}`} style={{ '--cover-color': coverColor?.background ?? '#463231' } as React.CSSProperties} aria-hidden="true" />}
-      <div className="ot-playing-from" data-morph-fade>Playing from<br /><strong>OpenTune</strong></div>
+      <div className="ot-playing-from" data-morph-fade>Playing from<br /><strong>OpenBlast</strong></div>
       {theater && (
         <div className="absolute inset-0 animate-fade-in bg-black">
           <VideoSurface fit="contain" className="size-full" />

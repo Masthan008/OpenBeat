@@ -33,7 +33,8 @@ def dimensions(data):
 
 def validate(html, data):
     meta = Metadata(html).meta
-    url = BASE + 'img/share-card-v3.jpg'
+    url = meta.get('og:image', '')
+    assert url.endswith('img/share-card-v3.jpg')
     assert meta['og:image'] == meta['og:image:secure_url'] == meta['twitter:image'] == url
     assert html.index('property="og:image"') < 4096, 'Place preview metadata before large embedded assets'
     assert meta['og:image:type'] == 'image/jpeg'

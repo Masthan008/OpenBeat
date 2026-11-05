@@ -13,23 +13,25 @@ here=$(cd "$(dirname "$0")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-appdir="$work/OpenTune.AppDir"
+appdir="$work/OpenBlast.AppDir"
 mkdir -p "$appdir"
 cp -a "$app" "$appdir/opentune"
 
 cat > "$appdir/AppRun" <<'EOF'
 #!/bin/sh
 here=$(dirname "$(readlink -f "$0")")
-exec "$here/opentune/bin/OpenTune" "$@"
+bin_name="OpenBlast"
+if [ ! -f "$here/opentune/bin/$bin_name" ] && [ -f "$here/opentune/bin/OpenTune" ]; then bin_name="OpenTune"; fi
+exec "$here/opentune/bin/$bin_name" "$@"
 EOF
 chmod +x "$appdir/AppRun"
 
 cat > "$appdir/opentune.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=OpenTune
+Name=OpenBlast
 Comment=A music player for YouTube Music
-Exec=OpenTune
+Exec=OpenBlast
 Icon=opentune
 Categories=AudioVideo;Audio;Player;
 Terminal=false
