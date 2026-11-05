@@ -69,16 +69,7 @@ enum class PlayerStyle(val label: String, val summary: String) {
 
 @Serializable
 enum class AppFont(val label: String) {
-    SYSTEM("System sans"),
-    OUTFIT("Outfit"),
-    INTER("Inter"),
-    POPPINS("Poppins"),
-    PLUS_JAKARTA("Plus Jakarta Sans"),
-    JETBRAINS_MONO("JetBrains Mono"),
-    LEXEND("Lexend"),
-    SERIF("Serif"),
-    MONO("Monospace"),
-    CUSTOM("Imported font"),
+    SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
 }
 
 @Serializable
@@ -657,10 +648,6 @@ enum class LyricsAnimation(val label: String, val summary: String) {
     KARAOKE("Karaoke", "Words fill with a glow; lines stay still"),
     ZOOM("Focus zoom", "A big current line, the rest blurred away"),
     MINIMAL("Minimal", "Only the colour changes"),
-    NEON_PULSE("Neon Glow", "Luminous neon aura with active scale and electric contrast"),
-    APPLE_CINEMATIC("Cinematic Wave", "Apple Music style depth of field and soft focal drift"),
-    BOUNCE("Rhythmic Bounce", "Dynamic spring motion as each new line takes lead"),
-    GHOST_FADE("Ghost Fade", "Deep contrast fade focusing purely on the active line"),
 }
 
 /** Where lyrics can come from. */

@@ -37,12 +37,12 @@ class LinkDeviceScreenTest {
                 Surface { LinkDeviceScreen(PaddingValues(), onBack = { }, onSignIn = { }, onTogether = { }) }
             }
         }
-        compose.onNodeWithText("Install OpenBeat on the TV").assertExists()
+        compose.onNodeWithText("Install OpenBlast on the TV").assertExists()
         shot("tv")
         compose.onNodeWithText("Computer").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Open the web player").assertExists()
-        compose.onNodeWithText("Install OpenBeat on the TV").assertDoesNotExist()
+        compose.onNodeWithText("Install OpenBlast on the TV").assertDoesNotExist()
         shot("computer")
         compose.onNodeWithText("Speaker").performClick()
         compose.waitForIdle()

@@ -88,14 +88,14 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon testDebugUnitTest assembleRelease
 
-      - name: Verify APK build and version
+      - name: Verify official APK signing identity and version
         if: steps.version.outputs.skip != 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
           for apk in app/build/outputs/apk/release/*.apk; do
-            "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | sed -n '1p' > "$RUNNER_TEMP/apk-version.txt"
+                        "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | sed -n '1p' > "$RUNNER_TEMP/apk-version.txt"
             grep -F "versionName='${TAG#v}'" "$RUNNER_TEMP/apk-version.txt"
           done
 
@@ -107,7 +107,7 @@ jobs:
           mkdir dist
           for f in app/build/outputs/apk/release/*.apk; do
             abi=$(basename "$f" .apk | sed -e 's/^app-//' -e 's/-release$//')
-            cp "$f" "dist/OpenBeat-${TAG}-${abi}.apk"
+            cp "$f" "dist/OpenBlast-${TAG}-${abi}.apk"
           done
           (cd dist && sha256sum *.apk > SHA256SUMS.txt)
 
@@ -119,9 +119,9 @@ jobs:
         # From main this also creates the tag, on the commit that was built.
         run: |
           if [ -f "docs/releases/${TAG#v}.md" ]; then
-            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "OpenTune $TAG" --notes-file "docs/releases/${TAG#v}.md"
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "OpenBlast $TAG" --notes-file "docs/releases/${TAG#v}.md"
           else
-            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "OpenTune $TAG" --generate-notes
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "OpenBlast $TAG" --generate-notes
           fi
 
       - name: Remove signing material

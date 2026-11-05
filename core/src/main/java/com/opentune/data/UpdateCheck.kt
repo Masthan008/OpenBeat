@@ -43,10 +43,10 @@ import okhttp3.Request
  * such limit, and the APK's address is built from the release's file names.
  */
 object UpdateCheck {
-    private const val LATEST = "https://api.github.com/repos/Masthan008/OpenBeat/releases/latest"
-    private const val LATEST_PAGE = "https://github.com/Masthan008/OpenBeat/releases/latest"
-    private const val DOWNLOADS = "https://github.com/Masthan008/OpenBeat/releases/download"
-    const val RELEASES_PAGE = "https://github.com/Masthan008/OpenBeat/releases"
+    private const val LATEST = "https://api.github.com/repos/justshivv/Opentune/releases/latest"
+    private const val LATEST_PAGE = "https://github.com/justshivv/Opentune/releases/latest"
+    private const val DOWNLOADS = "https://github.com/justshivv/Opentune/releases/download"
+    const val RELEASES_PAGE = "https://github.com/justshivv/Opentune/releases"
     /** How often the automatic check goes online, at most. */
     private const val AUTO_EVERY_MS = 6L * 60 * 60 * 1000
     /**
@@ -155,7 +155,8 @@ object UpdateCheck {
     internal fun fromPage(finalUrl: String, abis: List<String>): Release? {
         val version = TAG_IN_URL.find(finalUrl.substringBefore('?'))?.groupValues?.get(1) ?: return null
         val abi = abis.firstOrNull { it in BUILT_FOR } ?: "universal"
-        val name = "OpenBeat-v$version-$abi.apk"
+        val prefix = if (finalUrl.contains("Opentune", ignoreCase = true)) "OpenTune" else "OpenBlast"
+        val name = "$prefix-v$version-$abi.apk"
         return Release(
             version = version,
             page = "$RELEASES_PAGE/tag/v$version",
@@ -273,7 +274,7 @@ object UpdateCheck {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(com.opentune.core.R.drawable.ic_stat_opentune)
-            .setContentTitle("OpenTune ${release.version} is out")
+            .setContentTitle("OpenBlast ${release.version} is out")
             .setContentText("Tap to update from ${BuildConfig.VERSION_NAME}")
             .setContentIntent(open)
             .setAutoCancel(true)

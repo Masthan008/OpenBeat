@@ -722,12 +722,10 @@ private class LineMotion(
 private fun motionOf(animation: LyricsAnimation) = when (animation) {
     LyricsAnimation.FLUID -> LineMotion(1f, 0.97f, 1.8f, glow = false, inactiveAlpha = 0.8f)
     LyricsAnimation.KARAOKE -> LineMotion(1f, 1f, 0f, glow = true, inactiveAlpha = 0.55f)
+    // The active line stays at 1.0; the others shrink more, so it still reads as zoomed
+    // without scaling the current line past its box, which chopped long lines.
     LyricsAnimation.ZOOM -> LineMotion(1f, 0.84f, 1.9f, glow = false, inactiveAlpha = 0.6f)
     LyricsAnimation.MINIMAL -> LineMotion(1f, 1f, 0f, glow = false, inactiveAlpha = 0.6f)
-    LyricsAnimation.NEON_PULSE -> LineMotion(1.05f, 0.92f, 2.2f, glow = true, inactiveAlpha = 0.45f)
-    LyricsAnimation.APPLE_CINEMATIC -> LineMotion(1.08f, 0.88f, 3.5f, glow = false, inactiveAlpha = 0.38f)
-    LyricsAnimation.BOUNCE -> LineMotion(1.10f, 0.95f, 1.0f, glow = false, inactiveAlpha = 0.70f)
-    LyricsAnimation.GHOST_FADE -> LineMotion(1.02f, 0.90f, 0.0f, glow = false, inactiveAlpha = 0.15f)
 }
 
 @Composable
@@ -749,21 +747,17 @@ internal fun LyricLineView(
     val bright = MaterialTheme.colorScheme.onSurface
     val dim = bright.copy(alpha = 0.45f)
     val picking = selected != null
-    val scaleSpec = when (animation) {
-        LyricsAnimation.BOUNCE -> spring<Float>(dampingRatio = 0.55f, stiffness = Spring.StiffnessMediumLow)
-        LyricsAnimation.MINIMAL -> tween<Float>(200)
-        else -> tween<Float>(LINE_SETTLE_MS, easing = GLIDE_EASING)
-    }
     val scale by animateFloatAsState(
         if (isActive || picking) motion.activeScale else motion.inactiveScale,
-        scaleSpec,
+        // On the glide's own curve and time, so the size, the fade and the move are one motion.
+        tween(LINE_SETTLE_MS, easing = GLIDE_EASING),
         label = "lineScale",
     )
     val alpha by animateFloatAsState(
         when {
             picking -> if (selected == true) 1f else 0.6f
             isActive -> 1f
-            else -> (motion.inactiveAlpha - 0.06f * (minOf(abs(distance), 5) - 1) - if (distance < 0) 0.1f else 0f).coerceAtLeast(if (animation == LyricsAnimation.GHOST_FADE) 0.05f else 0.18f)
+            else -> (motion.inactiveAlpha - 0.06f * (minOf(abs(distance), 5) - 1) - if (distance < 0) 0.1f else 0f).coerceAtLeast(0.18f)
         },
         tween(if (animation == LyricsAnimation.MINIMAL) 200 else LINE_SETTLE_MS, easing = GLIDE_EASING),
         label = "lineAlpha",
@@ -798,9 +792,7 @@ internal fun LyricLineView(
     val rtl = remember(line) { com.opentune.data.lyrics.readsRightToLeft(line) }
     val origin = when (align) { TextAlign.Center -> 0.5f; TextAlign.End -> if (rtl) 0f else 1f; else -> if (rtl) 1f else 0f }
     val base = lyricsStyle().copy(textAlign = align, textDirection = if (rtl) TextDirection.Rtl else TextDirection.Ltr)
-    val shadowColor = if (animation == LyricsAnimation.NEON_PULSE) MaterialTheme.colorScheme.primary else bright.copy(alpha = 0.55f)
-    val shadowRadius = if (animation == LyricsAnimation.NEON_PULSE) 32f else 24f
-    val style = if ((motion.glow || ui.lyricsGlow) && isActive) base.copy(shadow = Shadow(shadowColor, blurRadius = shadowRadius)) else base
+    val style = if ((motion.glow || ui.lyricsGlow) && isActive) base.copy(shadow = Shadow(bright.copy(alpha = 0.55f), blurRadius = 24f)) else base
     val text = remember(line) { if (line.words.isEmpty()) line.text else line.words.joinToString("") { it.text } }
     val layout = remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     // Where each word sits, worked out once per layout rather than every frame.

@@ -63,7 +63,7 @@ internal class UpdateInstall(private val context: android.content.Context, priva
     fun start(onHandedOver: () -> Unit = {}) {
         if (!Updater.canInstall(context)) {
             runCatching { context.startActivity(Updater.allowInstallsIntent(context)) }
-            error = "Allow OpenBeat to install apps, then tap Update again."
+            error = "Allow OpenBlast to install apps, then tap Update again."
             return
         }
         error = null
@@ -118,7 +118,7 @@ fun UpdateDialog(found: UpdateCheck.Release, onDismiss: () -> Unit, onNotNow: (U
 
     FloatingCard(
         onDismiss = onDismiss,
-        title = "A new OpenBeat",
+        title = "A new OpenBlast",
         dismissible = progress == null,
         actions = {
             Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
@@ -128,7 +128,7 @@ fun UpdateDialog(found: UpdateCheck.Release, onDismiss: () -> Unit, onNotNow: (U
                         onDismiss()
                     } else start()
                 }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                    Text(if (progress != null) "Downloading…" else if (apk == null) "Open release page" else "Update OpenBeat")
+                    Text(if (progress != null) "Downloading…" else if (apk == null) "Open release page" else "Update OpenBlast")
                 }
                 TextButton(onClick = {
                     if (progress != null) install.cancel() else onNotNow(release)

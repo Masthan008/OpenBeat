@@ -51,10 +51,10 @@ class ReleasePresentationTest {
                 UpdateDialog(release, onDismiss = {})
             }
         } }
-        compose.onNodeWithText("Update OpenBeat").assertIsDisplayed()
+        compose.onNodeWithText("Update OpenBlast").assertIsDisplayed()
         compose.onNodeWithText("Not now").assertIsDisplayed()
         compose.onNodeWithText("app-arm64-v8a-release.apk").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Update OpenBeat").assertIsDisplayed()
+        compose.onNodeWithText("Update OpenBlast").assertIsDisplayed()
         capture("update-large-text")
     }
 

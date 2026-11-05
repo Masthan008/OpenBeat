@@ -114,7 +114,7 @@ fun LocalMusicScreen(contentPadding: PaddingValues, actions: SongActions, onBack
                     Icons.Rounded.Folder,
                     "Play music saved on your phone",
                     Modifier.padding(top = 32.dp),
-                    message = "OpenBeat needs permission to read audio files. Nothing leaves your device.",
+                    message = "OpenTune needs permission to read audio files. Nothing leaves your device.",
                     action = { Button(onClick = { launcher.launch(audioPermission) }) { Text("Allow access") } },
                 )
             }

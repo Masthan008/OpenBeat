@@ -43,7 +43,6 @@ class OpenTuneApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // First, so a crash anywhere after this is kept for Export diagnostics.
         com.opentune.data.CrashLog.install(this)
-
         // The home-screen widget follows the shared player service.
         com.opentune.data.AppHooks.onPlayerChanged = { context, player -> com.opentune.widget.NowPlayingWidget.refresh(context, player) }
         com.opentune.data.AppHooks.onPlayerStopped = { context -> com.opentune.widget.NowPlayingWidget.stopped(context) }

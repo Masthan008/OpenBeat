@@ -160,11 +160,6 @@ internal fun PlayerTheme(seed: Color?, content: @Composable () -> Unit) {
 private fun rememberType(settings: com.opentune.data.settings.ThemeSettings): Typography {
     val family = when (settings.font) {
         AppFont.OUTFIT -> Outfit
-        AppFont.INTER -> InterFont
-        AppFont.POPPINS -> PoppinsFont
-        AppFont.PLUS_JAKARTA -> PlusJakartaFont
-        AppFont.JETBRAINS_MONO -> JetBrainsMonoFont
-        AppFont.LEXEND -> LexendFont
         AppFont.SERIF -> FontFamily.Serif
         AppFont.MONO -> FontFamily.Monospace
         else -> FontFamily.SansSerif
@@ -259,54 +254,6 @@ private val Outfit: FontFamily by lazy {
             Font("Outfit-$w", outfitData, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
         },
     )
-}
-
-private val InterFont: FontFamily by lazy {
-    val data = Thread.currentThread().contextClassLoader.getResourceAsStream("font/inter_variable.ttf")?.use { it.readBytes() }
-    if (data != null) {
-        FontFamily(listOf(300, 400, 500, 600, 700, 800).map { w ->
-            Font("Inter-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
-        })
-    } else FontFamily.SansSerif
-}
-
-private val PoppinsFont: FontFamily by lazy {
-    val reg = Thread.currentThread().contextClassLoader.getResourceAsStream("font/poppins_regular.ttf")?.use { it.readBytes() }
-    val semi = Thread.currentThread().contextClassLoader.getResourceAsStream("font/poppins_semibold.ttf")?.use { it.readBytes() }
-    if (reg != null && semi != null) {
-        FontFamily(
-            Font("Poppins-Regular", reg, FontWeight.Normal),
-            Font("Poppins-SemiBold", semi, FontWeight.SemiBold),
-            Font("Poppins-Bold", semi, FontWeight.Bold),
-        )
-    } else FontFamily.SansSerif
-}
-
-private val PlusJakartaFont: FontFamily by lazy {
-    val data = Thread.currentThread().contextClassLoader.getResourceAsStream("font/plus_jakarta_sans_variable.ttf")?.use { it.readBytes() }
-    if (data != null) {
-        FontFamily(listOf(400, 500, 600, 700, 800).map { w ->
-            Font("PlusJakarta-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
-        })
-    } else FontFamily.SansSerif
-}
-
-private val JetBrainsMonoFont: FontFamily by lazy {
-    val data = Thread.currentThread().contextClassLoader.getResourceAsStream("font/jetbrains_mono_variable.ttf")?.use { it.readBytes() }
-    if (data != null) {
-        FontFamily(listOf(400, 500, 600, 700).map { w ->
-            Font("JetBrainsMono-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
-        })
-    } else FontFamily.Monospace
-}
-
-private val LexendFont: FontFamily by lazy {
-    val data = Thread.currentThread().contextClassLoader.getResourceAsStream("font/lexend_variable.ttf")?.use { it.readBytes() }
-    if (data != null) {
-        FontFamily(listOf(300, 400, 500, 600, 700).map { w ->
-            Font("Lexend-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
-        })
-    } else FontFamily.SansSerif
 }
 
 private val base = Typography()

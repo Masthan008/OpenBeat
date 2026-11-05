@@ -20,7 +20,7 @@ class UpdateLockTest {
 
     @Test fun twoBehindIsStillAllowedThreeIsNot() {
         assert(UpdateLock.behind(published, "1.0.1") <= UpdateLock.MAX_BEHIND)
-        assert(UpdateLock.behind(published, "0.4.18") <= UpdateLock.MAX_BEHIND)
+        assert(UpdateLock.behind(published, "0.4.18") > UpdateLock.MAX_BEHIND)
     }
 
     @Test fun aReleaseListedTwiceCountsOnce() {

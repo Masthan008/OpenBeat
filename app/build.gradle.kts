@@ -22,7 +22,6 @@ android {
             .takeIf { it.exists() }?.readText().orEmpty().replace("\r", "").trim()
         buildConfigField("String", "CHANGELOG", "\"" + changelog.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
 
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -131,7 +130,6 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.4.2")
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
-
 
     // ---- Images ----
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")

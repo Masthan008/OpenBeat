@@ -1325,7 +1325,7 @@ fun PlayerLayout(
                         close()
                         scope.launch {
                             val log = LogExport.recent()
-                            clipboard.setPrimaryClip(ClipData.newPlainText("OpenBeat log", log))
+                            clipboard.setPrimaryClip(ClipData.newPlainText("OpenTune log", log))
                             com.opentune.data.Pills.done("Log copied", context)
                         }
                     }

@@ -1,7 +1,7 @@
 <resources>
     <string name="widget_description">Il brano in riproduzione, con riproduci, salta e mi piace</string>
     <string name="widget_nothing_playing">Nessuna riproduzione</string>
-    <string name="widget_open">Tocca per aprire OpenBeat</string>
+    <string name="widget_open">Tocca per aprire OpenBlast</string>
     <string name="widget_like">Mi piace</string>
     <string name="widget_unlike">Rimuovi dai Mi piace</string>
     <string name="widget_previous">Precedente</string>

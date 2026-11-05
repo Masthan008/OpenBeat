@@ -15,7 +15,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OpenBeat"
+rootProject.name = "OpenTune"
 include(":app")
 include(":core")
 include(":wear")

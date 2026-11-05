@@ -359,7 +359,7 @@ fun SettingsScreen(
                 }
                 item {
                     Text(
-                        "OpenBeat ${BuildConfig.VERSION_NAME} • GNU GPL v3 • Lyrics from LRCLIB",
+                        "OpenBlast ${BuildConfig.VERSION_NAME} • GNU GPL v3 • Lyrics from LRCLIB",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(28.dp),
@@ -489,7 +489,7 @@ private fun settingsSections(
             message = runCatching {
                 withContext(Dispatchers.IO) {
                     val doc = buildJsonObject {
-                        put("app", "OpenBeat")
+                        put("app", "OpenBlast")
                         put("version", 1)
                         put("settings", AppSettings.exportJson())
                         put("history", History.exportJson())
@@ -507,7 +507,7 @@ private fun settingsSections(
             message = runCatching {
                 val doc = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { AppSettings.json.parseToJsonElement(it.readBytes().decodeToString()) }
-                } as? JsonObject ?: error("not an OpenBeat export")
+                } as? JsonObject ?: error("not an OpenBlast export")
                 doc["settings"]?.let(AppSettings::importJson)
                 doc["history"]?.let(History::importJson)
                 doc["library"]?.let(LibraryStore::importJson)
@@ -758,7 +758,7 @@ private fun settingsSections(
                                 onClick = { com.opentune.ui.spotify.SpotifyConnection.syncPlaylists(force = true) },
                             )
                             RowDivider()
-                            SettingRow("Disconnect Spotify", summary = "Signs out of Spotify inside OpenBeat. Playlists already brought over stay in Library", icon = Icons.Rounded.Close, onClick = { com.opentune.ui.spotify.SpotifyConnection.disconnect() })
+                            SettingRow("Disconnect Spotify", summary = "Signs out of Spotify inside OpenBlast. Playlists already brought over stay in Library", icon = Icons.Rounded.Close, onClick = { com.opentune.ui.spotify.SpotifyConnection.disconnect() })
                         }
                     } else {
                         NavRow(
@@ -820,7 +820,7 @@ private fun settingsSections(
                             is BitPerfectUsb.Status.Active -> "Exclusive on ${s.device}: ${s.format.ifEmpty { "${s.bits}-bit" }} at ${s.sampleRate / 1000.0} kHz, bit for bit"
                             is BitPerfectUsb.Status.NoMatch -> "On. The DAC lists no bit-perfect mode for ${s.sampleRate / 1000.0} kHz, so this song goes through Android's mixer"
                             BitPerfectUsb.Status.NoDac -> "On. Plug in a USB DAC and the music moves to it"
-                            else -> "The DAC plays only OpenBeat, switched to each song's own sample rate and bit depth: no mixing, resampling or effects. Volume is applied by the app; at full volume the signal is bit-exact"
+                            else -> "The DAC plays only OpenBlast, switched to each song's own sample rate and bit depth: no mixing, resampling or effects. Volume is applied by the app; at full volume the signal is bit-exact"
                         },
                         icon = Icons.Rounded.Usb,
                         enabled = BitPerfectUsb.supported,
@@ -835,7 +835,7 @@ private fun settingsSections(
                     NavRow(
                         "Background playback",
                         { runCatching { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } },
-                        summary = if (ignoring) "Unrestricted: music keeps playing with the screen off" else "Restricted: if playback stops in the background, set OpenBeat to Unrestricted",
+                        summary = if (ignoring) "Unrestricted: music keeps playing with the screen off" else "Restricted: if playback stops in the background, set OpenBlast to Unrestricted",
                         icon = Icons.Rounded.BatteryChargingFull,
                     )
                 },
@@ -941,7 +941,7 @@ private fun settingsSections(
                     )
                 },
                 Entry("Resume when headphones connect", "bluetooth headset wired auto play resume connect car") {
-                    ToggleRow("Resume when headphones connect", pb.resumeOnConnect, { v -> AppSettings.updatePlayback { it.copy(resumeOnConnect = v) } }, summary = "Carries on playing when headphones are plugged in or a Bluetooth device connects, while OpenBeat is open or in the notification", icon = com.opentune.ui.player.PlayerIcons.Headphones)
+                    ToggleRow("Resume when headphones connect", pb.resumeOnConnect, { v -> AppSettings.updatePlayback { it.copy(resumeOnConnect = v) } }, summary = "Carries on playing when headphones are plugged in or a Bluetooth device connects, while OpenTune is open or in the notification", icon = com.opentune.ui.player.PlayerIcons.Headphones)
                 },
                 Entry("Pause at zero volume", "mute volume down silent") {
                     ToggleRow("Pause at zero volume", pb.pauseAtZeroVolume, { v -> AppSettings.updatePlayback { it.copy(pauseAtZeroVolume = v) } }, summary = "Pauses when the volume is turned all the way down and plays again when it comes back up", icon = Icons.AutoMirrored.Rounded.VolumeOff)
@@ -1014,7 +1014,7 @@ private fun settingsSections(
                         value = com.opentune.ui.theme.AppLanguages.selected(context).label)
                 },
                 Entry("App icon", "launcher icon design glass pearl midnight rose ocean") {
-                    NavRow("App icon", { appIconDialog = true }, summary = "Choose the OpenBeat icon on your home screen", icon = Icons.Rounded.Palette)
+                    NavRow("App icon", { appIconDialog = true }, summary = "Choose the OpenTune icon on your home screen", icon = Icons.Rounded.Palette)
                 },
                 Entry("Fonts & readability", "font typeface text weight bold thin ttf otf import custom") {
                     NavRow("Fonts & readability", { fontDialog = true }, summary = "Built-in fonts, text weight and your own font file", icon = Icons.Rounded.TextFields, value = theme.font.label)
@@ -1049,7 +1049,7 @@ private fun settingsSections(
                         "Opening animation",
                         ui.openingAnimation,
                         { v -> AppSettings.updateUi { it.copy(openingAnimation = v) } },
-                        summary = "When OpenBeat starts, the screen dives into the logo and the app comes through it",
+                        summary = "When OpenTune starts, the screen dives into the logo and the app comes through it",
                         icon = Icons.Rounded.AutoAwesome,
                     )
                 },
@@ -1343,14 +1343,14 @@ private fun settingsSections(
                                 val (copied, skipped) = com.opentune.data.download.Downloads.exportExisting(context.applicationContext)
                                 val note = buildString {
                                     append(if (copied == 1) "1 song" else "$copied songs")
-                                    append(" copied to Music/OpenBeat")
+                                    append(" copied to Music/OpenBlast")
                                     if (skipped > 0) append("; $skipped in a format other apps can't play, download them again to export")
                                 }
                                 if (copied > 0 || skipped > 0) com.opentune.data.Pills.done(note, context)
                             }
                         },
                         summary = if (com.opentune.data.download.DownloadExport.supported)
-                            "Also saves each download to Music/OpenBeat as AAC (M4A) or FLAC, so other music apps can play it"
+                            "Also saves each download to Music/OpenBlast as AAC (M4A) or FLAC, so other music apps can play it"
                         else "Needs Android 10 or newer",
                         icon = Icons.Rounded.DownloadDone,
                         enabled = com.opentune.data.download.DownloadExport.supported,
@@ -1549,7 +1549,7 @@ private fun settingsSections(
                                 is UpdateCheck.Result.Failed -> message = "Couldn't check: ${r.reason}"
                             }
                         }
-                    }, summary = pendingUpdate?.let { "OpenBeat ${it.version} is ready to install. You have ${BuildConfig.VERSION_NAME}." } ?: "Current version: ${BuildConfig.VERSION_NAME}", icon = Icons.Rounded.SystemUpdate, dot = pendingUpdate != null)
+                    }, summary = pendingUpdate?.let { "OpenBlast ${it.version} is ready to install. You have ${BuildConfig.VERSION_NAME}." } ?: "Current version: ${BuildConfig.VERSION_NAME}", icon = Icons.Rounded.SystemUpdate, dot = pendingUpdate != null)
                 },
                 Entry("Check for updates automatically", "update new version release auto") {
                     ToggleRow("Check for updates automatically", ui.checkForUpdates, { v -> AppSettings.updateUi { it.copy(checkForUpdates = v) }; com.opentune.data.UpdateCheck.schedule(context) }, summary = "Looks for a new release on GitHub every few hours, in the background too, and offers to install it", icon = Icons.Rounded.SystemUpdate)
@@ -1563,17 +1563,26 @@ private fun settingsSections(
                         icon = Icons.Rounded.Info,
                     )
                 },
-                Entry("Support OpenBeat", "donate upi pay money tip support developer") {
-                    NavRow("Support OpenBeat", { supportDialog = true }, summary = "A small thank-you helps keep OpenBeat going", icon = Icons.Rounded.Favorite)
+                Entry("OpenBlast community", "github discord community addons developer") { CommunityBanner() },
+                Entry("Support OpenBlast", "donate upi pay money tip support developer") {
+                    NavRow("Support OpenBlast", { supportDialog = true }, summary = "A small thank-you helps keep OpenTune going", icon = Icons.Rounded.Favorite)
                 },
-
-
+                Entry("Star on GitHub", "star github rate like") {
+                    NavRow("Star on GitHub", {
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, com.opentune.ui.components.Support.REPO.toUri())) }
+                    }, summary = "Helps other people find OpenBlast", icon = Icons.Rounded.Star)
+                },
+                Entry("Source code", "github open source license gpl") {
+                    NavRow("Source code", {
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/justshivv/Opentune".toUri())) }
+                    }, summary = "github.com/justshivv/Opentune · GPL v3", icon = Icons.Rounded.Code)
+                },
                 Entry("Export diagnostics", "log share troubleshooting bug report") {
                     NavRow("Export diagnostics", {
                         scope.launch {
                             val log = LogExport.recent()
                             val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                                .putExtra(Intent.EXTRA_SUBJECT, "OpenBeat ${BuildConfig.VERSION_NAME} log")
+                                .putExtra(Intent.EXTRA_SUBJECT, "OpenBlast ${BuildConfig.VERSION_NAME} log")
                                 .putExtra(Intent.EXTRA_TEXT, log)
                             context.startActivity(Intent.createChooser(send, "Share log"))
                         }

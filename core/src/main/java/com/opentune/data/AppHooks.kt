@@ -22,5 +22,4 @@ object AppHooks {
 
     /** Called when the player stops for good. */
     @Volatile var onPlayerStopped: (Context) -> Unit = { }
-
 }

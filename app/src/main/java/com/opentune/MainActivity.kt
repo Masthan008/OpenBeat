@@ -6,10 +6,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -90,62 +86,35 @@ class MainActivity : ComponentActivity() {
             val song by vm.currentSong.collectAsState()
             OpenTuneTheme(theme, artworkSeed = rememberArtworkSeed(song?.thumbnailUrl)) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    val openingAllowed = !com.opentune.ui.components.Opening.played && AppSettings.ui.value.openingAnimation && !AppSettings.ui.value.reduceAnimation
-                    var opening by remember { mutableStateOf(openingAllowed) }
-                    var dive by remember { androidx.compose.runtime.mutableFloatStateOf(if (opening) 0f else 1f) }
-
                     // Some TVs crop the picture's edges: keep pages and buttons inside the safe area.
                     androidx.compose.foundation.layout.Box(if (tv) Modifier.padding(horizontal = 28.dp, vertical = 16.dp) else Modifier) {
-                        androidx.compose.foundation.layout.Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    if (dive < 1f) {
-                                        val s = 1.14f - 0.14f * (1f - (1f - dive) * (1f - dive))
-                                        scaleX = s
-                                        scaleY = s
-                                    }
-                                }
-                        ) {
-                            // More than two releases behind, the app is only its update screen until it's updated.
-                            val required by com.opentune.data.UpdateLock.required.collectAsState()
-                            val behind by com.opentune.data.UpdateLock.behind.collectAsState()
-                            LaunchedEffect(required) { if (required != null && vm.isPlaying.value) vm.togglePlayPause() }
-                            if (required != null) com.opentune.ui.settings.UpdateRequiredScreen(required!!, behind) else {
-                            // A fresh install's welcome comes first; Home, built after it, starts from the picks.
-                            androidx.compose.animation.AnimatedContent(
-                                ui.welcome == WelcomeState.DUE,
-                                transitionSpec = {
-                                    if (ui.reduceAnimation) {
-                                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160)) togetherWith
-                                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
-                                    } else {
-                                        (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320, delayMillis = 80)) +
-                                            androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(420), initialScale = 0.96f)) togetherWith
-                                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
-                                    }
-                                },
-                                label = "welcome",
-                            ) { welcome ->
-                                val page: @androidx.compose.runtime.Composable () -> Unit = {
-                                    if (welcome) WelcomeScreen(onDone = {}) else AppRoot(vm)
-                                }
-                                if (tv) com.opentune.ui.tv.TvRemoteSurface(page) else page()
+                    // More than two releases behind, the app is only its update screen until it's updated.
+                    val required by com.opentune.data.UpdateLock.required.collectAsState()
+                    val behind by com.opentune.data.UpdateLock.behind.collectAsState()
+                    LaunchedEffect(required) { if (required != null && vm.isPlaying.value) vm.togglePlayPause() }
+                    if (required != null) com.opentune.ui.settings.UpdateRequiredScreen(required!!, behind) else {
+                    // A fresh install's welcome comes first; Home, built after it, starts from the picks.
+                    androidx.compose.animation.AnimatedContent(
+                        ui.welcome == WelcomeState.DUE,
+                        transitionSpec = {
+                            if (ui.reduceAnimation) {
+                                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160)) togetherWith
+                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                            } else {
+                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320, delayMillis = 80)) +
+                                    androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(420), initialScale = 0.96f)) togetherWith
+                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
                             }
-                            }
-                            com.opentune.ui.account.ConfirmPairing()
+                        },
+                        label = "welcome",
+                    ) { welcome ->
+                        val page: @androidx.compose.runtime.Composable () -> Unit = {
+                            if (welcome) WelcomeScreen(onDone = {}) else AppRoot(vm)
                         }
-
-                        if (opening) {
-                            com.opentune.ui.components.OpeningReveal(
-                                onDive = { dive = it },
-                                onDone = {
-                                    opening = false
-                                    dive = 1f
-                                    com.opentune.ui.components.Opening.played = true
-                                }
-                            )
-                        }
+                        if (tv) com.opentune.ui.tv.TvRemoteSurface(page) else page()
+                    }
+                    }
+                    com.opentune.ui.account.ConfirmPairing()
                     }
                 }
             }
