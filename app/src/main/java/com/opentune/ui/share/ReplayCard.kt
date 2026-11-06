@@ -271,13 +271,13 @@ object ReplayCard {
             c.drawText(content.title, margin, 150f, titlePaint)
             val line = listOfNotNull(content.name, content.period).joinToString(" · ").uppercase()
             val brandPaint = text(32f, white, bold)
-            val brandW = brandPaint.measureText("OpenTune")
+            val brandW = brandPaint.measureText("OpenBlast")
             val logo = 46f
             c.drawText(fit(line, eyebrow(1f), inner - brandW - logo - 40f), margin, 204f, eyebrow(1f))
 
             // The name and mark, small, at the top right, level with the title.
             val right = w - margin
-            c.drawText("OpenTune", right - brandW, 140f, brandPaint)
+            c.drawText("OpenBlast", right - brandW, 140f, brandPaint)
             val logoTop = 140f - 11f - logo / 2f
             images.logo?.let { c.drawBitmap(it, null, RectF(right - brandW - logo - 10f, logoTop, right - brandW - 10f, logoTop + logo), image) }
         }
@@ -454,7 +454,7 @@ object ReplayCard {
     private fun withAlpha(color: Int, alpha: Int) = (color and 0x00FFFFFF) or (alpha shl 24)
 
     /** The picture's file name in the gallery: one per save, so an older one is never replaced. */
-    internal fun fileName(nowMs: Long): String = "OpenTune-Replay-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(nowMs)) + ".png"
+    internal fun fileName(nowMs: Long): String = "OpenBlast-Replay-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(nowMs)) + ".png"
 }
 
 /**
@@ -488,7 +488,7 @@ fun ReplayShareSheet(summary: ReplaySummary, period: String, onDismiss: () -> Un
             val saved = runCatching { ShareCard.saveImage(context, b, ReplayCard.fileName(System.currentTimeMillis())) }
                 .onFailure { Log.w("ReplayCard", "couldn't save the card", it) }.isSuccess
             saving = false
-            if (saved) com.opentune.data.Pills.done("Saved to Pictures/OpenTune", context) else com.opentune.data.Pills.error("Couldn't save the picture", context)
+            if (saved) com.opentune.data.Pills.done("Saved to Pictures/OpenBlast", context) else com.opentune.data.Pills.error("Couldn't save the picture", context)
         }
     }
     val storage = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -528,7 +528,7 @@ fun ReplayShareSheet(summary: ReplaySummary, period: String, onDismiss: () -> Un
                     val b = card ?: return@SheetButton
                     haptics.press()
                     scope.launch {
-                        ShareCard.sendImage(context, b, "OpenTune-Replay.png", "My ${content.title} on OpenTune · ${content.period}", "Replay")
+                        ShareCard.sendImage(context, b, "OpenTune-Replay.png", "My ${content.title} on OpenBlast · ${content.period}", "Replay")
                     }
                 },
             )

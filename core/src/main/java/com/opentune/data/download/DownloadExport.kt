@@ -52,7 +52,7 @@ object DownloadExport {
             song.albumName?.takeIf { it.isNotBlank() }?.let { put(MediaStore.Audio.Media.ALBUM, it) }
             put(MediaStore.Audio.Media.MIME_TYPE, mime)
             put(MediaStore.Audio.Media.IS_MUSIC, 1)
-            put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/OpenTune")
+            put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/OpenBlast")
             put(MediaStore.Audio.Media.IS_PENDING, 1)
         }
         val uri = runCatching { resolver.insert(collection, values) }

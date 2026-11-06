@@ -47,7 +47,7 @@ object Subsonic {
     private const val COVER_PREFIX = "subsonic://cover/"
     private const val TAG = "Subsonic"
     private const val API_VERSION = "1.16.1"
-    private const val CLIENT = "OpenTune"
+    private const val CLIENT = "OpenBlast"
 
     data class Server(val url: String, val user: String, val token: String, val salt: String, val type: String?)
 

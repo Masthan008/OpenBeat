@@ -115,10 +115,10 @@ fun SupportDialog(onDismiss: () -> Unit) {
     FloatingDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Rounded.Favorite, null) },
-        title = { Text("Support OpenTune") },
+        title = { Text("Support OpenBlast") },
         text = {
             Column {
-                Text("OpenTune has no ads and nothing to sell. If it has added a little something to your days, a small thank-you helps keep it going, and every one is truly appreciated.")
+                Text("OpenBlast has no ads and nothing to sell. If it has added a little something to your days, a small thank-you helps keep it going, and every one is truly appreciated.")
                 Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Support.AMOUNTS.forEach { a ->
                         FilterChip(selected = text == a.toString(), onClick = { text = a.toString() }, label = { Text("₹$a") })
@@ -168,8 +168,8 @@ fun InviteCard(invite: Support.Invite, onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    if (discord) "Talk to other listeners, swap add-ons, report bugs and hear about new features first. It's where OpenTune gets shaped."
-                    else "OpenTune is free and open source. A star on GitHub helps more listeners find the app, and takes a second."
+                    if (discord) "Talk to other listeners, swap add-ons, report bugs and hear about new features first. It's where OpenBlast gets shaped."
+                    else "OpenBlast is free and open source. A star on GitHub helps more listeners find the app, and takes a second."
                 )
                 androidx.compose.material3.FilledTonalButton(
                     onClick = { open(if (discord) Support.DISCORD else Support.REPO) },

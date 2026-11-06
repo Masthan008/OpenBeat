@@ -33,8 +33,8 @@ import okhttp3.Request
 object UpdateLock {
     /** How many releases the installed version may trail the newest one by. */
     const val MAX_BEHIND = 2
-    private const val SITE_LIST = "https://justshivv.github.io/Opentune/releases.json"
-    private const val API_LIST = "https://api.github.com/repos/justshivv/Opentune/releases?per_page=20"
+    private const val SITE_LIST = "https://masthan008.github.io/OpenBeat/releases.json"
+    private const val API_LIST = "https://api.github.com/repos/Masthan008/OpenBeat/releases?per_page=20"
     private const val EVERY_MS = 60L * 60 * 1000
     private const val PREFS = "update-lock"
     private const val K_VERSIONS = "versions"

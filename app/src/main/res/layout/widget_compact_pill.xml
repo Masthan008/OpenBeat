@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_pill_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="6dp">
+
+    <ImageView
+        android:id="@+id/widget_cover"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/widget_artwork_background"
+        android:clipToOutline="true"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_widget_cover" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="8dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_title"
+            style="@style/WidgetTitle"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:text="@string/widget_nothing_playing"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/widget_artist"
+            style="@style/WidgetArtist"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:text="@string/widget_open"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/widget_play"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/widget_play_background"
+        android:contentDescription="@string/widget_play"
+        android:padding="10dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_play"
+        android:tint="#FF12151C"
+        tools:ignore="UseAppTint" />
+
+    <ImageButton
+        android:id="@+id/widget_next"
+        style="@style/WidgetButton"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:layout_marginStart="4dp"
+        android:contentDescription="@string/widget_next"
+        android:src="@drawable/ic_widget_next" />
+</LinearLayout>

@@ -297,7 +297,7 @@ class PlaybackService : MediaLibraryService() {
                 if (bp is BitPerfectUsb.Status.Active) {
                     DspParams(outputGainDb = audioManager?.let(BitPerfectUsb::softwareGainDb) ?: 0f)
                 } else {
-                    DspParams(eq, sound.bassBoost, pb.spatialAudio, pb.clarity, eightDPeriod = sound.eightD.periodSeconds, spacePeriod = sound.space.periodSeconds)
+                    DspParams(eq, sound.bassBoost, pb.spatialAudio, pb.clarity, eightDPeriod = sound.eightD.periodSeconds, spacePeriod = sound.space.periodSeconds, mono = pb.monoAudio)
                 }
             }.distinctUntilChanged().collect { dsp.params = it; bridgeDsp.params = it }
         }
@@ -2650,7 +2650,7 @@ class PlaybackService : MediaLibraryService() {
         const val PRELOAD_US = 10_000_000L
 
         /** Tracks ahead of the current one whose stream URLs are resolved early. */
-        const val WARM_AHEAD = 2
+        const val WARM_AHEAD = 3
 
         /** A little under StreamResolver's 20-minute URL lifetime. */
         const val WARM_TTL_MS = 15 * 60 * 1000L

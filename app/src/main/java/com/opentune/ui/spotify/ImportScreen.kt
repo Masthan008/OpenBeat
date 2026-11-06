@@ -125,7 +125,7 @@ private sealed interface Preview {
 /**
  * Bring a playlist over: a Spotify playlist, album or song link, a YouTube
  * Music playlist link, or a CSV export (Exportify and the like, for whole
- * Spotify playlists and Liked Songs). Paste a link, share one to OpenTune,
+ * Spotify playlists and Liked Songs). Paste a link, share one to OpenBlast,
  * or pick a file; the result is a playlist on the phone.
  */
 @Composable
@@ -203,7 +203,7 @@ fun ImportScreen(
         item { PageHeader("Import a playlist", onBack = onBack) }
         item {
             Text(
-                "Paste a Spotify or YouTube Music link, share one to OpenTune, or pick a CSV export. Songs play from YouTube Music. No sign-in needed.",
+                "Paste a Spotify or YouTube Music link, share one to OpenBlast, or pick a CSV export. Songs play from YouTube Music. No sign-in needed.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),

@@ -81,6 +81,13 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "1.0.5" to listOf(
+            Note(Icons.Rounded.TouchApp, "4 new home-screen widgets", "Compact Player Pill, Retro Vinyl Turntable with center spindle controls, Live Synced Lyrics, and Speed Dial & Quick Favorites."),
+            Note(Icons.Rounded.Notifications, "OpenBlast notification icons", "Clean, sharp white OpenBlast marks for playback and update notifications in the status bar and shade."),
+            Note(Icons.Rounded.Lyrics, "Floating synced lyrics bubble", "Sing along over other apps with a draggable, floating lyrics pill and quick controls."),
+            Note(Icons.Rounded.GraphicEq, "Gapless transitions & mono audio", "Seamless 3-track queue lookahead pre-caching and mono audio channel mixing for single-earbud listening."),
+            Note(Icons.Rounded.NewReleases, "OpenBeat update pipeline", "Direct update tracking and downloads powered by Masthan008/OpenBeat."),
+        ),
         "1.0.4" to listOf(
             Note(Icons.Rounded.AutoAwesome, "OpenBlast", "A fresh high-octane rebrand with modern adaptive launcher icons, dark & gold vector emblems, and refined styling."),
             Note(Icons.Rounded.TouchApp, "Home screen widget controls", "Full 4x2 and 4x1 home screen widgets with instant, responsive play, pause, next, and previous playback controls."),
@@ -104,7 +111,7 @@ object WhatsNew {
             Note(Icons.Rounded.Favorite, "A burst of hearts", "Liking a song with the player's heart sends out a little burst of hearts. Albums and playlists have a heart too, to save them to your library, and every list can be shared."),
             Note(Icons.Rounded.GraphicEq, "A new equalizer", "A big response curve you drag the bands on, faders that glide, and presets in three groups, from Hi-Fi to Late night, each showing its own curve."),
             Note(Icons.Rounded.Lyrics, "Lyrics take the screen", "On the lyrics view, a few seconds untouched and the controls slide away; touch to bring them back."),
-            Note(Icons.Rounded.Mic, "Name that song, anywhere", "A home-screen widget and a Quick Settings tile open OpenTune listening, and what it finds goes into a Recognized playlist."),
+            Note(Icons.Rounded.Mic, "Name that song, anywhere", "A home-screen widget and a Quick Settings tile open OpenBlast listening, and what it finds goes into a Recognized playlist."),
             Note(Icons.Rounded.BlurOn, "Glass and motion", "Liquid Glass is deeper and brighter at the edges, page transitions each move their own way, and leaving the app glides into a pill. The mini player can keep plain glass, in Settings › Look."),
         ),
         "0.4.10" to listOf(
@@ -114,7 +121,7 @@ object WhatsNew {
             Note(Icons.Rounded.TouchApp, "Opening and closing the player", "Tap the mini player and its cover grows into the player. Going back from Home while music plays shrinks the app up towards the notification."),
             Note(Icons.Rounded.Download, "Updates that don't fall behind", "The update offered is always the newest, even when several came out since yours. One you put off leaves a red dot on the account button until it's installed, and Settings › Storage can delete a downloaded update."),
             Note(Icons.Rounded.AutoAwesome, "Clarity, as loud as off", "Clarity no longer makes music quieter. Settings still being worked on carry a Beta tag."),
-            Note(Icons.Rounded.Favorite, "Support OpenTune", "From Settings › About you can star OpenTune on GitHub, or send a small thank-you."),
+            Note(Icons.Rounded.Favorite, "Support OpenBlast", "From Settings › About you can star OpenBlast on GitHub, or send a small thank-you."),
         ),
         "0.4.9" to listOf(
             Note(Icons.Rounded.Lock, "Rooms you let people into", "People with the code knock; you let them in or turn them away. Only those you let in can hear what's playing or read the chat, and removing someone locks them out."),
@@ -129,7 +136,7 @@ object WhatsNew {
         ),
         "0.4.7" to listOf(
             Note(Icons.Rounded.Lyrics, "The best lyrics, from the start", "New defaults: every lyrics source on, word-by-word lyrics first, and romanized lines under other scripts. Settings you changed yourself stay as they were."),
-            Note(Icons.Rounded.NewReleases, "Swipe away to stop", "By default, removing OpenTune from your recent apps stops the music."),
+            Note(Icons.Rounded.NewReleases, "Swipe away to stop", "By default, removing OpenBlast from your recent apps stops the music."),
         ),
         "0.4.6" to listOf(
             Note(Icons.Rounded.Lyrics, "Lyrics settings that fit", "Settings › Lyrics sources scrolls, so every switch keeps its label."),
@@ -168,7 +175,7 @@ object WhatsNew {
         ),
         "0.3.6" to listOf(
             Note(Icons.Rounded.Cast, "Cast to a TV or speaker", "Play on Chromecasts, smart TVs and network speakers on your Wi-Fi."),
-            Note(Icons.Rounded.GraphicEq, "What's this song?", "From Home or the search bar, OpenTune names the song playing near you."),
+            Note(Icons.Rounded.GraphicEq, "What's this song?", "From Home or the search bar, OpenBlast names the song playing near you."),
             Note(Icons.Rounded.NewReleases, "More after one song", "A song started on its own now always carries on into similar songs."),
         ),
     )

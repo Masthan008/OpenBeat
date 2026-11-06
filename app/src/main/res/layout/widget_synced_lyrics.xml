@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- Synced Lyrics Content Area -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingHorizontal="8dp">
+
+        <TextView
+            android:id="@+id/widget_lyric_current"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="2"
+            android:text="♪ OpenBlast Lyrics"
+            android:textColor="#FFFFFFFF"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/widget_lyric_next"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Tap to sing along"
+            android:textColor="#8AFFFFFF"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Bottom Playback Control Dock -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/widget_cover"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/widget_artwork_background"
+            android:clipToOutline="true"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_widget_cover" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_title"
+                style="@style/WidgetTitle"
+                android:ellipsize="marquee"
+                android:singleLine="true"
+                android:text="@string/widget_nothing_playing"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/widget_artist"
+                style="@style/WidgetArtist"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="@string/widget_open"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/widget_previous"
+            style="@style/WidgetButton"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:contentDescription="@string/widget_previous"
+            android:src="@drawable/ic_widget_previous" />
+
+        <ImageButton
+            android:id="@+id/widget_play"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="2dp"
+            android:background="@drawable/widget_play_background"
+            android:contentDescription="@string/widget_play"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_play"
+            android:tint="#FF12151C"
+            tools:ignore="UseAppTint" />
+
+        <ImageButton
+            android:id="@+id/widget_next"
+            style="@style/WidgetButton"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="2dp"
+            android:contentDescription="@string/widget_next"
+            android:src="@drawable/ic_widget_next" />
+    </LinearLayout>
+</LinearLayout>

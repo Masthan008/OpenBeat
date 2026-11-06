@@ -889,6 +889,9 @@ private fun settingsSections(
                 Entry("Skip silence", "gaps") {
                     ToggleRow("Skip silence", pb.skipSilence, { v -> AppSettings.updatePlayback { it.copy(skipSilence = v) } }, summary = "Trim gaps longer than a second", icon = Icons.Rounded.SpaceBar)
                 },
+                Entry("Mono audio", "single earbud headphone combine channels") {
+                    ToggleRow("Mono audio", pb.monoAudio, { v -> AppSettings.updatePlayback { it.copy(monoAudio = v) } }, summary = "Combines left and right channels for listening with a single earbud", icon = com.opentune.ui.player.PlayerIcons.Headphones)
+                },
                 Entry("Clarity", "studio master clarity presence air bass clear enhance") {
                     ToggleRow("Clarity", pb.clarity, { v -> AppSettings.updatePlayback { it.copy(clarity = v) } }, summary = "Firmer bass, less mud, more presence and air, at the same loudness. Off plays the stream untouched.", icon = Icons.Rounded.AutoAwesome, beta = true)
                 },
@@ -941,7 +944,7 @@ private fun settingsSections(
                     )
                 },
                 Entry("Resume when headphones connect", "bluetooth headset wired auto play resume connect car") {
-                    ToggleRow("Resume when headphones connect", pb.resumeOnConnect, { v -> AppSettings.updatePlayback { it.copy(resumeOnConnect = v) } }, summary = "Carries on playing when headphones are plugged in or a Bluetooth device connects, while OpenTune is open or in the notification", icon = com.opentune.ui.player.PlayerIcons.Headphones)
+                    ToggleRow("Resume when headphones connect", pb.resumeOnConnect, { v -> AppSettings.updatePlayback { it.copy(resumeOnConnect = v) } }, summary = "Carries on playing when headphones are plugged in or a Bluetooth device connects, while OpenBlast is open or in the notification", icon = com.opentune.ui.player.PlayerIcons.Headphones)
                 },
                 Entry("Pause at zero volume", "mute volume down silent") {
                     ToggleRow("Pause at zero volume", pb.pauseAtZeroVolume, { v -> AppSettings.updatePlayback { it.copy(pauseAtZeroVolume = v) } }, summary = "Pauses when the volume is turned all the way down and plays again when it comes back up", icon = Icons.AutoMirrored.Rounded.VolumeOff)
@@ -1014,7 +1017,7 @@ private fun settingsSections(
                         value = com.opentune.ui.theme.AppLanguages.selected(context).label)
                 },
                 Entry("App icon", "launcher icon design glass pearl midnight rose ocean") {
-                    NavRow("App icon", { appIconDialog = true }, summary = "Choose the OpenTune icon on your home screen", icon = Icons.Rounded.Palette)
+                    NavRow("App icon", { appIconDialog = true }, summary = "Choose the OpenBlast icon on your home screen", icon = Icons.Rounded.Palette)
                 },
                 Entry("Fonts & readability", "font typeface text weight bold thin ttf otf import custom") {
                     NavRow("Fonts & readability", { fontDialog = true }, summary = "Built-in fonts, text weight and your own font file", icon = Icons.Rounded.TextFields, value = theme.font.label)
@@ -1049,7 +1052,7 @@ private fun settingsSections(
                         "Opening animation",
                         ui.openingAnimation,
                         { v -> AppSettings.updateUi { it.copy(openingAnimation = v) } },
-                        summary = "When OpenTune starts, the screen dives into the logo and the app comes through it",
+                        summary = "When OpenBlast starts, the screen dives into the logo and the app comes through it",
                         icon = Icons.Rounded.AutoAwesome,
                     )
                 },
@@ -1275,6 +1278,20 @@ private fun settingsSections(
                         icon = Icons.Rounded.TextFields,
                     )
                 },
+                Entry("Floating lyrics bubble", "overlay pip floating lyrics multitask") {
+                    NavRow(
+                        "Floating lyrics bubble",
+                        {
+                            if (!com.opentune.ui.player.FloatingLyricsService.canDrawOverlays(context)) {
+                                runCatching { context.startActivity(com.opentune.ui.player.FloatingLyricsService.overlayPermissionIntent(context)) }
+                            } else {
+                                com.opentune.ui.player.FloatingLyricsService.toggle(context)
+                            }
+                        },
+                        summary = if (com.opentune.ui.player.FloatingLyricsService.active) "Active (tap to turn off)" else "Float synchronized lyrics and controls over other apps",
+                        icon = Icons.Rounded.Lyrics,
+                    )
+                },
             ),
         ),
         Section(
@@ -1426,7 +1443,7 @@ private fun settingsSections(
                     NavRow("Wrapped", onOpenWrapped, summary = "Your listening as an animated story", icon = Icons.Rounded.AutoAwesome)
                 },
                 Entry("Export data", "backup json") {
-                    NavRow("Export data", { exporter.launchSafely(context, "opentune-backup.json") }, summary = "Settings, history, likes and playlists, as one JSON file", icon = Icons.Rounded.Upload)
+                    NavRow("Export data", { exporter.launchSafely(context, "openblast-backup.json") }, summary = "Settings, history, likes and playlists, as one JSON file", icon = Icons.Rounded.Upload)
                 },
                 Entry("Import data", "restore json") {
                     NavRow("Import data", { importer.launchSafely(context, arrayOf("application/json")) }, summary = "Replaces the settings, history, likes and playlists on this device", icon = Icons.Rounded.Download)

@@ -38,7 +38,7 @@ object WrappedPoster {
                 val images = urls.map { u -> async { u?.let { ShareCard.loadImage(context, it, 400) } } }.awaitAll()
                 withContext(Dispatchers.Default) { draw(summary, title, images.first(), images.drop(1)) }
             }.onFailure { Log.w("WrappedPoster", "couldn't make the poster", it) }.getOrNull()
-            ShareCard.sendImage(context, bitmap, "OpenTune-Wrapped.png", "My $title Wrapped on OpenTune", "Wrapped")
+            ShareCard.sendImage(context, bitmap, "OpenBlast-Wrapped.png", "My $title Wrapped on OpenTune", "Wrapped")
         }
     }
 
@@ -70,7 +70,7 @@ object WrappedPoster {
         val left = w * 0.083f
         val eyebrow = text(w * 0.022f, soft, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 0.2f)
 
-        c.drawText("OPENTUNE", left, h * 0.075f, eyebrow)
+        c.drawText("OPENBLAST", left, h * 0.075f, eyebrow)
         c.drawText("My", left, h * 0.14f, text(w * 0.1f, ink, serif, -0.02f))
         c.drawText(title, left, h * 0.2f, text(w * 0.13f, sun, serif, -0.02f))
         c.drawText("Wrapped", left, h * 0.26f, text(w * 0.1f, ink, serif, -0.02f))

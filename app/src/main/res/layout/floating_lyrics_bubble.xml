@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/floating_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/widget_pill_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="6dp">
+
+    <ImageView
+        android:id="@+id/floating_icon"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/media3_notification_small_icon"
+        android:tint="#FFFFFFFF"
+        tools:ignore="UseAppTint" />
+
+    <TextView
+        android:id="@+id/floating_lyrics_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="marquee"
+        android:maxWidth="220dp"
+        android:singleLine="true"
+        android:text="♪ OpenBlast Lyrics"
+        android:textColor="#FFFFFFFF"
+        android:textSize="13sp" />
+
+    <ImageButton
+        android:id="@+id/floating_play_pause"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/widget_play"
+        android:padding="4dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_play"
+        android:tint="#FFFFFFFF"
+        tools:ignore="UseAppTint" />
+
+    <ImageButton
+        android:id="@+id/floating_close"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="4dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Close"
+        android:padding="4dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_close_white"
+        android:tint="#B3FFFFFF"
+        tools:ignore="UseAppTint" />
+</LinearLayout>

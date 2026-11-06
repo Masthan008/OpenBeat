@@ -122,7 +122,7 @@ object FirstPartyAddonAuth {
             val nonce = b64(ByteArray(24).also { SecureRandom().nextBytes(it) })
             val path = request.url.encodedPath + (request.url.encodedQuery?.let { "?$it" } ?: "")
             val canonical = listOf("OpenTune-Addon-v1", token, time, nonce, request.method, path, sha(body)).joinToString("\n")
-            request.newBuilder().header("User-Agent", "OpenTune/verified-addon-v1")
+            request.newBuilder().header("User-Agent", "OpenBlast/verified-addon-v1")
                 .header("Authorization", "Bearer $token").header("X-OpenTune-Time", time)
                 .header("X-OpenTune-Nonce", nonce).header("X-OpenTune-Signature", sign(alias, canonical)).build()
         }

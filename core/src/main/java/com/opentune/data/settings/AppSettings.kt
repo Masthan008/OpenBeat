@@ -333,6 +333,8 @@ data class PlaybackSettings(
     val sponsorBlock: Boolean = true,
     /** SponsorBlock categories to skip, by API name. */
     val sponsorBlockCategories: Set<String> = DEFAULT_SPONSORBLOCK_CATEGORIES,
+    /** Combine left and right channels for single-earbud listening. */
+    val monoAudio: Boolean = false,
 )
 
 val DEFAULT_SPONSORBLOCK_CATEGORIES = setOf("music_offtopic", "sponsor", "selfpromo", "interaction")

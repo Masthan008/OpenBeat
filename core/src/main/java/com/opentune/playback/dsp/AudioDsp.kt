@@ -124,6 +124,7 @@ data class DspParams(
     val eightDPeriod: Float = 0f,
     /** Seconds for one turn of 3D sound ([Space3D]), which takes over from 8D; 0 is off. */
     val spacePeriod: Float = 0f,
+    val mono: Boolean = false,
 ) {
     private val eqActive: Boolean
         get() = equalizer.enabled && (
@@ -134,7 +135,7 @@ data class DspParams(
     /** The headphone correction from AutoEq, when one is chosen; independent of [eqActive]. */
     private val headphone get() = equalizer.headphone?.takeIf { it.filters.isNotEmpty() }
 
-    val isNeutral: Boolean get() = !eqActive && headphone == null && bassBoost == 0 && !spatial && !clarity && outputGainDb == 0f && eightDPeriod <= 0f && spacePeriod <= 0f
+    val isNeutral: Boolean get() = !eqActive && headphone == null && bassBoost == 0 && !spatial && !clarity && outputGainDb == 0f && eightDPeriod <= 0f && spacePeriod <= 0f && !mono
 
     /**
      * Whether anything in the chain can push a sample past full scale. Only
@@ -380,7 +381,11 @@ class DspAudioProcessor : BaseAudioProcessor() {
             frame[c] = x.toFloat()
         }
         if (channels == 2) {
-            if (p.spatial) {
+            if (p.mono) {
+                val m = (frame[0] + frame[1]) * 0.5f
+                frame[0] = m
+                frame[1] = m
+            } else if (p.spatial) {
                 val mid = (frame[0] + frame[1]) * 0.5f
                 val side = (frame[0] - frame[1]) * 0.5f * SPATIAL_WIDTH
                 frame[0] = mid + side

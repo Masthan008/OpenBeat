@@ -35,6 +35,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <!-- Installing an update downloaded from GitHub Releases; Android still asks each time. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Floating lyrics overlay over other apps. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- The phone's own equalizer, opened from the Equalizer page. -->
     <queries>
@@ -277,6 +279,22 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_studio_info" />
         </receiver>
+        <receiver android:name=".widget.CompactPillWidget" android:exported="false" android:label="@string/widget_compact_pill_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_compact_pill_info" />
+        </receiver>
+        <receiver android:name=".widget.VinylTurntableWidget" android:exported="false" android:label="@string/widget_vinyl_turntable_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_vinyl_turntable_info" />
+        </receiver>
+        <receiver android:name=".widget.SyncedLyricsWidget" android:exported="false" android:label="@string/widget_synced_lyrics_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_synced_lyrics_info" />
+        </receiver>
+        <receiver android:name=".widget.SpeedDialWidget" android:exported="false" android:label="@string/widget_speed_dial_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_speed_dial_info" />
+        </receiver>
         <receiver
             android:name=".widget.NowPlayingWidget"
             android:exported="false"
@@ -305,6 +323,9 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_recognize_info" />
         </receiver>
+        <service
+            android:name=".ui.player.FloatingLyricsService"
+            android:exported="false" />
         <service
             android:name=".widget.RecognizeTileService"
             android:exported="true"

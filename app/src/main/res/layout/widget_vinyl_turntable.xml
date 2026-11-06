@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <!-- Vinyl Disc Area -->
+        <FrameLayout
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/widget_vinyl_disc"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/widget_cover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_play_background"
+                android:clipToOutline="true"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_widget_cover" />
+
+            <!-- Spindle Center Play / Pause -->
+            <ImageButton
+                android:id="@+id/widget_play"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@drawable/widget_play_background"
+                android:contentDescription="@string/widget_play"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_widget_play"
+                android:tint="#FF12151C"
+                tools:ignore="UseAppTint" />
+        </FrameLayout>
+
+        <!-- Track Info & Controls -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="4dp">
+
+            <ImageButton
+                android:id="@+id/widget_previous"
+                style="@style/WidgetButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="@string/widget_previous"
+                android:src="@drawable/ic_widget_previous" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_title"
+                    style="@style/WidgetTitle"
+                    android:ellipsize="marquee"
+                    android:gravity="center"
+                    android:singleLine="true"
+                    android:text="@string/widget_nothing_playing"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/widget_artist"
+                    style="@style/WidgetArtist"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:singleLine="true"
+                    android:text="@string/widget_open"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/widget_next"
+                style="@style/WidgetButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="@string/widget_next"
+                android:src="@drawable/ic_widget_next" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

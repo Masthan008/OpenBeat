@@ -255,6 +255,10 @@ open class NowPlayingWidget : AppWidgetProvider() {
                 NowPlayingWidget::class.java to R.layout.widget_now_playing,
                 AlbumArtWidget::class.java to R.layout.widget_album_art,
                 StudioWidget::class.java to R.layout.widget_studio,
+                CompactPillWidget::class.java to R.layout.widget_compact_pill,
+                VinylTurntableWidget::class.java to R.layout.widget_vinyl_turntable,
+                SyncedLyricsWidget::class.java to R.layout.widget_synced_lyrics,
+                SpeedDialWidget::class.java to R.layout.widget_speed_dial,
             )
             for ((provider, layout) in designs) {
                 val ids = manager.getAppWidgetIds(ComponentName(context, provider))
@@ -282,6 +286,24 @@ open class NowPlayingWidget : AppWidgetProvider() {
                     views.setOnClickPendingIntent(R.id.widget_play, actionIntent(context, ACTION_PLAY_PAUSE, 102))
                     views.setOnClickPendingIntent(R.id.widget_next, actionIntent(context, ACTION_NEXT, 103))
                     views.setOnClickPendingIntent(R.id.widget_like, actionIntent(context, ACTION_LIKE, 104))
+                    if (provider == SyncedLyricsWidget::class.java) {
+                        views.setTextViewText(R.id.widget_lyric_current, if (empty) "♪ OpenBlast Lyrics" else "♪ " + state.title)
+                        views.setTextViewText(R.id.widget_lyric_next, if (empty) "Tap to sing along" else state.artist)
+                    }
+                    if (provider == SpeedDialWidget::class.java) {
+                        val navIntent = { route: String, code: Int ->
+                            PendingIntent.getActivity(
+                                context, code,
+                                Intent(context, MainActivity::class.java).setAction(Intent.ACTION_VIEW).putExtra("navigate", route),
+                                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                            )
+                        }
+                        views.setOnClickPendingIntent(R.id.widget_slot_liked, navIntent("library/liked", 201))
+                        views.setOnClickPendingIntent(R.id.widget_slot_history, navIntent("library/history", 202))
+                        views.setOnClickPendingIntent(R.id.widget_slot_downloads, navIntent("library/downloads", 203))
+                        views.setOnClickPendingIntent(R.id.widget_slot_supermix, navIntent("home/supermix", 204))
+                    }
+
                     manager.updateAppWidget(id, views)
                 }
             }
@@ -315,6 +337,10 @@ open class NowPlayingWidget : AppWidgetProvider() {
     }
 }
 
-/** Artwork-first and spacious transport variants, sharing playback and durable state. */
+/** Artwork-first, compact, turntable, lyrics, and speed dial variants sharing playback and durable state. */
 class AlbumArtWidget : NowPlayingWidget()
 class StudioWidget : NowPlayingWidget()
+class CompactPillWidget : NowPlayingWidget()
+class VinylTurntableWidget : NowPlayingWidget()
+class SyncedLyricsWidget : NowPlayingWidget()
+class SpeedDialWidget : NowPlayingWidget()

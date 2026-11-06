@@ -1,0 +1,5 @@
+• Expanded home screen widgets: New Compact Player Pill (2x1), Retro Vinyl Turntable (2x2), Live Synced Lyrics (4x2), and Speed Dial & Quick Favorites (4x2).
+• Brand & Icon Polish: OpenBlast notification icons, About & Updates logo, and complete string cleanups throughout the application.
+• Floating Synced Lyrics Bubble: Draggable system overlay bubble displaying synchronized lyrics and controls over games and other apps.
+• Audio Engine Upgrades: Proactive 15-second gapless pre-buffering, 3-track lookahead queue cache, and Mono audio channel toggle.
+• OpenBeat Update Pipeline: Decoupled update tracking and download endpoints directly to Masthan008/OpenBeat.
