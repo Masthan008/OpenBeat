@@ -81,6 +81,13 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "1.0.6" to listOf(
+            Note(Icons.Rounded.Favorite, "Diwali Favorite Animation (Beta)", "Celebrate your favourite songs with authentic Diwali joy: a glowing terracotta diya with a dancing flame, anar fountain sparks, and radiant phuljhadi sparklers. Switch styles in Settings › Motion and feel."),
+            Note(Icons.Rounded.BlurOn, "New Dock Animations & Icon Styles", "Added Float and Bounce dock motions alongside classic Minimize, Capsule, and Sink. Choose from fresh dock icon styles (Neon Glow, Minimal, Festive Sparkle) alongside Classic defaults."),
+            Note(Icons.Rounded.TouchApp, "Distinct Custom Widget Designs", "Bespoke visual identity for home widgets: vintage dark titanium vinyl turntable with gold rims and concentric vinyl grooves, and vibrant color-coded quick-access tiles."),
+            Note(Icons.Rounded.AutoAwesome, "Package Identity & Rebrand Polish", "Updated Android application ID to com.openblast, modernized widget intent actions, and refreshed third-party license documentation in THIRD_PARTY_NOTICES.md."),
+        ),
+
         "1.0.5" to listOf(
             Note(Icons.Rounded.TouchApp, "4 new home-screen widgets", "Compact Player Pill, Retro Vinyl Turntable with center spindle controls, Live Synced Lyrics, and Speed Dial & Quick Favorites."),
             Note(Icons.Rounded.Notifications, "OpenBlast notification icons", "Clean, sharp white OpenBlast marks for playback and update notifications in the status bar and shade."),

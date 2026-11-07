@@ -417,10 +417,12 @@ data class InterfaceSettings(
     /** With Spotify connected, Home shows Spotify's mixes made for the listener. */
     val spotifyMixes: Boolean = true,
     val lyricsAnimation: LyricsAnimation = LyricsAnimation.FLUID,
+    val favoriteAnimation: FavoriteAnimation = FavoriteAnimation.DEFAULT,
     /** Lyrics text size, as a fraction of the standard size. */
     val lyricsTextScale: Float = 1f,
     val playerStyle: PlayerStyle = PlayerStyle.CLASSIC,
     val dockMotion: DockMotion = DockMotion.MINIMIZE,
+    val dockIconStyle: DockIconStyle = DockIconStyle.DEFAULT,
     val controlStyle: ControlStyle = ControlStyle.BLOOM,
     /** The cover drifts and zooms slowly in the player while a song plays. */
     val movingCover: Boolean = true,
@@ -592,6 +594,16 @@ enum class DockMotion(val label: String, val summary: String) {
     MINIMIZE("Minimize", "Like iOS 26: the tabs shrink to the open one, with the song in a slim bar beside it"),
     CAPSULE("Capsule", "The tabs and the song gather into one small capsule in the middle"),
     SINK("Sink", "The tabs sink away into a blur and the song settles into their place"),
+    FLOAT("Float", "The dock floats up with an expansive glowing shadow as you scroll"),
+    BOUNCE("Bounce", "The tabs spring and bounce with playful elastic energy"),
+}
+
+@Serializable
+enum class DockIconStyle(val label: String, val summary: String) {
+    DEFAULT("Classic", "Standard Material icons"),
+    NEON("Neon Glow", "Modern soundwave and glow glyphs"),
+    MINIMAL("Minimal", "Clean geometric music glyphs"),
+    FESTIVE("Festive Sparkle", "Celebratory festive icons with sparkle accents"),
 }
 
 /** How a Canvas turns from the title down, so the title and controls over it read. */
@@ -643,6 +655,12 @@ enum class SeekbarTime(val label: String) {
     LEFT("Time left"),
     TOTAL("Length"),
     HIDDEN("Hidden"),
+}
+
+@Serializable
+enum class FavoriteAnimation(val label: String, val summary: String) {
+    DEFAULT("Classic", "Hearts & sparks in cover colours"),
+    DIWALI("Diwali", "Crackers, diyas & sparkling embers"),
 }
 
 enum class LyricsAnimation(val label: String, val summary: String) {

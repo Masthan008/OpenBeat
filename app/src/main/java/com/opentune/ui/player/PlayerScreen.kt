@@ -1493,7 +1493,8 @@ private fun TitleFlight(
 @Composable
 private fun StarButton(liked: Boolean, onClick: () -> Unit) {
     val haptics = com.opentune.ui.components.rememberHaptics()
-    val still = AppSettings.ui.collectAsState().value.reduceAnimation
+    val ui by AppSettings.ui.collectAsState()
+    val still = ui.reduceAnimation
     val pop = remember { androidx.compose.animation.core.Animatable(1f) }
     var pops by remember { mutableStateOf(0) }
     LaunchedEffect(pops) {
@@ -1523,7 +1524,8 @@ private const val PLAYER_BUTTON_TINT = 0.14f
 @Composable
 private fun HeartButton(liked: Boolean, onClick: () -> Unit) {
     val haptics = com.opentune.ui.components.rememberHaptics()
-    val still = AppSettings.ui.collectAsState().value.reduceAnimation
+    val ui by AppSettings.ui.collectAsState()
+    val still = ui.reduceAnimation
     val interactions = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -1558,7 +1560,12 @@ private fun HeartButton(liked: Boolean, onClick: () -> Unit) {
                 tint = if (liked) Color(0xFFFF4D6D) else LocalContentColor.current)
         }
         // Drawn past the button's edges, over whatever is around it.
-        if (burst.value < 1f) LikeBurst(burst.value, bursts, burstColors, Modifier.requiredSize(150.dp))
+        if (burst.value < 1f) {
+            when (ui.favoriteAnimation) {
+                com.opentune.data.settings.FavoriteAnimation.DEFAULT -> LikeBurst(burst.value, bursts, burstColors, Modifier.requiredSize(150.dp))
+                com.opentune.data.settings.FavoriteAnimation.DIWALI -> DiwaliCrackersBurst(burst.value, bursts, Modifier.requiredSize(180.dp))
+            }
+        }
     }
 }
 
@@ -1615,6 +1622,136 @@ internal fun LikeBurst(t: Float, seed: Int, colors: List<Color>, modifier: Modif
         }
     }
 }
+
+/**
+ * Celebratory Diwali festival animation at [t] (0 to 1):
+ * Radiant golden Diya expanding aura, explosive fireworks/crackers shell burst with crackling
+ * sparks, multi-pointed Phuljhadi sparkler rays, and rising celebratory embers.
+ */
+@Composable
+internal fun DiwaliCrackersBurst(t: Float, seed: Int, modifier: Modifier) {
+    val diwaliColors = remember {
+        listOf(
+            Color(0xFFFFD700), // Radiant Gold
+            Color(0xFFFF9100), // Festive Marigold Amber
+            Color(0xFFFF1744), // Auspicious Vermilion
+            Color(0xFFFFFFFF), // Sparkler Diamond White
+            Color(0xFFE040FB), // Neon Magenta
+            Color(0xFF00E5FF), // Electric Cyan
+            Color(0xFFFFEA00), // Bright Yellow
+            Color(0xFF76FF03), // Vibrant Festive Green
+        )
+    }
+    val starPath = remember {
+        androidx.compose.ui.graphics.Path().apply {
+            moveTo(0f, -1f)
+            lineTo(0.25f, -0.25f)
+            lineTo(1f, 0f)
+            lineTo(0.25f, 0.25f)
+            lineTo(0f, 1f)
+            lineTo(-0.25f, 0.25f)
+            lineTo(-1f, 0f)
+            lineTo(-0.25f, -0.25f)
+            close()
+        }
+    }
+    val flamePath = remember {
+        androidx.compose.ui.graphics.Path().apply {
+            moveTo(0f, -1f)
+            cubicTo(0.6f, -0.4f, 0.7f, 0.3f, 0f, 0.8f)
+            cubicTo(-0.7f, 0.3f, -0.6f, -0.4f, 0f, -1f)
+            close()
+        }
+    }
+    val particles = remember(seed) {
+        val r = kotlin.random.Random(seed * 9176 + 29)
+        List(24) { i ->
+            floatArrayOf(
+                (i / 24f) * 2f * Math.PI.toFloat() + r.nextFloat() * 0.28f, // 0: angle
+                0.65f + r.nextFloat() * 0.75f,                              // 1: reach
+                0.7f + r.nextFloat() * 0.8f,                               // 2: size
+                (i % 4).toFloat(),                                          // 3: type
+                r.nextFloat() * 0.15f,                                      // 4: delay
+                r.nextFloat() * 2f - 1f,                                    // 5: jitter
+            )
+        }
+    }
+    androidx.compose.foundation.Canvas(modifier) {
+        val c = center
+        val maxDist = 72.dp.toPx()
+
+        // 1. Central Golden Diya expanding aura ring
+        if (t < 0.45f) {
+            val auraLocal = (t / 0.45f).coerceIn(0f, 1f)
+            val auraRadius = 20.dp.toPx() + 38.dp.toPx() * auraLocal
+            val auraAlpha = (1f - auraLocal * auraLocal) * 0.65f
+            drawCircle(
+                color = Color(0xFFFFD700).copy(alpha = auraAlpha),
+                radius = auraRadius,
+                center = c,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx() * (1f - auraLocal))
+            )
+            drawCircle(
+                color = Color(0xFFFF9100).copy(alpha = auraAlpha * 0.4f),
+                radius = auraRadius * 0.65f,
+                center = c
+            )
+        }
+
+        // 2. Firecracker particles and sparklers
+        particles.forEachIndexed { i, p ->
+            val local = ((t - p[4]) / (1f - p[4])).coerceIn(0f, 1f)
+            if (local <= 0f) return@forEachIndexed
+
+            val easeOut = 1f - (1f - local) * (1f - local) * (1f - local)
+            val dist = maxDist * p[1] * easeOut
+            val jitter = if (local in 0.1f..0.7f) (kotlin.math.sin(local * 25f + p[5]) * 4.dp.toPx() * (1f - local)) else 0f
+
+            val angle = p[0]
+            val x = c.x + kotlin.math.cos(angle) * dist + kotlin.math.sin(angle) * jitter
+            val yOffset = if (p[3] == 2f) 22.dp.toPx() * easeOut else 8.dp.toPx() * easeOut
+            val y = c.y + kotlin.math.sin(angle) * dist - yOffset
+
+            val grow = if (local < 0.25f) local / 0.25f else 1f - (local - 0.25f) / 0.75f
+            val alpha = (1f - local * local * local).coerceIn(0f, 1f)
+            val baseColor = diwaliColors[i % diwaliColors.size]
+            val color = baseColor.copy(alpha = alpha)
+
+            when (p[3].toInt()) {
+                0 -> {
+                    val radius = 3.5.dp.toPx() * p[2] * (0.4f + grow)
+                    drawCircle(color, radius, androidx.compose.ui.geometry.Offset(x, y))
+                    drawCircle(Color.White.copy(alpha = alpha * 0.75f), radius * 0.5f, androidx.compose.ui.geometry.Offset(x, y))
+                }
+                1 -> {
+                    val starSize = 7.dp.toPx() * p[2] * (0.3f + 0.9f * grow)
+                    withTransform({
+                        translate(x, y)
+                        rotate(local * 180f + p[0] * 57.3f, pivot = androidx.compose.ui.geometry.Offset.Zero)
+                        scale(starSize, starSize, pivot = androidx.compose.ui.geometry.Offset.Zero)
+                    }) {
+                        drawPath(starPath, color)
+                    }
+                }
+                2 -> {
+                    val flameSize = 5.dp.toPx() * p[2] * (0.4f + 0.8f * grow)
+                    withTransform({
+                        translate(x, y)
+                        rotate(kotlin.math.sin(local * 10f) * 20f, pivot = androidx.compose.ui.geometry.Offset.Zero)
+                        scale(flameSize, flameSize, pivot = androidx.compose.ui.geometry.Offset.Zero)
+                    }) {
+                        drawPath(flamePath, Color(0xFFFFD700).copy(alpha = alpha))
+                    }
+                }
+                else -> {
+                    val r = 2.dp.toPx() * p[2] * (0.3f + grow)
+                    drawCircle(Color(0xFFFFFFFF).copy(alpha = alpha), r, androidx.compose.ui.geometry.Offset(x, y))
+                }
+            }
+        }
+    }
+}
+
 
 /**
  * Narrows what it's on to its height, centred, when that's the smaller

@@ -48,6 +48,14 @@ import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -130,6 +138,30 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
     LIBRARY("library", "Library", Icons.Outlined.LibraryMusic, Icons.Rounded.LibraryMusic),
 }
 
+private fun dockTabIcons(tab: Tab, style: com.opentune.data.settings.DockIconStyle): Pair<ImageVector, ImageVector> {
+    return when (style) {
+        com.opentune.data.settings.DockIconStyle.DEFAULT -> tab.icon to tab.selectedIcon
+        com.opentune.data.settings.DockIconStyle.NEON -> when (tab) {
+            Tab.HOME -> Icons.Rounded.GraphicEq to Icons.Rounded.GraphicEq
+            Tab.EXPLORE -> Icons.Rounded.AutoAwesome to Icons.Rounded.AutoAwesome
+            Tab.PODCASTS -> Icons.Rounded.Mic to Icons.Rounded.Mic
+            Tab.LIBRARY -> Icons.AutoMirrored.Rounded.QueueMusic to Icons.AutoMirrored.Rounded.QueueMusic
+        }
+        com.opentune.data.settings.DockIconStyle.MINIMAL -> when (tab) {
+            Tab.HOME -> Icons.Rounded.PlayArrow to Icons.Rounded.PlayArrow
+            Tab.EXPLORE -> Icons.Rounded.Search to Icons.Rounded.Search
+            Tab.PODCASTS -> Icons.Rounded.GraphicEq to Icons.Rounded.GraphicEq
+            Tab.LIBRARY -> Icons.Rounded.Album to Icons.Rounded.Album
+        }
+        com.opentune.data.settings.DockIconStyle.FESTIVE -> when (tab) {
+            Tab.HOME -> Icons.Rounded.AutoAwesome to Icons.Rounded.AutoAwesome
+            Tab.EXPLORE -> Icons.Rounded.Star to Icons.Rounded.Star
+            Tab.PODCASTS -> tab.icon to tab.selectedIcon
+            Tab.LIBRARY -> Icons.Rounded.Favorite to Icons.Rounded.Favorite
+        }
+    }
+}
+
 private const val SEARCH_ROUTE = "search"
 
 
@@ -155,7 +187,12 @@ fun AppRoot(vm: PlayerViewModel) {
     // Explore without a tab of its own lives on the Search page instead.
     val separateExplore = chromeUi.separateExplore
     val dockTabs = remember(separateExplore) { if (separateExplore) Tab.entries.toList() else Tab.entries - Tab.EXPLORE }
-    val chromeTabs = remember(dockTabs) { dockTabs.map { ChromeTab(it.label, it.icon, it.selectedIcon) } }
+    val chromeTabs = remember(dockTabs, chromeUi.dockIconStyle) {
+        dockTabs.map { tab ->
+            val (icon, selectedIcon) = dockTabIcons(tab, chromeUi.dockIconStyle)
+            ChromeTab(tab.label, icon, selectedIcon)
+        }
+    }
     // A page opened from inside the player (the artist, from a tap on their
     // name) folds the player away; back from that page opens the player
     // again, as it was left. Held: the page the player was over, and the page

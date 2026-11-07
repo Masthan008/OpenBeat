@@ -146,8 +146,17 @@ fun ToggleRow(
 }
 
 @Composable
-fun NavRow(title: String, onClick: () -> Unit, summary: String? = null, icon: ImageVector? = null, value: String? = null, dot: Boolean = false, leading: (@Composable () -> Unit)? = null) {
-    SettingRow(title, summary = summary, icon = icon, onClick = onClick, leading = leading, trailing = {
+fun NavRow(
+    title: String,
+    onClick: () -> Unit,
+    summary: String? = null,
+    icon: ImageVector? = null,
+    value: String? = null,
+    dot: Boolean = false,
+    beta: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    SettingRow(title, summary = summary, icon = icon, onClick = onClick, beta = beta, leading = leading, trailing = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (dot) UpdateDot(Modifier.padding(end = 6.dp))
             if (value != null) {

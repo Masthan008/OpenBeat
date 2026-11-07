@@ -590,7 +590,12 @@ private fun HeartButton(liked: Boolean, onClick: () -> Unit) {
                 tint = if (liked) Color(0xFFFF4D6D) else LocalContentColor.current,
             )
         }
-        if (burst.value < 1f) LikeBurst(burst.value, bursts, colors, Modifier.requiredSize(150.dp))
+        if (burst.value < 1f) {
+            when (AppSettings.ui.value.favoriteAnimation) {
+                com.opentune.data.settings.FavoriteAnimation.DEFAULT -> LikeBurst(burst.value, bursts, colors, Modifier.requiredSize(150.dp))
+                com.opentune.data.settings.FavoriteAnimation.DIWALI -> DesktopDiwaliCrackersBurst(burst.value, bursts, Modifier.requiredSize(180.dp))
+            }
+        }
     }
 }
 
@@ -610,6 +615,49 @@ private fun LikeBurst(t: Float, seed: Int, colors: List<Color>, modifier: Modifi
         }
     }
 }
+
+/** Celebratory Diwali festival fireworks and cracker sparkles on Desktop at [t] (0 to 1). */
+@Composable
+private fun DesktopDiwaliCrackersBurst(t: Float, seed: Int, modifier: Modifier) {
+    val diwaliColors = remember {
+        listOf(
+            Color(0xFFFFD700), // Gold
+            Color(0xFFFF9100), // Amber
+            Color(0xFFFF1744), // Vermilion
+            Color(0xFFFFFFFF), // White
+            Color(0xFFE040FB), // Magenta
+            Color(0xFF00E5FF), // Cyan
+            Color(0xFFFFEA00), // Yellow
+            Color(0xFF76FF03), // Green
+        )
+    }
+    Canvas(modifier) {
+        val random = java.util.Random(seed.toLong() * 9176L + 29L)
+        val centre = Offset(size.width / 2, size.height / 2)
+        val ease = 1f - (1f - t) * (1f - t)
+
+        // Golden aura
+        if (t < 0.45f) {
+            val auraLocal = (t / 0.45f).coerceIn(0f, 1f)
+            val auraRadius = 20.dp.toPx() + 38.dp.toPx() * auraLocal
+            val auraAlpha = (1f - auraLocal * auraLocal) * 0.6f
+            drawCircle(Color(0xFFFFD700).copy(alpha = auraAlpha), auraRadius, centre, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx() * (1f - auraLocal)))
+        }
+
+        repeat(20) { i ->
+            val angle = (i / 20f) * 2 * Math.PI.toFloat() + random.nextFloat() * 0.4f
+            val reach = size.minDimension * (0.32f + random.nextFloat() * 0.22f) * ease
+            val at = centre + Offset(kotlin.math.cos(angle) * reach, kotlin.math.sin(angle) * reach - 10.dp.toPx() * ease)
+            val r = (if (i % 2 == 0) 5.dp.toPx() else 3.dp.toPx()) * (if (t < 0.3f) t / 0.3f else 1f - (t - 0.3f) / 0.7f).coerceIn(0f, 1f)
+            val color = diwaliColors[i % diwaliColors.size].copy(alpha = (1f - t * t).coerceIn(0f, 1f))
+            drawCircle(color, r, at)
+            if (i % 3 == 0) {
+                drawCircle(Color.White.copy(alpha = (1f - t).coerceIn(0f, 1f)), r * 0.5f, at)
+            }
+        }
+    }
+}
+
 
 /** More, in a round button: add the song to a playlist. */
 @Composable

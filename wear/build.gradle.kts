@@ -18,7 +18,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.opentune.wear"
+        applicationId = "com.openblast.wear"
         // Wear OS 3 and later.
         minSdk = 30
         targetSdk = 36

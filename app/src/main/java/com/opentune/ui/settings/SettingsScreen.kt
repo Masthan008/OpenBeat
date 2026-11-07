@@ -165,6 +165,7 @@ import com.opentune.data.settings.DockLens
 import com.opentune.data.settings.DockMotion
 import com.opentune.data.settings.GlassStyle
 import com.opentune.data.settings.LyricsAlign
+import com.opentune.data.settings.FavoriteAnimation
 import com.opentune.data.settings.LyricsAnimation
 import com.opentune.data.settings.PageTransition
 import com.opentune.data.settings.PaletteStyleOption
@@ -452,8 +453,10 @@ private fun settingsSections(
     val listensWaiting by ListenBrainz.queued.collectAsState()
     val musicServer by Subsonic.server.collectAsState()
     var lyricsAnimationDialog by remember { mutableStateOf(false) }
+    var favoriteAnimationDialog by remember { mutableStateOf(false) }
     var dockMotionDialog by remember { mutableStateOf(false) }
     var dockLensDialog by remember { mutableStateOf(false) }
+    var dockIconStyleDialog by remember { mutableStateOf(false) }
     var glassStyleDialog by remember { mutableStateOf(false) }
     var pageTransitionDialog by remember { mutableStateOf(false) }
     var playerMotionDialog by remember { mutableStateOf(false) }
@@ -595,6 +598,16 @@ private fun settingsSections(
             onDismiss = { controlStyleDialog = false },
         )
     }
+    if (dockIconStyleDialog) {
+        ChoiceSheet(
+            title = "Dock icon style",
+            options = com.opentune.data.settings.DockIconStyle.entries,
+            selected = ui.dockIconStyle,
+            label = { "${it.label} · ${it.summary}" },
+            onSelect = { s -> AppSettings.updateUi { it.copy(dockIconStyle = s) } },
+            onDismiss = { dockIconStyleDialog = false },
+        )
+    }
     if (dockMotionDialog) {
         ChoiceSheet(
             title = "Dock animation",
@@ -653,6 +666,16 @@ private fun settingsSections(
             label = { "${it.label} · ${it.summary}" },
             onSelect = { m -> AppSettings.updateUi { it.copy(playerMotion = m) } },
             onDismiss = { playerMotionDialog = false },
+        )
+    }
+    if (favoriteAnimationDialog) {
+        ChoiceSheet(
+            title = "Favorite song animation",
+            options = FavoriteAnimation.entries,
+            selected = ui.favoriteAnimation,
+            label = { "${it.label} · ${it.summary}" },
+            onSelect = { a -> AppSettings.updateUi { it.copy(favoriteAnimation = a) } },
+            onDismiss = { favoriteAnimationDialog = false },
         )
     }
     if (lyricsAnimationDialog) {
@@ -1047,6 +1070,10 @@ private fun settingsSections(
                 Entry("Dock lens", "navigation bar dock tab highlight selection pill indicator jelly stretch glide") {
                     NavRow("Dock lens", { dockLensDialog = true }, summary = ui.dockLens.summary, icon = Icons.Rounded.Lens, value = ui.dockLens.label)
                 },
+                Entry("Dock icon style", "navigation bar dock tab icon glyphs neon minimal festive") {
+                    NavRow("Dock icon style", { dockIconStyleDialog = true }, summary = ui.dockIconStyle.summary, icon = Icons.Rounded.AutoAwesome, value = ui.dockIconStyle.label)
+                },
+
                 Entry("Opening animation", "splash start launch intro logo reveal dive") {
                     ToggleRow(
                         "Opening animation",
@@ -1067,6 +1094,9 @@ private fun settingsSections(
                 },
                 Entry("Song change", "cover change next song skip animation flip carousel deck fade") {
                     NavRow("Song change", { coverChangeDialog = true }, summary = ui.coverChange.summary, icon = Icons.Rounded.SwapHoriz, value = ui.coverChange.label)
+                },
+                Entry("Favorite song animation", "like favourite heart diwali animation crackers celebration") {
+                    NavRow("Favorite song animation", { favoriteAnimationDialog = true }, summary = ui.favoriteAnimation.summary, icon = Icons.Rounded.Favorite, value = ui.favoriteAnimation.label, beta = true)
                 },
                 Entry("Player opening", "now playing sheet open close animation spring smooth bouncy snappy") {
                     NavRow("Player opening", { playerMotionDialog = true }, summary = ui.playerMotion.summary, icon = Icons.Rounded.UnfoldMore, value = ui.playerMotion.label)

@@ -91,6 +91,9 @@
 .ot-burst { position: absolute; inset: 0; pointer-events: none; }
 .ot-burst i { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: var(--ot-key-on-dark); animation: ot-spark 0.6s var(--ot-ease-emph) forwards; }
 .ot-burst i:nth-child(even) { width: 3px; height: 3px; background: currentColor; }
+.ot-burst i:nth-child(3n+1) { background: #FFD700; box-shadow: 0 0 6px #FFD700; }
+.ot-burst i:nth-child(3n+2) { background: #FF9100; box-shadow: 0 0 6px #FF9100; }
+.ot-burst i:nth-child(3n+3) { background: #FF1744; box-shadow: 0 0 6px #FF1744; }
 @keyframes ot-pop { 0% { scale: 0.4; } 60% { scale: 1.25; } }
 @keyframes ot-spark {
   from { transform: rotate(var(--a)) translateY(-4px) scale(1); opacity: 1; }

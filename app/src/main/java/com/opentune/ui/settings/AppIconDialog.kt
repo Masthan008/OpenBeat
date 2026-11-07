@@ -48,7 +48,7 @@ internal enum class AppIcon(val title: String, val resource: Int) {
     Gold("Gold", R.mipmap.ic_launcher_gold),
     Neon("Neon", R.mipmap.ic_launcher_neon);
 
-    fun component(context: Context) = ComponentName(context, "${context.packageName}.icon.$name")
+    fun component(context: Context) = ComponentName(context, "com.opentune.icon.$name")
     companion object {
         fun selected(context: Context): AppIcon = entries.firstOrNull {
             context.packageManager.getComponentEnabledSetting(it.component(context)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED

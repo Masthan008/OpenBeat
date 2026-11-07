@@ -11,11 +11,11 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.opentune"
+        applicationId = "com.openblast"
         minSdk = 26
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.0.5"
+        versionCode = 48
+        versionName = "1.0.6"
         // This version's store changelog, shown as What's new when a release
         // goes out before the app's own notes for it are written.
         val changelog = rootProject.file("fastlane/metadata/android/en-US/changelogs/$versionCode.txt")

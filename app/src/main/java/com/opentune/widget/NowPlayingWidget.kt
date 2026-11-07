@@ -66,16 +66,16 @@ open class NowPlayingWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         when (intent.action) {
-            ACTION_LIKE -> {
+            ACTION_LIKE, "com.opentune.widget.LIKE" -> {
                 val state = load(context)
                 val id = state.videoId ?: return
                 val song = Song(id, state.title, state.artist, state.thumbnailUrl)
                 LibraryStore.setLiked(song, !LibraryStore.isLiked(id))
                 render(context, state.copy(liked = LibraryStore.isLiked(id)))
             }
-            ACTION_PLAY_PAUSE -> handlePlayPause(context)
-            ACTION_NEXT -> handleNext(context)
-            ACTION_PREVIOUS -> handlePrevious(context)
+            ACTION_PLAY_PAUSE, "com.opentune.widget.PLAY_PAUSE" -> handlePlayPause(context)
+            ACTION_NEXT, "com.opentune.widget.NEXT" -> handleNext(context)
+            ACTION_PREVIOUS, "com.opentune.widget.PREVIOUS" -> handlePrevious(context)
         }
     }
 
@@ -177,10 +177,10 @@ open class NowPlayingWidget : AppWidgetProvider() {
     )
 
     companion object {
-        const val ACTION_PLAY_PAUSE = "com.opentune.widget.PLAY_PAUSE"
-        const val ACTION_NEXT = "com.opentune.widget.NEXT"
-        const val ACTION_PREVIOUS = "com.opentune.widget.PREVIOUS"
-        const val ACTION_LIKE = "com.opentune.widget.LIKE"
+        const val ACTION_PLAY_PAUSE = "com.openblast.widget.PLAY_PAUSE"
+        const val ACTION_NEXT = "com.openblast.widget.NEXT"
+        const val ACTION_PREVIOUS = "com.openblast.widget.PREVIOUS"
+        const val ACTION_LIKE = "com.openblast.widget.LIKE"
         private const val PREFS = "widget"
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private var last: State? = null
@@ -199,14 +199,16 @@ open class NowPlayingWidget : AppWidgetProvider() {
                 playing = player?.isPlaying == true,
                 liked = song?.videoId?.let(LibraryStore::isLiked) == true,
             )
-            if (state == last) return
+            val changed = state != last
             last = state
             save(context, state)
-            render(context, state)
-            if (state.thumbnailUrl != coverFor) {
-                coverFor = state.thumbnailUrl
-                loadCover(context.applicationContext, state)
+            if (changed) {
+                if (state.thumbnailUrl != coverFor) {
+                    coverFor = state.thumbnailUrl
+                    loadCover(context.applicationContext, state)
+                }
             }
+            render(context, state)
         }
 
         /** The player has gone: keep the song shown, with Play rather than Pause. */
@@ -257,7 +259,6 @@ open class NowPlayingWidget : AppWidgetProvider() {
                 StudioWidget::class.java to R.layout.widget_studio,
                 CompactPillWidget::class.java to R.layout.widget_compact_pill,
                 VinylTurntableWidget::class.java to R.layout.widget_vinyl_turntable,
-                SyncedLyricsWidget::class.java to R.layout.widget_synced_lyrics,
                 SpeedDialWidget::class.java to R.layout.widget_speed_dial,
             )
             for ((provider, layout) in designs) {
@@ -286,10 +287,6 @@ open class NowPlayingWidget : AppWidgetProvider() {
                     views.setOnClickPendingIntent(R.id.widget_play, actionIntent(context, ACTION_PLAY_PAUSE, 102))
                     views.setOnClickPendingIntent(R.id.widget_next, actionIntent(context, ACTION_NEXT, 103))
                     views.setOnClickPendingIntent(R.id.widget_like, actionIntent(context, ACTION_LIKE, 104))
-                    if (provider == SyncedLyricsWidget::class.java) {
-                        views.setTextViewText(R.id.widget_lyric_current, if (empty) "♪ OpenBlast Lyrics" else "♪ " + state.title)
-                        views.setTextViewText(R.id.widget_lyric_next, if (empty) "Tap to sing along" else state.artist)
-                    }
                     if (provider == SpeedDialWidget::class.java) {
                         val navIntent = { route: String, code: Int ->
                             PendingIntent.getActivity(
@@ -342,5 +339,4 @@ class AlbumArtWidget : NowPlayingWidget()
 class StudioWidget : NowPlayingWidget()
 class CompactPillWidget : NowPlayingWidget()
 class VinylTurntableWidget : NowPlayingWidget()
-class SyncedLyricsWidget : NowPlayingWidget()
 class SpeedDialWidget : NowPlayingWidget()

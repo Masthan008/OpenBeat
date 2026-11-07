@@ -95,7 +95,7 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
             <!-- Open YouTube Music and YouTube links: songs, playlists, albums, channels.
-                 Not autoVerify: these domains aren't ours, so the user picks OpenTune. -->
+                 Not autoVerify: these domains aren't ours, so the user picks OpenBlast. -->
             <intent-filter tools:ignore="AppLinkWarning">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -138,7 +138,7 @@
                 <data android:scheme="https" android:host="masthan008.github.io" android:pathPrefix="/OpenBeat/together/" />
                 <data android:scheme="https" android:host="justshivv.github.io" android:pathPrefix="/Opentune/together/" />
             </intent-filter>
-            <!-- "Play … on OpenTune" from the Assistant. -->
+            <!-- "Play … on OpenBlast" from the Assistant. -->
             <intent-filter>
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -287,10 +287,6 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_vinyl_turntable_info" />
         </receiver>
-        <receiver android:name=".widget.SyncedLyricsWidget" android:exported="false" android:label="@string/widget_synced_lyrics_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_synced_lyrics_info" />
-        </receiver>
         <receiver android:name=".widget.SpeedDialWidget" android:exported="false" android:label="@string/widget_speed_dial_label">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_speed_dial_info" />
@@ -301,6 +297,10 @@
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.openblast.widget.PLAY_PAUSE" />
+                <action android:name="com.openblast.widget.NEXT" />
+                <action android:name="com.openblast.widget.PREVIOUS" />
+                <action android:name="com.openblast.widget.LIKE" />
                 <action android:name="com.opentune.widget.PLAY_PAUSE" />
                 <action android:name="com.opentune.widget.NEXT" />
                 <action android:name="com.opentune.widget.PREVIOUS" />

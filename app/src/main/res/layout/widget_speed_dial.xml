@@ -23,7 +23,7 @@
             android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
-            android:background="@drawable/widget_tile_background"
+            android:background="@drawable/widget_tile_liked"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="6dp">
@@ -53,7 +53,7 @@
             android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
-            android:background="@drawable/widget_tile_background"
+            android:background="@drawable/widget_tile_history"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="6dp">
@@ -83,7 +83,7 @@
             android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
-            android:background="@drawable/widget_tile_background"
+            android:background="@drawable/widget_tile_downloads"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="6dp">
@@ -112,7 +112,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@drawable/widget_tile_background"
+            android:background="@drawable/widget_tile_supermix"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="6dp">

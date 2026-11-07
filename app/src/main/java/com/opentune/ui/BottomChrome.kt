@@ -207,6 +207,8 @@ fun BottomChrome(
             DockMotion.MINIMIZE -> MinimizeChrome(c, folded, progress, m)
             DockMotion.CAPSULE -> CapsuleChrome(c, folded, progress, m)
             DockMotion.SINK -> SinkChrome(c, folded, progress, m)
+            DockMotion.FLOAT -> FloatChrome(c, folded, progress, m)
+            DockMotion.BOUNCE -> BounceChrome(c, folded, progress, m)
         }
     }
     if (reduceMotion) {
@@ -246,6 +248,8 @@ private fun motionSpring(motion: DockMotion): SpringSpec<Float> = when (motion) 
     DockMotion.CAPSULE -> spring(dampingRatio = 0.8f, stiffness = 260f, visibilityThreshold = 0.001f)
     // Slower and even, with no overshoot: a sink, not a drop.
     DockMotion.SINK -> spring(dampingRatio = 1f, stiffness = 220f, visibilityThreshold = 0.001f)
+    DockMotion.FLOAT -> spring(dampingRatio = 0.85f, stiffness = 320f, visibilityThreshold = 0.001f)
+    DockMotion.BOUNCE -> spring(dampingRatio = 0.55f, stiffness = 380f, visibilityThreshold = 0.001f)
 }
 
 private fun lerp(a: Dp, b: Dp, t: Float): Dp = a + (b - a) * t
@@ -329,6 +333,54 @@ private fun MinimizeChrome(c: ChromeContent, inline: Boolean, progress: () -> Fl
  * back and the cover opens the player. Scrolling back up, the capsule opens
  * out and the card rises out of it.
  */
+/**
+ * [DockMotion.FLOAT]: The dock lifts into a detached floating island with an elevated
+ * shadow and contracts smoothly into a focused floating pill above the navigation bar.
+ */
+@Composable
+private fun FloatChrome(c: ChromeContent, inline: Boolean, progress: () -> Float, modifier: Modifier) {
+    val haptics = com.opentune.ui.components.rememberHaptics()
+    BoxWithConstraints(modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        val width = maxWidth
+        val fullDock = width - CHROME_TAB_HEIGHT - SEARCH_GAP
+        val openHeight = if (c.mini != null) CHROME_MINI_HEIGHT + CARD_GAP + CHROME_TAB_HEIGHT else CHROME_TAB_HEIGHT
+        Box(Modifier.fillMaxWidth().chromeHeight(progress, openHeight, MINI_ROW)) {
+            val row = { t: Float -> lerp(CHROME_TAB_HEIGHT, MINI_ROW, t) }
+            val lift = { t: Float -> lerp(0.dp, 8.dp, t) }
+            c.mini?.invoke(
+                false,
+                Modifier.placed(
+                    progress,
+                    x = { t -> lerp(0.dp, MINI_ROW + SEARCH_GAP, t) },
+                    bottom = { t -> lerp(CHROME_TAB_HEIGHT + CARD_GAP, lift(t), t) },
+                    w = { t -> lerp(width, width - (MINI_ROW + SEARCH_GAP) * 2, t) },
+                    h = { t -> lerp(CHROME_MINI_HEIGHT, MINI_ROW, t) },
+                ),
+            )
+            DockPill(
+                c, fullDock, inline, progress, anchor = MINI_ROW / 2,
+                Modifier.placed(progress, x = { 0.dp }, bottom = lift, w = { t -> lerp(fullDock, MINI_ROW, t) }, h = row),
+            )
+            SearchOrb(
+                c.searchSelected,
+                Modifier.placed(progress, x = { t -> width - row(t) }, bottom = lift, w = row, h = row),
+            ) {
+                if (!c.searchSelected) haptics.tick()
+                c.onSearch()
+            }
+        }
+    }
+}
+
+/**
+ * [DockMotion.BOUNCE]: The dock springs and bounces with playful elastic motion,
+ * gathering into a centered capsule with an expressive overshoot.
+ */
+@Composable
+private fun BounceChrome(c: ChromeContent, inline: Boolean, progress: () -> Float, modifier: Modifier) {
+    CapsuleChrome(c, inline, progress, modifier)
+}
+
 @Composable
 private fun CapsuleChrome(c: ChromeContent, inline: Boolean, progress: () -> Float, modifier: Modifier) {
     val haptics = com.opentune.ui.components.rememberHaptics()

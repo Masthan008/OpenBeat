@@ -1,0 +1,4 @@
+Diwali Favorite Animation (Beta): Authentic Diwali celebration with glowing diya, dancing flame, anar fountain sparks, and phuljhadi sparklers (toggle styles in Settings > Motion and feel).
+New Dock Animations & Icon Styles: Added Float and Bounce dock motions alongside classic Minimize, Capsule, and Sink. Added fresh dock icon packs (Neon Glow, Minimal, Festive Sparkle) while preserving Classic icons.
+Distinct Custom Widget Designs: Bespoke visual styling for home widgets (Vintage Titanium Vinyl Turntable with concentric grooves and Color-Coded Quick Access Tiles).
+Package Identity & Rebrand Polish: Updated application ID to com.openblast, modernized widget intent actions, and refreshed third-party license notices.

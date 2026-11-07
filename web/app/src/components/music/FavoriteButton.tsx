@@ -37,7 +37,7 @@ export function FavoriteButton({ videoId, className, size = 18 }: FavoriteButton
       {liked ? <StarFilledIcon size={size} /> : <StarIcon size={size} />}
       {liked && bursts > 0 && (
         <span key={bursts} className="ot-burst" aria-hidden="true">
-          {Array.from({ length: 8 }, (_, i) => <i key={i} style={{ '--a': `${i * 45}deg` } as React.CSSProperties} />)}
+          {Array.from({ length: 16 }, (_, i) => <i key={i} style={{ '--a': `${i * 22.5}deg` } as React.CSSProperties} />)}
         </span>
       )}
     </button>
