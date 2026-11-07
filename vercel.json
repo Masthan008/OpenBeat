@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "site",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/releases.json",
+      "destination": "https://masthan008.github.io/OpenBeat/releases.json"
+    }
+  ]
+}
