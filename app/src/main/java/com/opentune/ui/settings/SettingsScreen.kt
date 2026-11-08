@@ -1386,9 +1386,9 @@ private fun settingsSections(
                 Entry("Download quality", "offline bitrate") {
                     NavRow("Download quality", { downloadQualityDialog = true }, icon = Icons.Rounded.Download, value = lib.downloadQuality.label)
                 },
-                Entry("Download on Wi-Fi only", "wifi mobile data cellular metered download") {
+                Entry("Download on Wi-Fi only (Beta)", "wifi mobile data cellular metered download") {
                     ToggleRow(
-                        "Download on Wi-Fi only",
+                        "Download on Wi-Fi only (Beta)",
                         lib.downloadWifiOnly,
                         { enabled ->
                             AppSettings.updateLibrary {

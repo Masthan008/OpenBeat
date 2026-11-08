@@ -11,7 +11,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.openblast"
+        applicationId = providers.gradleProperty("appId").getOrElse("com.openblast")
         minSdk = 26
         targetSdk = 36
         versionCode = 51
