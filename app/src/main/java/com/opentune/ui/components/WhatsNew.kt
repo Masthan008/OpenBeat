@@ -83,6 +83,12 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "1.0.8" to listOf(
+            Note(Icons.Rounded.Waves, "Vivo OriginOS Header Capsule", "Live audio waveforms, track details, and quick controls in the top center status bar cutout (Origin Island / Atomic Capsule) and Origin Player widgets."),
+            Note(Icons.Rounded.Download, "Real-Time Song Downloads", "Choose between 'Wi-Fi and mobile data' or 'Wi-Fi only'. Downloads start immediately with real-time network triggers."),
+            Note(Icons.Rounded.TabletAndroid, "Smart Wi-Fi Detection", "Resolved 'Waiting for Wi-Fi' lockups on mobile hotspots and metered wireless networks."),
+            Note(Icons.Rounded.Person, "iOS Ecosystem Modernization", "Updated iOS project configuration to OpenBlast branding and added developer attribution for sideloaded installations."),
+        ),
         "1.0.7" to listOf(
             Note(Icons.Rounded.Person, "Developer Attribution", "Created by Masthan Valli. Developer credits featured across Android, Desktop, and Web About pages."),
             Note(Icons.Rounded.FormatQuote, "3 New Typefaces", "Expanded typography choices with Plus Jakarta Sans, Lexend, and Inter in Settings › Appearance › Fonts & readability."),

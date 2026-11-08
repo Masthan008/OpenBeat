@@ -28,6 +28,9 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.core.app.NotificationCompat
+import androidx.media3.session.DefaultMediaNotificationProvider
+import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.LibraryResult
 import com.opentune.data.radio.Radio
@@ -104,6 +107,21 @@ import kotlinx.coroutines.withContext
  * Audio path: decoder → [DspAudioProcessor] (EQ, tone, balance, widening,
  * levelling, limiter) → ExoPlayer's silence skipping and speed/pitch → output.
  */
+private class OpenBlastMediaNotificationProvider(context: Context) : DefaultMediaNotificationProvider(context) {
+    override fun addNotificationActions(
+        mediaSession: MediaSession,
+        mediaButtons: ImmutableList<CommandButton>,
+        builder: NotificationCompat.Builder,
+        actionFactory: MediaNotification.ActionFactory,
+    ): IntArray {
+        val indices = super.addNotificationActions(mediaSession, mediaButtons, builder, actionFactory)
+        builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+        builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        builder.setOngoing(mediaSession.player.isPlaying)
+        return indices
+    }
+}
+
 @OptIn(UnstableApi::class)
 class PlaybackService : MediaLibraryService() {
 
@@ -434,6 +452,8 @@ class PlaybackService : MediaLibraryService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        setMediaNotificationProvider(OpenBlastMediaNotificationProvider(this))
+
         mediaSession = MediaLibrarySession.Builder(this, player, sessionCallback)
             .setSessionActivity(sessionActivity)
             .build()
@@ -460,6 +480,51 @@ class PlaybackService : MediaLibraryService() {
      * heard: if it's playing it's skipped, and the copies of it still to come
      * leave the queue. Songs already played stay, so going back still works.
      */
+    private fun broadcastSystemPlayback(player: Player) {
+        try {
+            val item = player.currentMediaItem ?: return
+            val metadata = item.mediaMetadata
+            val title = metadata.title?.toString() ?: ""
+            val artist = metadata.artist?.toString() ?: ""
+            val album = metadata.albumTitle?.toString() ?: ""
+            val isPlaying = player.isPlaying
+            val duration = player.duration.coerceAtLeast(0L)
+            val position = player.currentPosition.coerceAtLeast(0L)
+
+            val action = if (player.playbackState == Player.STATE_ENDED) {
+                "com.android.music.playbackcomplete"
+            } else {
+                "com.android.music.playstatechanged"
+            }
+
+            val metaIntent = Intent("com.android.music.metachanged").apply {
+                putExtra("id", item.mediaId)
+                putExtra("artist", artist)
+                putExtra("track", title)
+                putExtra("album", album)
+                putExtra("playing", isPlaying)
+                putExtra("duration", duration)
+                putExtra("position", position)
+                putExtra("package", packageName)
+            }
+            sendBroadcast(metaIntent)
+
+            val stateIntent = Intent(action).apply {
+                putExtra("id", item.mediaId)
+                putExtra("artist", artist)
+                putExtra("track", title)
+                putExtra("album", album)
+                putExtra("playing", isPlaying)
+                putExtra("duration", duration)
+                putExtra("position", position)
+                putExtra("package", packageName)
+            }
+            sendBroadcast(stateIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to broadcast system media event: ${e.message}")
+        }
+    }
+
     private suspend fun skipDisliked(player: ExoPlayer) {
         var before: Set<String>? = null
         LibraryStore.disliked.collect { now ->
@@ -822,6 +887,7 @@ class PlaybackService : MediaLibraryService() {
                 )
             ) {
                 refreshButtons()
+                broadcastSystemPlayback(player)
             }
             if (events.containsAny(
                     Player.EVENT_MEDIA_ITEM_TRANSITION,

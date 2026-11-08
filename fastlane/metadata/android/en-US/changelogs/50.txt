@@ -1,0 +1,4 @@
+- Vivo OriginOS & FuntouchOS support: Live audio waveform and controls in the top center status bar cutout (Origin Island / Status Bar Capsule) and Origin Player widgets
+- Real-time song downloads: Choose between 'Wi-Fi and mobile data' or 'Wi-Fi only' with instant start
+- Smart network detection: Resolved 'Waiting for Wi-Fi' lockups on mobile hotspots and metered wireless networks
+- iOS codebase modernization: Updated XcodeGen configuration to OpenBlast branding and added developer attribution

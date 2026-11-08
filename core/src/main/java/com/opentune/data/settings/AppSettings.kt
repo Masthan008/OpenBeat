@@ -545,13 +545,20 @@ enum class LyricsAlign(val label: String) {
 }
 
 @Serializable
+enum class DownloadNetworkPolicy(val label: String, val summary: String) {
+    WIFI_OR_MOBILE("Wi-Fi and mobile data", "Download songs over any available network in real time"),
+    WIFI_ONLY("Wi-Fi only", "Save mobile data; downloads wait for a Wi-Fi connection"),
+}
+
+@Serializable
 data class LibrarySettings(
     /** A MediaStore relative path ("Music/"), or null for every folder. */
     val localFolder: String? = null,
     val filterNonMusic: Boolean = true,
     val songCacheMb: Int = 512,
     val downloadQuality: AudioQuality = AudioQuality.MAX,
-    val downloadWifiOnly: Boolean = true,
+    val downloadNetwork: DownloadNetworkPolicy = DownloadNetworkPolicy.WIFI_OR_MOBILE,
+    val downloadWifiOnly: Boolean = false,
     /** Also copy each download into the phone's Music folder, in a format other apps play; see [com.opentune.data.download.DownloadExport]. */
     val exportDownloads: Boolean = false,
     /** Leave out songs and albums marked explicit; see [com.opentune.data.ContentFilter]. */

@@ -1,6 +1,9 @@
 package com.opentune.data.download
 
 import android.app.NotificationChannel
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
@@ -121,6 +124,8 @@ object Downloads {
 
     private fun finished(m: Map<String, DownloadEntry>) = m.values.filter { it.state == DownloadState.DONE }
 
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
     @OptIn(FlowPreview::class)
     fun init(context: Context) {
         val d = File(context.filesDir, "downloads").apply { mkdirs() }
@@ -136,7 +141,30 @@ object Downloads {
                 runCatching { f.write(json.encodeToString(serializer, map)) }
             }
         }
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        if (cm != null && networkCallback == null) {
+            val cb = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    if (hasWaitingDownloads()) {
+                        requeueWaiting(context.applicationContext)
+                    }
+                }
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && hasWaitingDownloads()) {
+                        requeueWaiting(context.applicationContext)
+                    }
+                }
+            }
+            try {
+                cm.registerDefaultNetworkCallback(cb)
+                networkCallback = cb
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to register network callback: ${e.message}")
+            }
+        }
     }
+
+    private fun hasWaitingDownloads(): Boolean = _entries.value.values.any { it.state == DownloadState.QUEUED }
 
     private var saved: com.opentune.data.SavedFile? = null
 
@@ -172,11 +200,20 @@ object Downloads {
             preferred?.key ?: existing?.preferredRenditionKey)
     }
 
+    fun isWifiConnected(context: Context): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val active = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(active) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
+
     private fun schedule(context: Context, song: SongRef, preferLossless: Boolean = false, preferredKey: String? = null) {
-        val wifiOnly = AppSettings.library.value.downloadWifiOnly
+        val lib = AppSettings.library.value
+        val wifiOnly = lib.downloadWifiOnly || lib.downloadNetwork == com.opentune.data.settings.DownloadNetworkPolicy.WIFI_ONLY
+        val requiredNetwork = if (wifiOnly && !isWifiConnected(context)) NetworkType.UNMETERED else NetworkType.CONNECTED
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
             .setInputData(workDataOf(DownloadWorker.KEY_ID to song.videoId))
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED).build())
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(requiredNetwork).build())
             // Started straight away rather than whenever Android next runs background work,
             // which on a phone saving battery could be a long while; past the quota it's ordinary work.
             .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -196,11 +233,12 @@ object Downloads {
         _entries.value.values.filter { it.state == DownloadState.QUEUED }.forEach { schedule(context, it.song, it.preferLossless, it.preferredRenditionKey) }
     }
 
-    /** Downloads wait because only Wi-Fi is allowed and the phone is on mobile data (or another metered network). */
+    /** Downloads wait because only Wi-Fi is allowed and the phone is not on Wi-Fi. */
     fun waitingForWifi(context: Context): Boolean {
-        if (!AppSettings.library.value.downloadWifiOnly) return false
-        val cm = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return false
-        return cm.activeNetwork == null || cm.isActiveNetworkMetered
+        val lib = AppSettings.library.value
+        val wifiOnly = lib.downloadWifiOnly || lib.downloadNetwork == com.opentune.data.settings.DownloadNetworkPolicy.WIFI_ONLY
+        if (!wifiOnly) return false
+        return !isWifiConnected(context)
     }
 
     fun remove(context: Context, videoId: String) = remove(context, videoId, onlyActive = false)

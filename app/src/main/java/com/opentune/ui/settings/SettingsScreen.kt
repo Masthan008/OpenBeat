@@ -429,6 +429,7 @@ private fun settingsSections(
     val accounts by AccountStore.accounts.collectAsState()
     val done by Downloads.done.collectAsState(Downloads.doneNow())
     var downloadQualityDialog by remember { mutableStateOf(false) }
+    var downloadNetworkDialog by remember { mutableStateOf(false) }
     var lyricsSourcesDialog by remember { mutableStateOf(false) }
     var lastFmDialog by remember { mutableStateOf(false) }
     var serverDialog by remember { mutableStateOf(false) }
@@ -696,6 +697,19 @@ private fun settingsSections(
             label = { "${it.label} · ${if (it == AudioQuality.MAX) "Lossless from add-ons when available; YouTube fallback" else it.summary}" },
             onSelect = { q -> AppSettings.updateLibrary { it.copy(downloadQuality = q) } },
             onDismiss = { downloadQualityDialog = false },
+        )
+    }
+    if (downloadNetworkDialog) {
+        ChoiceSheet(
+            title = "Download network",
+            options = com.opentune.data.settings.DownloadNetworkPolicy.entries,
+            selected = lib.downloadNetwork,
+            label = { "${it.label} · ${it.summary}" },
+            onSelect = { p ->
+                AppSettings.updateLibrary { it.copy(downloadNetwork = p, downloadWifiOnly = (p == com.opentune.data.settings.DownloadNetworkPolicy.WIFI_ONLY)) }
+                com.opentune.data.download.Downloads.requeueWaiting(context)
+            },
+            onDismiss = { downloadNetworkDialog = false },
         )
     }
     if (confirmSignOut) {
@@ -1372,8 +1386,14 @@ private fun settingsSections(
                 Entry("Download quality", "offline bitrate") {
                     NavRow("Download quality", { downloadQualityDialog = true }, icon = Icons.Rounded.Download, value = lib.downloadQuality.label)
                 },
-                Entry("Download on Wi-Fi only", "mobile data metered") {
-                    ToggleRow("Download on Wi-Fi only", lib.downloadWifiOnly, { v -> AppSettings.updateLibrary { it.copy(downloadWifiOnly = v) }; com.opentune.data.download.Downloads.requeueWaiting(context) }, summary = "Waits for Wi-Fi before saving songs", icon = Icons.Rounded.Wifi)
+                Entry("Download network", "wifi mobile data cellular metered download") {
+                    NavRow(
+                        "Download network",
+                        { downloadNetworkDialog = true },
+                        icon = if (lib.downloadNetwork == com.opentune.data.settings.DownloadNetworkPolicy.WIFI_ONLY) Icons.Rounded.Wifi else Icons.Rounded.Download,
+                        value = lib.downloadNetwork.label,
+                        summary = lib.downloadNetwork.summary,
+                    )
                 },
                 Entry("Stream downloads when online", "offline file internet play quality") {
                     val pbd by AppSettings.playback.collectAsState()

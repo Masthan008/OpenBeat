@@ -21,7 +21,16 @@ struct AppearanceView: View {
                     Text("Medium").tag("medium")
                     Text("Bold").tag("bold")
                 }
-                Text("OpenTune").font(.system(size: 28, weight: chosenWeight, design: chosenDesign))
+                Text("OpenBlast").font(.system(size: 28, weight: chosenWeight, design: chosenDesign))
+            }
+            Section("About") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("OpenBlast for iOS")
+                        .font(.headline)
+                    Text("Created by Masthan Valli")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                }
             }
             Section("Player") {
                 Picker("Background", selection: $background) {

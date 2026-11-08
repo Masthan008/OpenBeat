@@ -52,7 +52,7 @@ internal val SETTINGS_CATEGORIES = listOf(
         "audio", "Sound and quality", "Streaming and download quality, add-ons, loudness, effects and output", Icons.Rounded.GraphicEq,
         listOf(
             "Streaming quality" to listOf("On Wi-Fi", "On mobile data", "Upgrade quality while playing"),
-            "Download quality" to listOf("Download quality", "Download on Wi-Fi only"),
+            "Download quality" to listOf("Download quality", "Download network", "Download on Wi-Fi only"),
             "Audio add-ons" to listOf("Audio add-ons", "Lossless streaming", "Unmetered networks only"),
             "Loudness" to listOf("Loudness normalization", "Volume level", "Normalize on the phone speaker"),
             "Effects" to listOf("Equalizer", "Clarity", "Spatial audio", "System audio effects"),
