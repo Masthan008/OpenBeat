@@ -87,6 +87,10 @@ object Library {
         exec("DELETE FROM downloads WHERE id = ?", id)
     }
 
+    fun clearDownloads() = write {
+        exec("DELETE FROM downloads")
+    }
+
     fun setLiked(song: Song, liked: Boolean) = write {
         if (liked) {
             keep(song.saved())

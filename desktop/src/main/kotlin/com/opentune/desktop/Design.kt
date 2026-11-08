@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
@@ -137,6 +138,7 @@ internal fun CollectionHero(
                     val ready = !songs.isNullOrEmpty()
                     PrimaryButton("Play", Icons.Rounded.PlayArrow, enabled = ready) { songs?.let { Player.playAll(it, 0) } }
                     SecondaryButton("Shuffle", Icons.Rounded.Shuffle, enabled = ready) { songs?.let { Player.playAll(it.shuffled(), 0) } }
+                    SecondaryButton("Download", Icons.Rounded.Download, enabled = ready) { songs?.forEach { DownloadManager.download(it) } }
                     extra()
                 }
             }
@@ -294,6 +296,14 @@ internal fun TrackRow(i: Int, song: Song, songs: List<Song>, onRemove: ((Song) -
                 HoverIcon(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlist", size = 32.dp, iconSize = 19.dp) { adding = true }
                 AddToPlaylistMenu(song, adding) { adding = false }
             }
+            HoverIcon(
+                if (isDownloaded) Icons.Rounded.DownloadDone else Icons.Rounded.Download,
+                if (isDownloaded) "Downloaded" else "Download",
+                lit = isDownloaded,
+                size = 30.dp,
+                iconSize = 18.dp,
+                enabled = !isDownloading,
+            ) { DownloadManager.toggle(song) }
             LikeButton(isLiked, { Library.setLiked(song, !isLiked) }, size = 20.dp)
             Box {
                 HoverIcon(Icons.Rounded.MoreVert, "More options", size = 30.dp, iconSize = 18.dp) { menuOpen = true }

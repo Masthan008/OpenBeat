@@ -72,6 +72,7 @@ import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInFull
@@ -964,6 +965,13 @@ internal fun SongList(songs: List<Song>, current: Int = -1, onRemove: ((Song) ->
                         Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlist", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     AddToPlaylistMenu(song, adding) { adding = false }
+                }
+                IconButton(onClick = { DownloadManager.toggle(song) }, enabled = !isDownloading) {
+                    Icon(
+                        if (isDownloaded) Icons.Rounded.DownloadDone else Icons.Rounded.Download,
+                        if (isDownloaded) "Downloaded" else "Download",
+                        tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 LikeButton(isLiked, { Library.setLiked(song, !isLiked) }, size = 24.dp)
                 Box {

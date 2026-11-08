@@ -36,6 +36,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -76,7 +78,34 @@ import com.opentune.data.subsonic.Subsonic
 import kotlinx.coroutines.launch
 
 /** The groups of settings, in the bar at the top and down the page. */
-private enum class Group(val label: String) { LOOK("Look"), PLAYBACK("Playback"), SOURCES("Sources"), SOUND("Equalizer"), LYRICS("Lyrics"), ACCOUNTS("Accounts"), SERVER("Your server"), ABOUT("About") }
+private enum class Group(val label: String) {
+    LOOK("Look"),
+    PLAYBACK("Playback"),
+    SOURCES("Sources"),
+    DOWNLOADS("Downloads"),
+    SOUND("Equalizer"),
+    LYRICS("Lyrics"),
+    ACCOUNTS("Accounts"),
+    SERVER("Your server"),
+    ABOUT("About");
+
+    fun matches(query: String): Boolean {
+        if (query.isBlank()) return true
+        val q = query.trim().lowercase()
+        if (label.lowercase().contains(q)) return true
+        return when (this) {
+            LOOK -> "theme appearance dark light color dynamic blur layout view font visual look".contains(q)
+            PLAYBACK -> "audio stream speed pitch volume normalize silence skip fade transition playback cache buffer".contains(q)
+            SOURCES -> "youtube piped jiosaavn subsonic invidious source addon provider plugin streaming".contains(q)
+            DOWNLOADS -> "download offline storage folder cache files directory disk save tracks songs mp3 m4a opus".contains(q)
+            SOUND -> "equalizer sound eq bass treble frequency preset preamp audio bands 60hz 1khz".contains(q)
+            LYRICS -> "lyrics sync text translated word timing romanized karaoke musixmatch lrclib".contains(q)
+            ACCOUNTS -> "account sign in log in discord lastfm spotify sync profile token".contains(q)
+            SERVER -> "server self-hosted subsonic navidrome jellyfin own server url address".contains(q)
+            ABOUT -> "about openblast masthan valli version update website release github build license".contains(q)
+        }
+    }
+}
 
 /**
  * Settings, grouped into cards down a centred column, with a bar of the
@@ -89,6 +118,7 @@ internal fun SettingsPage() {
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val at by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { (list.firstVisibleItemIndex - 1).coerceIn(0, Group.entries.lastIndex) } }
+    var search by remember { mutableStateOf("") }
     val top = LocalPageTop.current
     val haze = dev.chrisbanes.haze.rememberHazeState()
     val blur = !AppSettings.ui.collectAsState().value.reduceBlur
@@ -100,26 +130,57 @@ internal fun SettingsPage() {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize().then(if (blur) Modifier.hazeSource(haze) else Modifier),
         ) {
-            item { Column(Modifier.column()) { Text("Settings", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold) } }
-            Group.entries.forEach { g ->
-                item(key = g) {
-                    Box(Modifier.column()) {
-                        when (g) {
-                            Group.LOOK -> AppearanceSection()
-                            Group.PLAYBACK -> PlaybackSection()
-                            Group.SOURCES -> SourcesSection()
-                            Group.SOUND -> EqualizerSection()
-                            Group.LYRICS -> LyricsSection()
-                            Group.ACCOUNTS -> ConnectedSection()
-                            Group.SERVER -> ServerSection()
-                            Group.ABOUT -> Section("About") {
-                                Text("OpenBlast ${BuildConfig.VERSION_NAME} for computers", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                                Text("Created by Masthan Valli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-                                Text(
-                                    "Settings and playlists are kept in ${appContext.getFilesDir().parentFile.absolutePath}.",
-                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                DesktopUpdateChecker()
+            item {
+                Column(Modifier.column()) {
+                    Text("Settings", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = search,
+                        onValueChange = { search = it },
+                        placeholder = { Text("Search settings (look, audio, download, lyrics, server)...") },
+                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = "Search") },
+                        trailingIcon = {
+                            if (search.isNotEmpty()) {
+                                IconButton(onClick = { search = "" }) {
+                                    Icon(Icons.Rounded.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            val visibleGroups = Group.entries.filter { it.matches(search) }
+            if (visibleGroups.isEmpty()) {
+                item {
+                    Box(Modifier.column().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
+                        Text("No settings found matching \"$search\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
+                visibleGroups.forEach { g ->
+                    item(key = g) {
+                        Box(Modifier.column()) {
+                            when (g) {
+                                Group.LOOK -> AppearanceSection()
+                                Group.PLAYBACK -> PlaybackSection()
+                                Group.SOURCES -> SourcesSection()
+                                Group.DOWNLOADS -> DownloadsSection()
+                                Group.SOUND -> EqualizerSection()
+                                Group.LYRICS -> LyricsSection()
+                                Group.ACCOUNTS -> ConnectedSection()
+                                Group.SERVER -> ServerSection()
+                                Group.ABOUT -> Section("About") {
+                                    Text("OpenBlast ${BuildConfig.VERSION_NAME} for computers", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                    Text("Created by Masthan Valli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        "Settings and playlists are kept in ${appContext.getFilesDir().parentFile.absolutePath}.",
+                                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    DesktopUpdateChecker()
+                                }
                             }
                         }
                     }
@@ -139,7 +200,10 @@ internal fun SettingsPage() {
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Group.entries.forEachIndexed { i, g ->
-                        Segment(g.label, at == i) { scope.launch { list.animateScrollToItem(i + 1, 0) } }
+                        Segment(g.label, at == i) {
+                            if (search.isNotEmpty()) search = ""
+                            scope.launch { list.animateScrollToItem(i + 1, 0) }
+                        }
                     }
                 }
                 Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)))
@@ -179,6 +243,77 @@ internal fun SwitchRow(title: String, summary: String?, checked: Boolean, onChan
             summary?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         Switch(checked, onChange)
+    }
+}
+
+@Composable
+private fun DownloadsSection() {
+    val downloaded by Library.downloaded.collectAsState()
+    val scope = rememberCoroutineScope()
+    var deletingAll by remember { mutableStateOf(false) }
+    val downloadDir = DownloadManager.folder
+
+    val sizeBytes = remember(downloaded) {
+        runCatching {
+            downloadDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }.getOrDefault(0L)
+    }
+    val sizeText = when {
+        sizeBytes < 1024 * 1024 -> "${sizeBytes / 1024} KB"
+        sizeBytes < 1024 * 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f MB", sizeBytes / (1024.0 * 1024.0))
+        else -> String.format(java.util.Locale.US, "%.2f GB", sizeBytes / (1024.0 * 1024.0 * 1024.0))
+    }
+
+    Section("Downloads") {
+        Text("Saved music and offline storage on your computer.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${downloaded.size} songs downloaded ($sizeText)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Folder: ${downloadDir.absolutePath}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = {
+                runCatching { Desktop.getDesktop().open(downloadDir) }
+            }) {
+                Text("Open in File Explorer")
+            }
+            if (downloaded.isNotEmpty()) {
+                OutlinedButton(onClick = { deletingAll = true }) {
+                    Text("Delete all downloads", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+
+    if (deletingAll) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deletingAll = false },
+            title = { Text("Delete all downloaded music?") },
+            text = { Text("This will delete all offline songs from ${downloadDir.absolutePath}. You can re-download them anytime.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        deletingAll = false
+                        scope.launch(Dispatchers.IO) {
+                            DownloadManager.deleteAll()
+                        }
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text("Delete all")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingAll = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 
@@ -547,7 +682,7 @@ private fun DesktopUpdateChecker() {
                                 status = "Could not check for updates: ${result.error}"
                             } else if (result.hasUpdate) {
                                 latestVersion = result.tag
-                                downloadUrl = result.downloadUrl ?: "https://masthan008.github.io/OpenBeat/#releases"
+                                downloadUrl = result.downloadUrl ?: "https://github.com/Masthan008/OpenBeat/releases"
                                 status = "New version ${result.tag} is available!"
                             } else {
                                 status = "OpenBlast is up to date (${BuildConfig.VERSION_NAME})."
@@ -562,14 +697,14 @@ private fun DesktopUpdateChecker() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = {
-                runCatching { Desktop.getDesktop().browse(URI("https://masthan008.github.io/OpenBeat/")) }
+                runCatching { Desktop.getDesktop().browse(URI("https://openbeat-site.vercel.app/")) }
             }) {
                 Text("Official Website")
             }
             OutlinedButton(onClick = {
-                runCatching { Desktop.getDesktop().browse(URI("https://masthan008.github.io/OpenBeat/#releases")) }
+                runCatching { Desktop.getDesktop().browse(URI("https://github.com/Masthan008/OpenBeat/releases")) }
             }) {
-                Text("Releases & Downloads")
+                Text("GitHub Releases")
             }
         }
     }
@@ -631,7 +766,7 @@ private fun checkDesktopUpdate(): UpdateCheckResult {
         UpdateCheckResult(
             hasUpdate = hasNewer,
             tag = tag,
-            downloadUrl = pageUrl ?: "https://masthan008.github.io/OpenBeat/#releases",
+            downloadUrl = pageUrl ?: "https://github.com/Masthan008/OpenBeat/releases",
         )
     } catch (e: Exception) {
         UpdateCheckResult(error = e.message ?: "Connection error")

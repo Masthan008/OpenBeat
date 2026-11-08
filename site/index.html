@@ -434,6 +434,8 @@ h3 { font-size: clamp(27px, 2.6vw, 34px); line-height: 1; font-weight: 750; font
 .plat-tag-desktop { background: #0284c720; color: #0284c7; border: 1px solid #0284c740; }
 .plat-tag-ios { background: #d9770620; color: #d97706; border: 1px solid #d9770640; }
 .plat-tag-tv { background: #e11d4820; color: #e11d48; border: 1px solid #e11d4840; }
+.plat-tag-beta { background: #f59e0b25; color: #d97706; border: 1px solid #f59e0b50; }
+.plat-tag-new { background: #10b98125; color: #059669; border: 1px solid #10b98150; }
 .rel .notes h3 { color: var(--fg); font-size: 22px; font-stretch: 85%; font-weight: 700; }
 .rel .notes ul { padding-left: 18px; list-style: disc; display: grid; gap: 6px; }
 .rel .side { display: grid; gap: 10px; justify-items: end; font-size: 14px; }
@@ -1329,11 +1331,12 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
     tag_name: "v1.0.9", name: "OpenBlast v1.0.9", published_at: "2026-11-08T21:30:00Z", html_url: "#releases",
     assets: [{ name: "OpenBlast-v1.0.9-universal.apk", size: 13621864, download_count: null, browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk" }],
     highlights: [
-      "[Vivo OriginOS] Center punch-hole status bar capsule (Origin Island) & Origin Player widget registration",
-      "[Android] Direct Wi-Fi only / mobile data toggle switch with instant real-time download execution",
+      "[Vivo OriginOS] [Beta] Center punch-hole status bar capsule (Origin Island) & Origin Player widget registration",
+      "[Android] [Beta] Direct Wi-Fi only / mobile data toggle switch with instant real-time download execution",
+      "[Desktop] [New] Universal 48kHz audio resampler & movie soundtrack discovery",
+      "[Desktop] [New] Full offline download engine, Downloaded library shelf & floating always-on-top Mini-Player",
       "[Web] Fluid mesh player backdrops, Electric Violet & Sunset Coral themes, and expanded controls",
       "[Android TV] 10-foot landscape Leanback experience with D-pad navigation and background playback",
-      "[Desktop] Windows titlebar caption controls, native frameless UI, and auto-update notifications",
       "[iOS] Early SwiftUI preview build with AltStore/SideStore sideload support and OpenBlast branding",
     ],
   }];
@@ -1341,18 +1344,25 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const mb = (bytes) => (bytes / 1048576).toFixed(1) + " MB";
   function formatNote(n) {
-    const m = n.match(/^\[(.*?)\]\s*(.*)$/);
-    if (!m) return esc(n);
-    const plat = m[1];
-    const text = m[2];
-    let slug = "android";
-    if (/vivo/i.test(plat)) slug = "vivo";
-    else if (/web/i.test(plat)) slug = "web";
-    else if (/desktop|windows/i.test(plat)) slug = "desktop";
-    else if (/ios|iphone/i.test(plat)) slug = "ios";
-    else if (/tv/i.test(plat)) slug = "tv";
-    else if (/android/i.test(plat)) slug = "android";
-    return '<span class="plat-tag plat-tag-' + slug + '">' + esc(plat) + '</span>' + esc(text);
+    let t = n;
+    let tagsHtml = "";
+    while (t.startsWith("[")) {
+      const closeIdx = t.indexOf("]");
+      if (closeIdx === -1) break;
+      const tag = t.substring(1, closeIdx).trim();
+      t = t.substring(closeIdx + 1).trim();
+      let slug = "android";
+      if (/beta/i.test(tag)) slug = "beta";
+      else if (/new/i.test(tag)) slug = "new";
+      else if (/vivo/i.test(tag)) slug = "vivo";
+      else if (/web/i.test(tag)) slug = "web";
+      else if (/desktop|windows/i.test(tag)) slug = "desktop";
+      else if (/ios|iphone/i.test(tag)) slug = "ios";
+      else if (/tv/i.test(tag)) slug = "tv";
+      else if (/android/i.test(tag)) slug = "android";
+      tagsHtml += '<span class="plat-tag plat-tag-' + slug + '">' + esc(tag) + '</span>';
+    }
+    return tagsHtml ? (tagsHtml + esc(t)) : esc(n);
   }
   function notesOf(rel) {
     if (rel.highlights) return rel.highlights;

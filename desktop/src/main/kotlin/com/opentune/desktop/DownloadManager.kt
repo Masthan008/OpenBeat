@@ -96,6 +96,15 @@ object DownloadManager {
         }
     }
 
+    fun deleteAll() {
+        runCatching {
+            Library.downloaded.value.forEach { song ->
+                Library.downloadFileFor(song.videoId)?.delete()
+            }
+            Library.clearDownloads()
+        }
+    }
+
     fun toggle(song: Song) {
         if (Library.isDownloaded(song.videoId)) {
             delete(song)

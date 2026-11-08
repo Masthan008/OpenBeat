@@ -45,6 +45,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -415,6 +417,27 @@ private fun PlayerFoot(song: Song, showLyrics: Boolean, onLyrics: (() -> Unit)?)
                 }
             }
             Spacer(Modifier.width(10.dp))
+            val downloaded by Library.downloaded.collectAsState()
+            val isDownloaded = downloaded.any { it.videoId == song.videoId }
+            val activeDownloads by DownloadManager.active.collectAsState()
+            val isDownloading = song.videoId in activeDownloads
+            IconButton(
+                onClick = { DownloadManager.toggle(song) },
+                enabled = !isDownloading,
+                modifier = Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                if (isDownloading) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                } else {
+                    Icon(
+                        if (isDownloaded) Icons.Rounded.DownloadDone else Icons.Rounded.Download,
+                        if (isDownloaded) "Downloaded" else "Download",
+                        tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(10.dp))
             HeartButton(isLiked) { Library.setLiked(song, !isLiked) }
             Spacer(Modifier.width(10.dp))
             MoreButton(song)
@@ -672,13 +695,7 @@ private fun MoreButton(song: Song) {
             Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { open = true },
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Rounded.MoreHoriz, "More", Modifier.size(26.dp)) }
-        DropdownMenu(open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(
-                text = { Text("Add to playlist") },
-                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null) },
-                onClick = { open = false; adding = true },
-            )
-        }
+        TrackContextMenu(song, open, onDismiss = { open = false }, onAddToPlaylist = { adding = true })
         AddToPlaylistMenu(song, adding) { adding = false }
     }
 }
