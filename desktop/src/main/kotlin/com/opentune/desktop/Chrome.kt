@@ -312,6 +312,10 @@ internal fun TopBar(
                 HoverIcon(Icons.AutoMirrored.Rounded.QueueMusic, "Up next", enabled = has, lit = panel == SidePanel.QUEUE, size = 32.dp, iconSize = 19.dp) { onPanel(SidePanel.QUEUE) }
                 HoverIcon(if (panel == SidePanel.NOW) Icons.Rounded.Info else Icons.Outlined.Info, "Now playing", enabled = has, lit = panel == SidePanel.NOW, size = 32.dp, iconSize = 18.dp) { onPanel(SidePanel.NOW) }
             }
+            if (DesktopWindow.drawsFrame && (panel == null || !panelRoom)) {
+                Spacer(Modifier.width(8.dp))
+                WindowsCaptionControls()
+            }
         }
         }
     }
@@ -374,6 +378,10 @@ internal fun RightPanel(panel: SidePanel, song: Song, queue: List<Song>, index: 
                     SidePanel.entries.forEach { p -> Segment(p.label, p == panel) { onPanel(p) } }
                 }
                 HoverIcon(Icons.Rounded.Close, "Close", size = 30.dp, iconSize = 17.dp) { onPanel(null) }
+                if (DesktopWindow.drawsFrame) {
+                    Spacer(Modifier.width(4.dp))
+                    WindowsCaptionControls()
+                }
             }
             AnimatedContent(panel, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) }, label = "right panel", modifier = Modifier.fillMaxSize()) { p ->
                 when (p) {

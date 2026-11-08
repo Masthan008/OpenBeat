@@ -164,6 +164,9 @@ internal fun NowPlaying(song: Song, docked: Boolean, onClose: () -> Unit) {
             PlayerBackdrop(theme.playerBackground, song.thumbnailUrl, playing, Modifier.matchParentSize())
             // Over the sidebar's head too, so the window can still be moved with the player open.
             if (!docked) Box(Modifier.fillMaxWidth().height(36.dp).windowDrag())
+            if (!docked && DesktopWindow.drawsFrame) {
+                WindowsCaptionControls(Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
+            }
             BoxWithConstraints(Modifier.fillMaxSize().padding(top = if (docked) 8.dp else DesktopWindow.topInset)) {
                 val beside = !docked && maxWidth >= 900.dp && maxWidth > maxHeight
                 if (beside) {

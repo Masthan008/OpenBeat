@@ -1,5 +1,12 @@
 package com.opentune.desktop
 
+import androidx.compose.material3.CircularProgressIndicator
+import com.opentune.data.Http
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.awt.Desktop
+import java.net.URI
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -106,11 +113,12 @@ internal fun SettingsPage() {
                             Group.ACCOUNTS -> ConnectedSection()
                             Group.SERVER -> ServerSection()
                             Group.ABOUT -> Section("About") {
-                                Text("OpenBlast ${BuildConfig.VERSION_NAME} for computers", style = MaterialTheme.typography.bodyLarge)
+                                Text("OpenBlast ${BuildConfig.VERSION_NAME} for computers", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                                 Text(
                                     "Settings and playlists are kept in ${appContext.getFilesDir().parentFile.absolutePath}.",
                                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                DesktopUpdateChecker()
                             }
                         }
                     }
@@ -441,42 +449,15 @@ private fun <T> Choices(title: String, choices: List<T>, selected: T, label: (T)
     }
 }
 
-/** Discord's "Listening to" card and Last.fm scrobbles. */
+/** Last.fm scrobbles. */
 @Composable
 private fun ConnectedSection() {
-    val discord by DiscordPresence.enabled.collectAsState()
-    val discordStatus by DiscordPresence.status.collectAsState()
     val lastFm by LastFmDesktop.state.collectAsState()
     val waiting by LastFmDesktop.waiting.collectAsState()
     var problem by remember { mutableStateOf<String?>(null) }
     var key by remember { mutableStateOf(lastFm.ownKey) }
     var secret by remember { mutableStateOf(lastFm.ownSecret) }
-    Section("Discord and Last.fm") {
-        SwitchRow(
-            "Show on Discord",
-            when (discordStatus) {
-                DiscordPresence.Status.Connected -> "The song you play shows on your Discord profile while the Discord app is open."
-                DiscordPresence.Status.NotRunning -> "Waiting for the Discord app. Open it on this computer and the song shows on your profile."
-                DiscordPresence.Status.NoApp -> "Needs a Discord application named OpenBlast, which the card is titled with. Paste its id below."
-                DiscordPresence.Status.Off -> "Show the song you play on your Discord profile, through the Discord app on this computer."
-            },
-            discord, DiscordPresence::setEnabled,
-        )
-        if (!DiscordPresence.buildHasApp) {
-            val saved by DiscordPresence.ownAppId.collectAsState()
-            var appId by remember(saved) { mutableStateOf(saved) }
-            val valid = appId.isBlank() || appId.trim().matches(Regex("[0-9]{17,20}"))
-            Text(
-                "This build has no Discord application of its own. Create one named OpenBlast at discord.com/developers/applications and paste its Application ID.",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                appId, { appId = it; if (it.isBlank() || it.trim().matches(Regex("[0-9]{17,20}"))) DiscordPresence.setOwnAppId(it) },
-                label = { Text("Discord Application ID") }, singleLine = true, isError = !valid,
-                supportingText = if (valid) null else ({ Text("An application id is 17 to 20 digits.") }),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+    Section("Last.fm") {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Last.fm", style = MaterialTheme.typography.bodyLarge)
@@ -517,4 +498,154 @@ private fun ConnectedSection() {
             )
         }
     }
+}
+
+/** Check for app updates against the official OpenBlast releases. */
+@Composable
+private fun DesktopUpdateChecker() {
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf<String?>(null) }
+    var latestVersion by remember { mutableStateOf<String?>(null) }
+    var downloadUrl by remember { mutableStateOf<String?>(null) }
+    var checking by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    status ?: "Keep OpenBlast up to date with new features and improvements.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (checking) {
+                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                } else if (downloadUrl != null) {
+                    Button(onClick = {
+                        runCatching { Desktop.getDesktop().browse(URI(downloadUrl!!)) }
+                    }) {
+                        Text("Download Update")
+                    }
+                } else {
+                    OutlinedButton(onClick = {
+                        checking = true
+                        status = "Checking for updates..."
+                        downloadUrl = null
+                        latestVersion = null
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) {
+                                checkDesktopUpdate()
+                            }
+                            checking = false
+                            if (result.error != null) {
+                                status = "Could not check for updates: ${result.error}"
+                            } else if (result.hasUpdate) {
+                                latestVersion = result.tag
+                                downloadUrl = result.downloadUrl ?: "https://masthan008.github.io/OpenBeat/#releases"
+                                status = "New version ${result.tag} is available!"
+                            } else {
+                                status = "OpenBlast is up to date (${BuildConfig.VERSION_NAME})."
+                            }
+                        }
+                    }) {
+                        Text("Check for updates")
+                    }
+                }
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = {
+                runCatching { Desktop.getDesktop().browse(URI("https://masthan008.github.io/OpenBeat/")) }
+            }) {
+                Text("Official Website")
+            }
+            OutlinedButton(onClick = {
+                runCatching { Desktop.getDesktop().browse(URI("https://masthan008.github.io/OpenBeat/#releases")) }
+            }) {
+                Text("Releases & Downloads")
+            }
+        }
+    }
+}
+
+private data class UpdateCheckResult(
+    val hasUpdate: Boolean = false,
+    val tag: String = "",
+    val downloadUrl: String? = null,
+    val error: String? = null,
+)
+
+private fun checkDesktopUpdate(): UpdateCheckResult {
+    return try {
+        var tag = ""
+        var pageUrl: String? = null
+        try {
+            val req = okhttp3.Request.Builder()
+                .url("https://masthan008.github.io/OpenBeat/releases.json")
+                .header("User-Agent", "OpenBlast-Desktop/${BuildConfig.VERSION_NAME}")
+                .build()
+            Http.client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string().orEmpty()
+                    val arr = org.json.JSONArray(body)
+                    if (arr.length() > 0) {
+                        val first = arr.getJSONObject(0)
+                        tag = first.optString("tag_name")
+                        pageUrl = first.optString("html_url")
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        if (tag.isEmpty()) {
+            val reqApi = okhttp3.Request.Builder()
+                .url("https://api.github.com/repos/Masthan008/OpenBeat/releases/latest")
+                .header("User-Agent", "OpenBlast-Desktop/${BuildConfig.VERSION_NAME}")
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
+            Http.client.newCall(reqApi).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string().orEmpty()
+                    val obj = org.json.JSONObject(body)
+                    tag = obj.optString("tag_name")
+                    pageUrl = obj.optString("html_url")
+                }
+            }
+        }
+
+        if (tag.isEmpty()) {
+            return UpdateCheckResult(error = "No release information found")
+        }
+
+        val current = BuildConfig.VERSION_NAME.removePrefix("v").trim()
+        val latest = tag.removePrefix("v").trim()
+        val hasNewer = isNewerVersion(latest, current)
+
+        UpdateCheckResult(
+            hasUpdate = hasNewer,
+            tag = tag,
+            downloadUrl = pageUrl ?: "https://masthan008.github.io/OpenBeat/#releases",
+        )
+    } catch (e: Exception) {
+        UpdateCheckResult(error = e.message ?: "Connection error")
+    }
+}
+
+private fun isNewerVersion(latest: String, current: String): Boolean {
+    val lParts = latest.split('.').mapNotNull { it.takeWhile { c -> c.isDigit() }.toIntOrNull() }
+    val cParts = current.split('.').mapNotNull { it.takeWhile { c -> c.isDigit() }.toIntOrNull() }
+    val maxLen = maxOf(lParts.size, cParts.size)
+    for (i in 0 until maxLen) {
+        val l = lParts.getOrElse(i) { 0 }
+        val c = cParts.getOrElse(i) { 0 }
+        if (l > c) return true
+        if (l < c) return false
+    }
+    return false
 }

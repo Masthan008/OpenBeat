@@ -277,7 +277,7 @@ compose.desktop {
             modules("java.instrument", "java.management", "java.net.http", "java.scripting", "java.sql", "jdk.crypto.ec", "jdk.dynalink", "jdk.httpserver", "jdk.jfr", "jdk.unsupported")
             macOS {
                 iconFile.set(project.file("packaging/icons/AppIcon.icns"))
-                bundleID = "com.opentune.desktop"
+                bundleID = "com.openblast.desktop"
             }
             windows {
                 iconFile.set(project.file("packaging/icons/AppIcon.ico"))

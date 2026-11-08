@@ -27,6 +27,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.awt.Frame
 import java.awt.MouseInfo
 import javax.swing.JFrame
@@ -60,6 +72,11 @@ object DesktopWindow {
 
     fun minimize() {
         if (!WindowsFrame.minimize()) window?.extendedState = Frame.ICONIFIED
+    }
+
+    fun isMaximized(): Boolean {
+        val w = window ?: return false
+        return (w.extendedState and Frame.MAXIMIZED_BOTH != 0) || WindowsFrame.isMaximized()
     }
 
     fun toggleMaximize() {
@@ -108,7 +125,7 @@ internal fun Modifier.windowDrag(): Modifier = if (!DesktopWindow.drawsFrame) th
  */
 @Composable
 internal fun WindowButtons(modifier: Modifier = Modifier) {
-    if (!DesktopWindow.drawsFrame) return
+    if (!DesktopWindow.drawsFrame || WindowsFrame.isWindows) return
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
         CaptionDot("Close", CLOSE, DesktopWindow.close) { ink ->
             val r = GLYPH.toPx()
@@ -157,3 +174,100 @@ private val CLOSE = Color(0xFFFF5F57)
 private val MINIMISE = Color(0xFFFEBC2E)
 private val ZOOM = Color(0xFF28C840)
 private val GLYPH_INK = Color(0x99000000)
+
+/**
+ * Modern Windows caption buttons (Minimize, Maximize/Restore, Close)
+ * rendered at the top-right of the window.
+ */
+@Composable
+internal fun WindowsCaptionControls(modifier: Modifier = Modifier) {
+    if (!WindowsFrame.isWindows && !DesktopWindow.drawsFrame) return
+    val window = DesktopWindow.window
+    var isMaximized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(window) {
+        val w = window ?: return@LaunchedEffect
+        while (isActive) {
+            val max = (w.extendedState and Frame.MAXIMIZED_BOTH != 0) || WindowsFrame.isMaximized()
+            if (isMaximized != max) {
+                isMaximized = max
+            }
+            delay(200)
+        }
+    }
+
+    Row(
+        modifier = modifier.height(32.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Minimize Button
+        CaptionButton(
+            label = "Minimize",
+            onClick = DesktopWindow::minimize,
+            onHoverBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+        ) { ink ->
+            val stroke = 1.dp.toPx()
+            val w = 5.dp.toPx()
+            drawLine(ink, Offset(center.x - w, center.y), Offset(center.x + w, center.y), strokeWidth = stroke)
+        }
+
+        // Maximize / Restore Button
+        CaptionButton(
+            label = if (isMaximized) "Restore" else "Maximize",
+            onClick = DesktopWindow::toggleMaximize,
+            onHoverBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+        ) { ink ->
+            val stroke = 1.dp.toPx()
+            if (!isMaximized) {
+                val size = 9.dp.toPx()
+                drawRect(ink, Offset(center.x - size / 2, center.y - size / 2), Size(size, size), style = Stroke(stroke))
+            } else {
+                val size = 7.5.dp.toPx()
+                val off = 2.dp.toPx()
+                drawRect(ink, Offset(center.x - size / 2 + off, center.y - size / 2 - off), Size(size, size), style = Stroke(stroke))
+                drawRect(Color(0xFF101216), Offset(center.x - size / 2 - off, center.y - size / 2 + off), Size(size, size))
+                drawRect(ink, Offset(center.x - size / 2 - off, center.y - size / 2 + off), Size(size, size), style = Stroke(stroke))
+            }
+        }
+
+        // Close Button (Red on hover, white icon)
+        CaptionButton(
+            label = "Close",
+            onClick = DesktopWindow.close,
+            onHoverBackground = Color(0xFFE81123),
+            hoveredInk = Color.White,
+        ) { ink ->
+            val stroke = 1.2.dp.toPx()
+            val r = 4.5.dp.toPx()
+            drawLine(ink, Offset(center.x - r, center.y - r), Offset(center.x + r, center.y + r), strokeWidth = stroke)
+            drawLine(ink, Offset(center.x + r, center.y - r), Offset(center.x - r, center.y + r), strokeWidth = stroke)
+        }
+    }
+}
+
+@Composable
+private fun CaptionButton(
+    label: String,
+    onClick: () -> Unit,
+    onHoverBackground: Color,
+    hoveredInk: Color? = null,
+    glyph: DrawScope.(Color) -> Unit,
+) {
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    val defaultInk = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+    val ink = if (hovered && hoveredInk != null) hoveredInk else defaultInk
+
+    Box(
+        modifier = Modifier
+            .width(46.dp)
+            .fillMaxHeight()
+            .hoverable(hover)
+            .pointerHoverIcon(PointerIcon.Default)
+            .clickable(interactionSource = hover, indication = null, onClick = onClick)
+            .semantics { contentDescription = label }
+            .background(if (hovered) onHoverBackground else Color.Transparent)
+            .drawBehind { glyph(ink) }
+    )
+}

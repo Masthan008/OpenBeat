@@ -13,8 +13,19 @@ import com.opentune.data.settings.AppSettings
 import com.opentune.data.subsonic.Subsonic
 import java.io.File
 
-/** Where the desktop keeps what it saves: ~/.opentune, read through the shared code's Context. */
-internal val appContext by lazy { android.content.Context(File(System.getProperty("user.home"), ".opentune")) }
+/** Where the desktop keeps what it saves: ~/.openblast (migrating from ~/.opentune if needed). */
+internal val appContext by lazy {
+    val home = File(System.getProperty("user.home"))
+    val newDir = File(home, ".openblast")
+    val oldDir = File(home, ".opentune")
+    if (!newDir.exists() && oldDir.exists()) {
+        try {
+            oldDir.copyRecursively(newDir, overwrite = false)
+        } catch (_: Exception) {}
+    }
+    newDir.mkdirs()
+    android.content.Context(if (newDir.exists()) newDir else oldDir)
+}
 
 fun main(args: Array<String>) {
     if ("--self-check" in args) return selfCheck()
@@ -22,8 +33,7 @@ fun main(args: Array<String>) {
     AppSettings.init(appContext)
     Subsonic.init(appContext)
     com.opentune.data.config.RemoteConfig.init(appContext)
-    // What's playing, to the listener's Discord profile and Last.fm scrobbles, when they've turned them on.
-    DiscordPresence.start()
+    // What's playing: Last.fm scrobbles when turned on.
     LastFmDesktop.start()
     // FFmpeg's natives unpack once on first use: done now, off the window's thread, so the first song doesn't wait.
     Thread({ Ffmpeg.available }, "ffmpeg-load").apply { isDaemon = true; start() }

@@ -38,7 +38,12 @@ internal object WindowsFrame {
 
     // ---- What Settings keeps -------------------------------------------------------
 
-    private val file = File(System.getProperty("user.home"), ".opentune/window.json")
+    private val file: File
+        get() {
+            val newFile = File(System.getProperty("user.home"), ".openblast/window.json")
+            val oldFile = File(System.getProperty("user.home"), ".opentune/window.json")
+            return if (!newFile.exists() && oldFile.exists()) oldFile else newFile
+        }
     private fun saved(): JSONObject = runCatching { JSONObject(file.readText()) }.getOrDefault(JSONObject())
 
     private val _ownFrame = MutableStateFlow(saved().optBoolean("ownFrame", true))
@@ -108,7 +113,7 @@ internal object WindowsFrame {
             u.SetWindowPos(h, null, 0, 0, 0, 0, SWP_FRAMECHANGED or SWP_NOMOVE or SWP_NOSIZE or SWP_NOZORDER or SWP_NOACTIVATE)
             applyMaterial(lastDark)
             true
-        }.onFailure { System.err.println("OpenTune: own window frame not installed: $it") }.getOrDefault(false)
+        }.onFailure { System.err.println("OpenBlast: own window frame not installed: $it") }.getOrDefault(false)
     }
 
     // The theme's darkness last asked for, for the material put on when the frame goes in.
@@ -135,16 +140,21 @@ internal object WindowsFrame {
 
     fun minimize(): Boolean = command(SC_MINIMIZE)
 
+    fun isMaximized(): Boolean {
+        val h = hwnd ?: return false
+        return runCatching { api!!.user.IsZoomed(h) }.getOrDefault(false)
+    }
+
     fun toggleMaximize(): Boolean {
         val h = hwnd ?: return false
-        val maximized = runCatching { api!!.user.IsZoomed(h) }.getOrDefault(false)
+        val maximized = isMaximized()
         return command(if (maximized) SC_RESTORE else SC_MAXIMIZE)
     }
 
     /** Hands the press in progress to Windows, which moves the window as it would from its own title bar. */
     fun startDrag(): Boolean {
         val h = hwnd ?: return false
-        return runCatching { api!!.user.PostMessageW(h, WM_OPENTUNE_DRAG, 0, 0) }.getOrDefault(false)
+        return runCatching { api!!.user.PostMessageW(h, WM_OPENBLAST_DRAG, 0, 0) }.getOrDefault(false)
     }
 
     private fun command(sc: Long): Boolean {
@@ -165,7 +175,7 @@ internal object WindowsFrame {
                 return 0
             }
             WM_NCHITTEST -> if (!u.IsZoomed(w)) edge(w, lParam)?.let { return it }
-            WM_OPENTUNE_DRAG -> {
+            WM_OPENBLAST_DRAG -> {
                 // The press may be over by the time this arrives; a move started then would follow
                 // the pointer until the next click.
                 val button = if (u.GetSystemMetrics(SM_SWAPBUTTON) != 0) VK_RBUTTON else VK_LBUTTON
@@ -278,7 +288,7 @@ internal object WindowsFrame {
     internal val api: Api? by lazy {
         if (!isWindows) null else runCatching {
             Api(Native.load("user32", User32::class.java), runCatching { Native.load("dwmapi", Dwm::class.java) }.getOrNull())
-        }.onFailure { System.err.println("OpenTune: JNA unavailable, keeping Windows' own title bar: $it") }.getOrNull()
+        }.onFailure { System.err.println("OpenBlast: JNA unavailable, keeping Windows' own title bar: $it") }.getOrNull()
     }
 
     internal const val GWLP_WNDPROC = -4
@@ -299,7 +309,7 @@ internal object WindowsFrame {
     private const val WM_NCDESTROY = 0x82
     private const val WM_SYSCOMMAND = 0x112
     private const val WM_LBUTTONUP = 0x202
-    private const val WM_OPENTUNE_DRAG = 0x8000 + 0x42
+    private const val WM_OPENBLAST_DRAG = 0x8000 + 0x42
     private const val SC_MINIMIZE = 0xF020L
     private const val SC_MAXIMIZE = 0xF030L
     private const val SC_RESTORE = 0xF120L
