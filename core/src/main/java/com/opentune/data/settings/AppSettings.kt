@@ -69,7 +69,14 @@ enum class PlayerStyle(val label: String, val summary: String) {
 
 @Serializable
 enum class AppFont(val label: String) {
-    SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+    SYSTEM("System sans"),
+    OUTFIT("Outfit"),
+    SERIF("Serif"),
+    MONO("Monospace"),
+    PLUS_JAKARTA_SANS("Plus Jakarta Sans"),
+    LEXEND("Lexend"),
+    INTER("Inter"),
+    CUSTOM("Imported font"),
 }
 
 @Serializable
@@ -748,6 +755,8 @@ val SEED_COLORS = listOf(
     0xFF8E24AA.toInt(), // purple
     0xFFD81B60.toInt(), // pink
     0xFF6D4C41.toInt(), // brown
+    0xFF7C4DFF.toInt(), // electric violet
+    0xFFFF5722.toInt(), // sunset coral
 )
 
 /**

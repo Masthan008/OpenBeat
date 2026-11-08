@@ -132,8 +132,9 @@ internal val SETTINGS_CATEGORIES = listOf(
         ),
     ),
     SettingsCategory(
-        "about", "About", "Updates, source code and diagnostics", Icons.Rounded.Info,
+        "about", "About", "Developer, updates, and diagnostics", Icons.Rounded.Info,
         listOf(
+            "Developer" to listOf("Developer"),
             "Updates" to listOf("What's new", "Check for updates", "Check for updates automatically"),
             "Community" to listOf("OpenBlast community", "Support OpenBlast", "Star on GitHub", "Source code"),
             "Help" to listOf("Show the welcome again", "Count this phone in usage numbers", "Export diagnostics"),

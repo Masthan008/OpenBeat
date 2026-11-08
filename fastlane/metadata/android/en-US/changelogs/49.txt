@@ -1,0 +1,4 @@
+- Created by Masthan Valli: Added official developer attribution on About page across all platforms
+- Added 3 new modern fonts: Plus Jakarta Sans, Lexend, and Inter under Appearance settings
+- Added 2 new vibrant accent color themes: Electric Violet and Sunset Coral
+- Enhanced launcher icons with full HD raster mipmaps across all device densities and refreshed TV banner

@@ -1578,6 +1578,9 @@ private fun settingsSections(
         Section(
             "Advanced",
             listOf(
+                Entry("Developer", "developer author creator Masthan Valli about owner") {
+                    SettingRow("Developer", icon = Icons.Rounded.Person, summary = "Created by Masthan Valli")
+                },
                 Entry("What's new", "release notes changelog version highlights") {
                     NavRow("What's new", { showWhatsNew = true }, summary = "Highlights and improvements in ${BuildConfig.VERSION_NAME}", icon = Icons.Rounded.SystemUpdate)
                 },

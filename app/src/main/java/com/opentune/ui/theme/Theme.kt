@@ -227,6 +227,27 @@ val Outfit = FontFamily(
     },
 )
 
+@OptIn(ExperimentalTextApi::class)
+val PlusJakartaSans = FontFamily(
+    listOf(400, 500, 600, 700, 800).map { w ->
+        Font(R.font.plus_jakarta_sans_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+@OptIn(ExperimentalTextApi::class)
+val Lexend = FontFamily(
+    listOf(300, 400, 500, 600, 700).map { w ->
+        Font(R.font.lexend_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+@OptIn(ExperimentalTextApi::class)
+val Inter = FontFamily(
+    listOf(400, 500, 600, 700).map { w ->
+        Font(R.font.inter_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
 private fun TextStyle.outfit(weight: FontWeight? = null, spacing: Float? = null) =
     copy(fontFamily = Outfit, fontWeight = weight ?: fontWeight, letterSpacing = spacing?.sp ?: letterSpacing)
 
@@ -278,6 +299,9 @@ internal fun rememberAppFont(settings: ThemeSettings): FontFamily {
             com.opentune.data.settings.AppFont.OUTFIT -> Outfit
             com.opentune.data.settings.AppFont.SERIF -> FontFamily.Serif
             com.opentune.data.settings.AppFont.MONO -> FontFamily.Monospace
+            com.opentune.data.settings.AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSans
+            com.opentune.data.settings.AppFont.LEXEND -> Lexend
+            com.opentune.data.settings.AppFont.INTER -> Inter
             com.opentune.data.settings.AppFont.CUSTOM -> runCatching {
                 val file = requireNotNull(ImportedFonts.file(context, settings.customFontId))
                 FontFamily(requireNotNull(android.graphics.Typeface.Builder(file).build()))

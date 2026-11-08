@@ -30,6 +30,8 @@ import androidx.compose.material.icons.rounded.SurroundSound
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.FormatQuote
 import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Favorite
@@ -81,6 +83,12 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "1.0.7" to listOf(
+            Note(Icons.Rounded.Person, "Developer Attribution", "Created by Masthan Valli. Developer credits featured across Android, Desktop, and Web About pages."),
+            Note(Icons.Rounded.FormatQuote, "3 New Typefaces", "Expanded typography choices with Plus Jakarta Sans, Lexend, and Inter in Settings › Appearance › Fonts & readability."),
+            Note(Icons.Rounded.Palette, "New Vibrant Accent Colors", "Added Electric Violet and Sunset Coral accent themes alongside classic palettes."),
+            Note(Icons.Rounded.Image, "Crisp OpenBlast HD Mipmaps", "Full suite of high-resolution raster launcher icons across all device densities and refreshed TV banner."),
+        ),
         "1.0.6" to listOf(
             Note(Icons.Rounded.Favorite, "Diwali Favorite Animation (Beta)", "Celebrate your favourite songs with authentic Diwali joy: a glowing terracotta diya with a dancing flame, anar fountain sparks, and radiant phuljhadi sparklers. Switch styles in Settings › Motion and feel."),
             Note(Icons.Rounded.BlurOn, "New Dock Animations & Icon Styles", "Added Float and Bounce dock motions alongside classic Minimize, Capsule, and Sink. Choose from fresh dock icon styles (Neon Glow, Minimal, Festive Sparkle) alongside Classic defaults."),

@@ -162,6 +162,9 @@ private fun rememberType(settings: com.opentune.data.settings.ThemeSettings): Ty
         AppFont.OUTFIT -> Outfit
         AppFont.SERIF -> FontFamily.Serif
         AppFont.MONO -> FontFamily.Monospace
+        AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSans
+        AppFont.LEXEND -> Lexend
+        AppFont.INTER -> Inter
         else -> FontFamily.SansSerif
     }
     return remember(family, settings.textWeight) { readableType(family, settings.textWeight.minimum) }
@@ -254,6 +257,40 @@ private val Outfit: FontFamily by lazy {
             Font("Outfit-$w", outfitData, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
         },
     )
+}
+
+private val plusJakartaSansData: ByteArray? by lazy {
+    Thread.currentThread().contextClassLoader.getResourceAsStream("font/plus_jakarta_sans_variable.ttf")?.use { it.readBytes() }
+}
+private val lexendData: ByteArray? by lazy {
+    Thread.currentThread().contextClassLoader.getResourceAsStream("font/lexend_variable.ttf")?.use { it.readBytes() }
+}
+private val interData: ByteArray? by lazy {
+    Thread.currentThread().contextClassLoader.getResourceAsStream("font/inter_variable.ttf")?.use { it.readBytes() }
+}
+
+private val PlusJakartaSans: FontFamily by lazy {
+    plusJakartaSansData?.let { data ->
+        FontFamily(listOf(400, 500, 600, 700, 800).map { w ->
+            Font("PlusJakartaSans-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+        })
+    } ?: FontFamily.SansSerif
+}
+
+private val Lexend: FontFamily by lazy {
+    lexendData?.let { data ->
+        FontFamily(listOf(300, 400, 500, 600, 700).map { w ->
+            Font("Lexend-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+        })
+    } ?: FontFamily.SansSerif
+}
+
+private val Inter: FontFamily by lazy {
+    interData?.let { data ->
+        FontFamily(listOf(400, 500, 600, 700).map { w ->
+            Font("Inter-$w", data, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+        })
+    } ?: FontFamily.SansSerif
 }
 
 private val base = Typography()
