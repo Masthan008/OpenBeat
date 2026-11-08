@@ -1386,13 +1386,21 @@ private fun settingsSections(
                 Entry("Download quality", "offline bitrate") {
                     NavRow("Download quality", { downloadQualityDialog = true }, icon = Icons.Rounded.Download, value = lib.downloadQuality.label)
                 },
-                Entry("Download network", "wifi mobile data cellular metered download") {
-                    NavRow(
-                        "Download network",
-                        { downloadNetworkDialog = true },
-                        icon = if (lib.downloadNetwork == com.opentune.data.settings.DownloadNetworkPolicy.WIFI_ONLY) Icons.Rounded.Wifi else Icons.Rounded.Download,
-                        value = lib.downloadNetwork.label,
-                        summary = lib.downloadNetwork.summary,
+                Entry("Download on Wi-Fi only", "wifi mobile data cellular metered download") {
+                    ToggleRow(
+                        "Download on Wi-Fi only",
+                        lib.downloadWifiOnly,
+                        { enabled ->
+                            AppSettings.updateLibrary {
+                                it.copy(
+                                    downloadWifiOnly = enabled,
+                                    downloadNetwork = if (enabled) com.opentune.data.settings.DownloadNetworkPolicy.WIFI_ONLY else com.opentune.data.settings.DownloadNetworkPolicy.WIFI_OR_MOBILE,
+                                )
+                            }
+                            com.opentune.data.download.Downloads.requeueWaiting(context)
+                        },
+                        summary = if (lib.downloadWifiOnly) "Paused on mobile data; downloads wait for Wi-Fi" else "Downloads immediately over Wi-Fi, 4G, or 5G",
+                        icon = Icons.Rounded.Wifi,
                     )
                 },
                 Entry("Stream downloads when online", "offline file internet play quality") {

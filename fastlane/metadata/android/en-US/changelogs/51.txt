@@ -1,0 +1,6 @@
+- [Vivo OriginOS] Registered under system audio categories, intent filters, and media button receivers for Origin Player and Jovi widgets
+- [Android] Direct "Download on Wi-Fi only" toggle switch (default: OFF so songs download immediately on mobile data or Wi-Fi)
+- [Web] Fluid mesh, gradient, and echo glow player backdrops with Electric Violet and Sunset Coral themes
+- [Android TV] Enhanced 10-foot Leanback landscape UI with D-pad navigation and remote control support
+- [Desktop] Windows titlebar caption controls and automated update notifications
+- [Website] Official release notes with color-coded platform badges and download links

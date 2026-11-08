@@ -823,7 +823,15 @@ object AppSettings {
         val p = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
         prefs = p
         connectivity = context.getSystemService(ConnectivityManager::class.java)
-        val stored = p.getString(K_STATE, null)?.let { runCatching { json.decodeFromString<SettingsState>(it) }.getOrNull() }
+        val raw = p.getString(K_STATE, null)?.let { runCatching { json.decodeFromString<SettingsState>(it) }.getOrNull() }
+        val stored = if (raw != null && !p.getBoolean("v109_download_migrated", false)) {
+            p.edit { putBoolean("v109_download_migrated", true) }
+            val migrated = raw.copy(library = raw.library.copy(downloadWifiOnly = false, downloadNetwork = DownloadNetworkPolicy.WIFI_OR_MOBILE))
+            p.edit { putString(K_STATE, json.encodeToString(SettingsState.serializer(), migrated)) }
+            migrated
+        } else {
+            raw
+        }
         publish(stored ?: migrateLegacy(p))
     }
 

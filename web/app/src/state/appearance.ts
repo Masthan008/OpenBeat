@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export const ACCENTS = [
   ['Red', '#e53935'], ['Amber', '#ff6f00'], ['Yellow', '#fdd835'], ['Green', '#43a047'],
   ['Teal', '#00897b'], ['Sky', '#039be5'], ['Indigo', '#3949ab'], ['Purple', '#8e24aa'],
-  ['Pink', '#d81b60'], ['Brown', '#6d4c41'],
+  ['Pink', '#d81b60'], ['Brown', '#6d4c41'], ['Electric Violet', '#7c4dff'], ['Sunset Coral', '#ff5722'],
 ] as const;
 export const PLAYER_STYLES = ['classic', 'vinyl', 'lyrics-first', 'minimal', 'cassette', 'halo', 'polaroid'] as const;
 export interface Appearance {

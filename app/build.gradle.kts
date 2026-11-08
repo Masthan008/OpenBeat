@@ -14,8 +14,8 @@ android {
         applicationId = "com.openblast"
         minSdk = 26
         targetSdk = 36
-        versionCode = 50
-        versionName = "1.0.8"
+        versionCode = 51
+        versionName = "1.0.9"
         // This version's store changelog, shown as What's new when a release
         // goes out before the app's own notes for it are written.
         val changelog = rootProject.file("fastlane/metadata/android/en-US/changelogs/$versionCode.txt")

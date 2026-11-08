@@ -83,6 +83,12 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "1.0.9" to listOf(
+            Note(Icons.Rounded.Waves, "Vivo Origin Player & Audio Source Registration", "Registered OpenBlast under Vivo audio categories, intent filters, and media button receivers for Origin Player and Jovi widgets."),
+            Note(Icons.Rounded.Download, "Direct Wi-Fi Only Toggle Switch", "Direct on/off switch in Settings › Downloads. Default is OFF so downloads start immediately on mobile data or Wi-Fi."),
+            Note(Icons.Rounded.Palette, "Web Player Backdrops & New Accents", "Fluid mesh, gradient, and echo glow player backdrops plus Electric Violet and Sunset Coral accent themes in the web player."),
+            Note(Icons.Rounded.AutoAwesome, "Cross-Platform Notes & Android TV", "Clear platform tags across official release notes, enhanced Android TV 10-foot experience, and iOS branding updates."),
+        ),
         "1.0.8" to listOf(
             Note(Icons.Rounded.Waves, "Vivo OriginOS Header Capsule", "Live audio waveforms, track details, and quick controls in the top center status bar cutout (Origin Island / Atomic Capsule) and Origin Player widgets."),
             Note(Icons.Rounded.Download, "Real-Time Song Downloads", "Choose between 'Wi-Fi and mobile data' or 'Wi-Fi only'. Downloads start immediately with real-time network triggers."),

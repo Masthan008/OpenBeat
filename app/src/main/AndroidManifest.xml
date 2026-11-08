@@ -56,6 +56,7 @@
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
 
     <application
+        android:appCategory="audio"
         android:banner="@drawable/tv_banner"
         android:name=".OpenTuneApp"
         android:allowBackup="true"
@@ -93,6 +94,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <!-- Android music category for system audio source selectors (Vivo Origin Player) -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
             <!-- Open YouTube Music and YouTube links: songs, playlists, albums, channels.
                  Not autoVerify: these domains aren't ours, so the user picks OpenBlast. -->
@@ -158,6 +164,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Midnight" android:targetActivity=".MainActivity"
@@ -166,6 +173,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Pearl" android:targetActivity=".MainActivity"
@@ -174,6 +182,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Rose" android:targetActivity=".MainActivity"
@@ -182,6 +191,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Ocean" android:targetActivity=".MainActivity"
@@ -190,6 +200,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Aurora" android:targetActivity=".MainActivity"
@@ -198,6 +209,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Gold" android:targetActivity=".MainActivity"
@@ -206,6 +218,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".icon.Neon" android:targetActivity=".MainActivity"
@@ -214,6 +227,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity-alias>
 
@@ -228,6 +242,7 @@
                      browse Home, Recent and Library and search. -->
                 <action android:name="androidx.media3.session.MediaLibraryService" />
                 <action android:name="android.media.browse.MediaBrowserService" />
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </service>
 

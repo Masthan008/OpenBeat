@@ -427,6 +427,13 @@ h3 { font-size: clamp(27px, 2.6vw, 34px); line-height: 1; font-weight: 750; font
 .rel .ver .new { font-size: 12.5px; font-weight: 650; padding: 5px 10px; border-radius: 999px; background: var(--ink); color: var(--tint); }
 .rel .ver small { font-size: 14px; color: var(--muted); }
 .rel .notes { color: var(--muted); font-size: 16px; display: grid; gap: 10px; min-width: 0; }
+.plat-tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; margin-right: 8px; vertical-align: 1px; }
+.plat-tag-vivo { background: #0052ff20; color: #2563eb; border: 1px solid #2563eb40; }
+.plat-tag-android { background: #05966920; color: #059669; border: 1px solid #05966940; }
+.plat-tag-web { background: #7c4dff20; color: #7c4dff; border: 1px solid #7c4dff40; }
+.plat-tag-desktop { background: #0284c720; color: #0284c7; border: 1px solid #0284c740; }
+.plat-tag-ios { background: #d9770620; color: #d97706; border: 1px solid #d9770640; }
+.plat-tag-tv { background: #e11d4820; color: #e11d48; border: 1px solid #e11d4840; }
 .rel .notes h3 { color: var(--fg); font-size: 22px; font-stretch: 85%; font-weight: 700; }
 .rel .notes ul { padding-left: 18px; list-style: disc; display: grid; gap: 6px; }
 .rel .side { display: grid; gap: 10px; justify-items: end; font-size: 14px; }
@@ -1319,19 +1326,40 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   // notes for v0.2.0.
   const LATEST_PAGE = "#releases";
   const FALLBACK = [{
-    tag_name: "v1.0.8", name: "OpenBlast v1.0.8", published_at: "2026-11-07T15:17:35Z", html_url: "#releases",
-    assets: [{ name: "OpenBlast-v1.0.8-universal.apk", size: 12787668, download_count: null, browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.8/OpenBlast-v1.0.8-universal.apk" }],
-    highlights: ["Dynamic Diwali celebration animation for favorites", "Five dock animations and custom launcher icon styles", "Synced lyrics, background playback, and high quality audio streaming"],
+    tag_name: "v1.0.9", name: "OpenBlast v1.0.9", published_at: "2026-11-08T21:30:00Z", html_url: "#releases",
+    assets: [{ name: "OpenBlast-v1.0.9-universal.apk", size: 13621864, download_count: null, browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk" }],
+    highlights: [
+      "[Vivo OriginOS] Center punch-hole status bar capsule (Origin Island) & Origin Player widget registration",
+      "[Android] Direct Wi-Fi only / mobile data toggle switch with instant real-time download execution",
+      "[Web] Fluid mesh player backdrops, Electric Violet & Sunset Coral themes, and expanded controls",
+      "[Android TV] 10-foot landscape Leanback experience with D-pad navigation and background playback",
+      "[Desktop] Windows titlebar caption controls, native frameless UI, and auto-update notifications",
+      "[iOS] Early SwiftUI preview build with AltStore/SideStore sideload support and OpenBlast branding",
+    ],
   }];
   const ago = (iso) => { const d = (Date.now() - new Date(iso)) / 864e5; return d < 1 ? "today" : d < 2 ? "yesterday" : d < 30 ? Math.floor(d) + " days ago" : Math.floor(d / 30) + " months ago"; };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const mb = (bytes) => (bytes / 1048576).toFixed(1) + " MB";
+  function formatNote(n) {
+    const m = n.match(/^\[(.*?)\]\s*(.*)$/);
+    if (!m) return esc(n);
+    const plat = m[1];
+    const text = m[2];
+    let slug = "android";
+    if (/vivo/i.test(plat)) slug = "vivo";
+    else if (/web/i.test(plat)) slug = "web";
+    else if (/desktop|windows/i.test(plat)) slug = "desktop";
+    else if (/ios|iphone/i.test(plat)) slug = "ios";
+    else if (/tv/i.test(plat)) slug = "tv";
+    else if (/android/i.test(plat)) slug = "android";
+    return '<span class="plat-tag plat-tag-' + slug + '">' + esc(plat) + '</span>' + esc(text);
+  }
   function notesOf(rel) {
     if (rel.highlights) return rel.highlights;
     // Notes written for a release here win over GitHub's generated ones, which only list commits.
     const known = FALLBACK.find((f) => f.tag_name === rel.tag_name);
     const lines = (rel.body || "").split("\n").map((l) => l.trim()).filter((l) => /^[-*] /.test(l)).map((l) => l.replace(/^[-*] /, "").replace(/\*\*/g, "").replace(/\(?https?:\/\/\S+\)?/g, "").trim()).filter(Boolean);
-    return lines.length ? lines.slice(0, 4) : (known ? known.highlights : []);
+    return lines.length ? lines.slice(0, 6) : (known ? known.highlights : []);
   }
   function renderReleases(list, live) {
     const box = $("rel-list"); box.innerHTML = "";
@@ -1346,7 +1374,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       const row = document.createElement("article"); row.className = "rel";
       row.innerHTML =
         '<div class="ver"><b>' + esc(rel.tag_name) + '</b>' + (i === 0 ? '<span class="new">Latest</span>' : '') + (dated ? '<small>' + dated + '</small>' : '') + '</div>' +
-        '<div class="notes"><h3>' + esc(rel.name || rel.tag_name) + '</h3>' + (notes.length ? '<ul>' + notes.map((n) => '<li>' + esc(n) + '</li>').join("") + '</ul>' : '<p>See the release notes on GitHub.</p>') + '</div>' +
+        '<div class="notes"><h3>' + esc(rel.name || rel.tag_name) + '</h3>' + (notes.length ? '<ul>' + notes.map((n) => '<li>' + formatNote(n) + '</li>').join("") + '</ul>' : '<p>See the release notes on GitHub.</p>') + '</div>' +
         '<div class="side">' + (apkUrl ? '<a class="btn btn-tint btn-small" href="' + esc(apkUrl) + '"><svg class="line-ico"><use href="#i-download"/></svg>APK' + (apk.size ? ' <span class="sub">' + mb(apk.size) + '</span>' : '') + '</a>' : '') + (live && downloads ? '<span class="num">' + downloads.toLocaleString("en-US") + ' APK download events</span>' : '') + '</div>';
       box.appendChild(row);
       if (i === 0) {
