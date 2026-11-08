@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -456,6 +457,7 @@ internal fun MixPage(mix: DailyMixes.Mix) {
 internal fun LibraryHome(onShelf: (Shelf) -> Unit, onPlaylist: (String) -> Unit, onOpenAny: (Any) -> Unit) {
     val liked by Library.liked.collectAsState()
     val recent by Library.recent.collectAsState()
+    val downloaded by Library.downloaded.collectAsState()
     val playlists by Library.playlists.collectAsState()
     val server by Subsonic.server.collectAsState()
     val history = rememberHistory()
@@ -472,6 +474,7 @@ internal fun LibraryHome(onShelf: (Shelf) -> Unit, onPlaylist: (String) -> Unit,
         item(key = "shortcuts") {
             HRow(12.dp) {
                 item { Shortcut(Icons.Rounded.Favorite, "Liked songs", songCount(liked.size), heart = true) { onShelf(Shelf.LIKED) } }
+                item { Shortcut(Icons.Rounded.DownloadDone, "Downloaded", if (downloaded.isEmpty()) "No offline songs" else songCount(downloaded.size)) { onShelf(Shelf.DOWNLOADS) } }
                 item { Shortcut(Icons.Rounded.History, "Recently played", if (recent.isEmpty()) "Nothing yet" else "${recent.size} songs") { onShelf(Shelf.RECENT) } }
                 if (server != null) item { Shortcut(Icons.Rounded.Storage, "Your server", server!!.url.substringAfter("://").substringBefore('/')) { onShelf(Shelf.SERVER) } }
                 item { Shortcut(Icons.Rounded.Add, "New playlist", "Start one here") { naming = true } }

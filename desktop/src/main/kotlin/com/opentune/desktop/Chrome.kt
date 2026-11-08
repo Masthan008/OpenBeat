@@ -83,7 +83,9 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Add
@@ -176,6 +178,7 @@ internal fun Sidebar(selected: Any?, folded: Boolean, onPick: (Any) -> Unit) {
             HorizontalDivider(color = divider, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
             SideRow(Icons.Rounded.History, "History", selected == Shelf.RECENT, folded) { onPick(Shelf.RECENT) }
             SideRow(Icons.Rounded.Favorite, "Liked songs", selected == Shelf.LIKED, folded) { onPick(Shelf.LIKED) }
+            SideRow(Icons.Rounded.DownloadDone, "Downloaded", selected == Shelf.DOWNLOADS, folded) { onPick(Shelf.DOWNLOADS) }
             SideRow(Icons.AutoMirrored.Rounded.PlaylistPlay, "Up next", selected == Tab.QUEUE, folded) { onPick(Tab.QUEUE) }
             HorizontalDivider(color = divider, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
             // Your playlists by name, scrolling on their own between the pages and Settings.
@@ -308,6 +311,7 @@ internal fun TopBar(
             VolumeControl(slider = roomy)
             Spacer(Modifier.width(6.dp))
             if (panelRoom) {
+                HoverIcon(Icons.Rounded.PictureInPictureAlt, "Mini player", enabled = has, size = 32.dp, iconSize = 18.dp) { DesktopWindow.toggleMiniPlayer() }
                 HoverIcon(Icons.Rounded.Lyrics, "Lyrics", enabled = has, lit = panel == SidePanel.LYRICS, size = 32.dp, iconSize = 18.dp) { onPanel(SidePanel.LYRICS) }
                 HoverIcon(Icons.AutoMirrored.Rounded.QueueMusic, "Up next", enabled = has, lit = panel == SidePanel.QUEUE, size = 32.dp, iconSize = 19.dp) { onPanel(SidePanel.QUEUE) }
                 HoverIcon(if (panel == SidePanel.NOW) Icons.Rounded.Info else Icons.Outlined.Info, "Now playing", enabled = has, lit = panel == SidePanel.NOW, size = 32.dp, iconSize = 18.dp) { onPanel(SidePanel.NOW) }

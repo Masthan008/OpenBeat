@@ -29,9 +29,9 @@ internal object Ffmpeg {
  * gives. The equalizer, bass and treble, balance and speed go through FFmpeg's
  * audio filters, as JavaFX applies them on its own streams.
  *
- * Its callbacks follow the JavaFX engine's: [onReady] with the length once
- * it's known, [onStarted] at the first sound, [onPlaying] as it plays and
- * pauses, [onEnd] at the end and [onError] when it can't.
+ * Every stream is normalized through an internal aformat resampler to 48,000 Hz
+ * 16-bit stereo so mono, 24kHz, and surround streams never suffer clock mismatch
+ * or chipmunk speedups.
  */
 internal class FfmpegEngine(
     private val address: String,
@@ -50,7 +50,9 @@ internal class FfmpegEngine(
     @Volatile private var seekRequest: Long? = null
     @Volatile private var seekingTo: Long? = null
     @Volatile private var started = false
-    @Volatile private var rate = 0
+    @Volatile private var rate = OUTPUT_SAMPLE_RATE
+    @Volatile private var inRate = OUTPUT_SAMPLE_RATE
+    @Volatile private var inChannels = OUTPUT_CHANNELS
     @Volatile private var duration = 0L
     /** Where the current run started, in frames, and the line's position then. */
     @Volatile private var runStart = 0L
@@ -75,14 +77,16 @@ internal class FfmpegEngine(
             g.setOption("reconnect", "1")
             g.setOption("reconnect_streamed", "1")
             g.start()
-            rate = g.sampleRate.takeIf { it > 0 } ?: 48_000
+            inRate = g.sampleRate.takeIf { it > 0 } ?: OUTPUT_SAMPLE_RATE
+            inChannels = g.audioChannels.takeIf { it > 0 } ?: OUTPUT_CHANNELS
+            rate = OUTPUT_SAMPLE_RATE
             duration = (g.lengthInTime / 1000).coerceAtLeast(0)
             onReady(duration)
-            val opened = out.open(AudioFormat(rate.toFloat(), 16, 2, true, false))
+            val opened = out.open(AudioFormat(rate.toFloat(), 16, OUTPUT_CHANNELS, true, false))
             if (opened.sampleSizeInBits != 16) throw IllegalStateException("the sound card won't take 16-bit")
             applyVolume()
             if (!paused) out.start()
-            filter = effects(rate)
+            filter = effects(inRate, inChannels)
             val first = startAtMs().takeIf { it > 500 }
             if (first != null) seekTo(g, first)
             var at = msToFrame(first ?: 0)
@@ -92,13 +96,13 @@ internal class FfmpegEngine(
                 if (effectsChanged) {
                     effectsChanged = false
                     filter?.let { f -> runCatching { f.stop(); f.release() } }
-                    filter = effects(rate)
+                    filter = effects(inRate, inChannels)
                 }
                 seekRequest?.let { request ->
                     seekRequest = null
                     out.flush()
                     seekTo(g, request)
-                    filter?.let { f -> runCatching { f.stop(); f.release() }; filter = effects(rate) }
+                    filter?.let { f -> runCatching { f.stop(); f.release() }; filter = effects(inRate, inChannels) }
                     at = msToFrame(request)
                     emitting = false
                 }
@@ -149,16 +153,20 @@ internal class FfmpegEngine(
     }
 
     /**
-     * The phone's sound settings as FFmpeg filters, or null when they'd change
-     * nothing, so a plain song goes straight through.
+     * Builds the audio filter chain, always including standard resampling and
+     * channel normalisation (stereo 48kHz 16-bit) so every song plays at true 1.0x speed.
      */
-    private fun effects(rate: Int): FFmpegFrameFilter? {
-        val chain = filterChain(AppSettings.sound.value.speed, AppSettings.equalizer.value)
+    private fun effects(inRate: Int, inChannels: Int): FFmpegFrameFilter {
+        val userChain = filterChain(AppSettings.sound.value.speed, AppSettings.equalizer.value)
         speed = AppSettings.sound.value.speed.toDouble().coerceIn(0.5, 2.0)
-        if (chain == null) return null
-        return FFmpegFrameFilter(chain, 2).apply {
+        val fullChain = if (userChain != null) {
+            "$userChain,aformat=sample_fmts=s16:sample_rates=$OUTPUT_SAMPLE_RATE:channel_layouts=stereo"
+        } else {
+            "aformat=sample_fmts=s16:sample_rates=$OUTPUT_SAMPLE_RATE:channel_layouts=stereo"
+        }
+        return FFmpegFrameFilter(fullChain, inChannels).apply {
             sampleFormat = avutil.AV_SAMPLE_FMT_S16
-            sampleRate = rate
+            sampleRate = inRate
             start()
         }
     }
@@ -238,6 +246,9 @@ internal class FfmpegEngine(
     }
 
     internal companion object {
+        const val OUTPUT_SAMPLE_RATE = 48_000
+        const val OUTPUT_CHANNELS = 2
+
         /**
          * The FFmpeg filter chain for [speed] and the equalizer [eq]: a peaking
          * filter two-thirds of an octave wide per band (lowered by the biggest

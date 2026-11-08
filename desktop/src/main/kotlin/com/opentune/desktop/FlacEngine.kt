@@ -50,7 +50,7 @@ internal class SoundCard : PcmOut {
     private var line: SourceDataLine? = null
 
     override fun open(format: AudioFormat): AudioFormat {
-        val tries = listOf(format, AudioFormat(format.sampleRate, 16, format.channels, true, false)).distinct()
+        val tries = listOf(format, AudioFormat(format.sampleRate, 16, format.channels, true, false), AudioFormat(format.sampleRate, 16, 2, true, false), AudioFormat(48000f, 16, 2, true, false), AudioFormat(44100f, 16, 2, true, false)).distinct()
         var last: Exception? = null
         for (f in tries) {
             try {
@@ -272,6 +272,11 @@ internal class FlacEngine(
                 if (converted.size < n * 2) converted = ByteArray(n * 2)
                 to16(bytes, off, n, converted)
                 bytes = converted; off = 0; len = n * 2
+                if (si.channels == 1 && output!!.channels == 2) {
+                    val stereoBytes = ByteArray(len * 2)
+                    monoToStereo16(bytes, off, frames - skip, stereoBytes)
+                    bytes = stereoBytes; off = 0; len = stereoBytes.size
+                }
             } else if (softGain != 1.0) {
                 bytes = bytes.copyOfRange(off, off + len); off = 0
                 scale(bytes, si.bitsPerSample, softGain)
@@ -365,6 +370,17 @@ internal class FlacEngine(
                 val s = ((v + dither) / 256.0).roundToInt().coerceIn(-32768, 32767)
                 dst[i * 2] = s.toByte()
                 dst[i * 2 + 1] = (s shr 8).toByte()
+            }
+        }
+
+        /** Upmixes mono 16-bit little-endian samples to stereo so single-channel tracks play properly. */
+        fun monoToStereo16(src: ByteArray, off: Int, count: Int, dst: ByteArray) {
+            for (i in 0 until count) {
+                val s0 = src[off + i * 2]
+                val s1 = src[off + i * 2 + 1]
+                val p = i * 4
+                dst[p] = s0; dst[p + 1] = s1
+                dst[p + 2] = s0; dst[p + 3] = s1
             }
         }
 

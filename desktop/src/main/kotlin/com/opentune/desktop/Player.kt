@@ -168,6 +168,76 @@ object Player {
         if (i in _queue.value.indices) open(i)
     }
 
+    fun playNext(song: Song) {
+        val q = _queue.value.toMutableList()
+        val curr = _index.value
+        if (q.isEmpty()) {
+            playAll(listOf(song), 0)
+        } else {
+            val target = (curr + 1).coerceAtMost(q.size)
+            q.add(target, song)
+            _queue.value = q
+        }
+    }
+
+    fun enqueue(song: Song) {
+        val q = _queue.value.toMutableList()
+        if (q.isEmpty()) {
+            playAll(listOf(song), 0)
+        } else {
+            q.add(song)
+            _queue.value = q
+        }
+    }
+
+    fun startRadio(seed: Song) {
+        scope.launch {
+            val radioSongs = runCatching {
+                InnertubeParser.parseWatchQueue(Innertube.next(seed.videoId))
+            }.getOrDefault(emptyList())
+            val list = if (radioSongs.any { it.videoId == seed.videoId }) radioSongs else listOf(seed) + radioSongs
+            if (list.isNotEmpty()) {
+                val start = list.indexOfFirst { it.videoId == seed.videoId }.coerceAtLeast(0)
+                playAll(list, start)
+            }
+        }
+    }
+
+    fun moveInQueue(from: Int, to: Int) {
+        val q = _queue.value.toMutableList()
+        if (from in q.indices && to in q.indices && from != to) {
+            val song = q.removeAt(from)
+            q.add(to, song)
+            val cur = _index.value
+            _index.value = when {
+                cur == from -> to
+                from < to && cur in (from + 1)..to -> cur - 1
+                from > to && cur in to until from -> cur + 1
+                else -> cur
+            }
+            _queue.value = q
+        }
+    }
+
+    fun removeFromQueue(at: Int) {
+        val q = _queue.value.toMutableList()
+        if (at in q.indices) {
+            val cur = _index.value
+            q.removeAt(at)
+            if (at < cur) {
+                _index.value = cur - 1
+            } else if (at == cur && q.isNotEmpty()) {
+                _queue.value = q
+                open(cur.coerceIn(q.indices))
+                return
+            } else if (q.isEmpty()) {
+                pauseAll()
+                _index.value = -1
+            }
+            _queue.value = q
+        }
+    }
+
     fun toggle() {
         val e = synchronized(gate) { engine } ?: return current?.let { open(_index.value) } ?: Unit
         wanted = !wanted

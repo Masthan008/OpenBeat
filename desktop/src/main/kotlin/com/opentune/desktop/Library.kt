@@ -50,6 +50,8 @@ object Library {
     val liked: StateFlow<List<Song>> = _liked.asStateFlow()
     private val _recent = MutableStateFlow<List<Song>>(emptyList())
     val recent: StateFlow<List<Song>> = _recent.asStateFlow()
+    private val _downloaded = MutableStateFlow<List<Song>>(emptyList())
+    val downloaded: StateFlow<List<Song>> = _downloaded.asStateFlow()
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
     @Volatile private var volume = 0.8
@@ -66,6 +68,24 @@ object Library {
     }
 
     fun isLiked(id: String) = _liked.value.any { it.videoId == id }
+
+    fun isDownloaded(id: String) = _downloaded.value.any { it.videoId == id }
+
+    fun downloadFileFor(id: String): File? = synchronized(this) {
+        runCatching {
+            db.query("SELECT path FROM downloads WHERE id = ?", id) { it.getString(1) }.firstOrNull()
+                ?.let { File(it) }?.takeIf { it.isFile }
+        }.getOrNull()
+    }
+
+    fun saveDownload(song: Song, file: File) = write {
+        keep(song.saved())
+        exec("INSERT OR REPLACE INTO downloads(id, path, at) VALUES (?, ?, ?)", song.videoId, file.absolutePath, System.currentTimeMillis())
+    }
+
+    fun removeDownload(id: String) = write {
+        exec("DELETE FROM downloads WHERE id = ?", id)
+    }
 
     fun setLiked(song: Song, liked: Boolean) = write {
         if (liked) {
@@ -166,6 +186,10 @@ object Library {
                     "JOIN songs s ON s.id = p.id ORDER BY p.last DESC LIMIT $RECENT",
                 row = ::song,
             )
+            _downloaded.value = db.query(
+                "SELECT s.id, s.title, s.artist, s.cover, s.length FROM downloads d JOIN songs s ON s.id = d.id ORDER BY d.at DESC",
+                row = ::song,
+            )
             val lists = db.query("SELECT id, name FROM playlists ORDER BY position") { it.getString(1) to it.getString(2) }
             _playlists.value = lists.map { (id, name) ->
                 Playlist(
@@ -194,6 +218,7 @@ object Library {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS playlists(id TEXT PRIMARY KEY, name TEXT NOT NULL, position INTEGER NOT NULL)")
             st.executeUpdate("CREATE TABLE IF NOT EXISTS playlist_songs(playlist TEXT NOT NULL, position INTEGER NOT NULL, id TEXT NOT NULL)")
             st.executeUpdate("CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)")
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS downloads(id TEXT PRIMARY KEY, path TEXT NOT NULL, at INTEGER NOT NULL)")
         }
         importLegacy(c, legacyFile)
         return c

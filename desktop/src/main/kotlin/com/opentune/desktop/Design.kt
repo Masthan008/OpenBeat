@@ -35,6 +35,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Shuffle
@@ -248,8 +251,13 @@ internal fun TrackRow(i: Int, song: Song, songs: List<Song>, onRemove: ((Song) -
     val liked by Library.liked.collectAsState()
     val isLiked = liked.any { it.videoId == song.videoId }
     val current = queue.getOrNull(index)?.videoId == song.videoId
+    val downloaded by Library.downloaded.collectAsState()
+    val isDownloaded = downloaded.any { it.videoId == song.videoId }
+    val activeDownloads by DownloadManager.active.collectAsState()
+    val isDownloading = song.videoId in activeDownloads
     var adding by remember { mutableStateOf(false) }
-    val tools by animateFloatAsState(if (hovered || isLiked || adding) 1f else 0f, tween(140), label = "row tools")
+    var menuOpen by remember { mutableStateOf(false) }
+    val tools by animateFloatAsState(if (hovered || isLiked || adding || menuOpen) 1f else 0f, tween(140), label = "row tools")
     Row(
         Modifier.padding(horizontal = GUTTER - 12.dp).fillMaxWidth().hoverWash(hover, RoundedCornerShape(10.dp))
             .clickable(interactionSource = hover, indication = null) { Player.playAll(songs, i) }
@@ -265,10 +273,20 @@ internal fun TrackRow(i: Int, song: Song, songs: List<Song>, onRemove: ((Song) -
         }
         Cover(song.thumbnailUrl, 44.dp, RoundedCornerShape(8.dp))
         Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-            Text(
-                song.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = if (current) railAccent() else MaterialTheme.colorScheme.onSurface,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    song.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = if (current) railAccent() else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (isDownloading) {
+                    Spacer(Modifier.width(6.dp))
+                    CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
+                } else if (isDownloaded) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Rounded.DownloadDone, "Downloaded", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                }
+            }
             Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(Modifier.graphicsLayer { alpha = tools }, verticalAlignment = Alignment.CenterVertically) {
@@ -277,6 +295,10 @@ internal fun TrackRow(i: Int, song: Song, songs: List<Song>, onRemove: ((Song) -
                 AddToPlaylistMenu(song, adding) { adding = false }
             }
             LikeButton(isLiked, { Library.setLiked(song, !isLiked) }, size = 20.dp)
+            Box {
+                HoverIcon(Icons.Rounded.MoreVert, "More options", size = 30.dp, iconSize = 18.dp) { menuOpen = true }
+                TrackContextMenu(song, menuOpen, onDismiss = { menuOpen = false }, onAddToPlaylist = { adding = true })
+            }
         }
         Text(song.durationText.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(52.dp).padding(start = 10.dp))
         if (onRemove != null) {

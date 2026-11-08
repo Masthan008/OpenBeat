@@ -19,7 +19,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.HourglassEmpty
+import androidx.compose.material.icons.rounded.Radio
+import androidx.compose.material.icons.rounded.FileDownload
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -81,6 +88,150 @@ internal fun AddToPlaylistMenu(song: Song, open: Boolean, onDismiss: () -> Unit)
     }
 }
 
+/** Context menu offering Play next, Add to queue, Start radio, Add to playlist, and Offline download. */
+@Composable
+internal fun TrackContextMenu(
+    song: Song,
+    open: Boolean,
+    onDismiss: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+) {
+    val downloaded by Library.downloaded.collectAsState()
+    val isDownloaded = downloaded.any { it.videoId == song.videoId }
+    val activeDownloads by DownloadManager.active.collectAsState()
+    val isDownloading = song.videoId in activeDownloads
+
+    DropdownMenu(open, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text("Play next") },
+            leadingIcon = { Icon(Icons.Rounded.PlayArrow, null) },
+            onClick = {
+                Player.playNext(song)
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = { Text("Add to queue") },
+            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.QueueMusic, null) },
+            onClick = {
+                Player.enqueue(song)
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = { Text("Start radio") },
+            leadingIcon = { Icon(Icons.Rounded.Radio, null) },
+            onClick = {
+                Player.startRadio(song)
+                onDismiss()
+            },
+        )
+        HorizontalDivider()
+        DropdownMenuItem(
+            text = { Text("Add to playlist...") },
+            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null) },
+            onClick = {
+                onDismiss()
+                onAddToPlaylist()
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    when {
+                        isDownloading -> "Downloading..."
+                        isDownloaded -> "Delete download"
+                        else -> "Download for offline"
+                    }
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    when {
+                        isDownloading -> Icons.Rounded.HourglassEmpty
+                        isDownloaded -> Icons.Rounded.Delete
+                        else -> Icons.Rounded.Download
+                    },
+                    null,
+                )
+            },
+            enabled = !isDownloading,
+            onClick = {
+                DownloadManager.toggle(song)
+                onDismiss()
+            },
+        )
+    }
+}
+
+/** Dialog to import a playlist directly from a YouTube or YouTube Music link. */
+@Composable
+internal fun ImportPlaylistDialog(onDismiss: () -> Unit, onImported: (String) -> Unit) {
+    var url by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = { if (!loading) onDismiss() },
+        title = { Text("Import YouTube Playlist") },
+        text = {
+            Column {
+                Text("Paste a YouTube or YouTube Music playlist link:", style = MaterialTheme.typography.bodyMedium)
+                androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                OutlinedTextField(
+                    url, { url = it; error = null },
+                    singleLine = true,
+                    placeholder = { Text("https://music.youtube.com/playlist?list=...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null,
+                )
+                if (error != null) {
+                    Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                }
+                if (loading) {
+                    Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                        Text("Fetching playlist tracks...", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = url.isNotBlank() && !loading,
+                onClick = {
+                    loading = true
+                    error = null
+                    scope.launch {
+                        val trimmed = url.trim()
+                        val listId = when {
+                            "list=" in trimmed -> trimmed.substringAfter("list=").substringBefore('&').substringBefore('#')
+                            trimmed.startsWith("VL") -> trimmed.removePrefix("VL")
+                            else -> trimmed
+                        }
+                        val browseId = if (listId.startsWith("VL")) listId else "VL$listId"
+                        val songs: List<Song> = runCatching { Pages.songsOf(browseId) }.getOrElse { emptyList() }
+                        if (songs.isEmpty()) {
+                            error = "Could not find any songs in this playlist link."
+                            loading = false
+                        } else {
+                            val playlistId = Library.createPlaylist("Imported Playlist ($listId)")
+                            songs.forEach { Library.addToPlaylist(playlistId, it) }
+                            loading = false
+                            onImported(playlistId)
+                        }
+                    }
+                },
+            ) { Text("Import") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !loading) { Text("Cancel") }
+        },
+    )
+}
+
 /** Asks for a playlist's name. */
 @Composable
 internal fun NameDialog(title: String, initial: String, confirm: String, onDismiss: () -> Unit, onDone: (String) -> Unit) {
@@ -99,6 +250,7 @@ internal fun NameDialog(title: String, initial: String, confirm: String, onDismi
 internal fun PlaylistGrid(onOpen: (String) -> Unit) {
     val playlists by Library.playlists.collectAsState()
     var naming by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf(false) }
     LazyVerticalGrid(
         GridCells.Adaptive(170.dp),
         contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = LocalPageBottom.current),
@@ -113,6 +265,15 @@ internal fun PlaylistGrid(onOpen: (String) -> Unit) {
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Add, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary) }
                 Text("New playlist", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+            }
+        }
+        item {
+            Column(Modifier.clip(MaterialTheme.shapes.medium).clickable { importing = true }) {
+                Box(
+                    Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary) }
+                Text("Import playlist", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
             }
         }
         items(playlists, key = { it.id }) { p ->
@@ -130,6 +291,12 @@ internal fun PlaylistGrid(onOpen: (String) -> Unit) {
         NameDialog("New playlist", "", "Create", onDismiss = { naming = false }) { name ->
             onOpen(Library.createPlaylist(name))
             naming = false
+        }
+    }
+    if (importing) {
+        ImportPlaylistDialog(onDismiss = { importing = false }) { id ->
+            onOpen(id)
+            importing = false
         }
     }
 }

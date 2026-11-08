@@ -72,6 +72,13 @@ import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.OpenInFull
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -183,6 +190,15 @@ private data class Page(val tab: Tab, val shelf: Shelf? = null, val opened: Any?
  */
 @Composable
 fun DesktopApp(startPanel: SidePanel? = null) {
+    val isMini by DesktopWindow.isMiniPlayer.collectAsState()
+    val currentSong = Player.queue.collectAsState().value.getOrNull(Player.index.collectAsState().value)
+    if (isMini && currentSong != null) {
+        DesktopTheme(artworkSeed = rememberArtworkSeed(currentSong.thumbnailUrl)) {
+            MiniPlayerView(currentSong)
+        }
+        return
+    }
+
     var page by remember { mutableStateOf(Page(Tab.HOME)) }
     // Back goes through what was opened, the way it came.
     val history = remember { mutableStateListOf<Page>() }
@@ -342,7 +358,7 @@ private fun Pages(
             shown.tab == Tab.LIBRARY -> shown.shelf?.let { LibraryPage(it, onShelf, onPlaylist) }
                 ?: LibraryHome(onShelf = onShelf, onPlaylist = onPlaylist, onOpenAny = onOpenAny)
             shown.tab == Tab.SETTINGS -> SettingsPage()
-            else -> SongPage("Up next", queue, "The queue is empty.", current = index, onPlay = { _, i -> Player.playAt(i) })
+            else -> SongPage("Up next", queue, "The queue is empty.", current = index, onRemove = { s -> val idx = queue.indexOfFirst { it.videoId == s.videoId }; if (idx >= 0) Player.removeFromQueue(idx) }, onPlay = { _, i -> Player.playAt(i) })
         }
     }
 }
@@ -373,27 +389,98 @@ private const val MATERIAL_PAGE_ALPHA = 0.45f
  */
 @Composable
 internal fun SearchPage(query: String, onQuery: (String) -> Unit, searches: Int, onSearch: () -> Unit, onOpenAny: (Any) -> Unit) {
-    var results by remember { mutableStateOf<List<Song>?>(null) }
+    var results by remember { mutableStateOf<Pages.SearchOutcome?>(null) }
+    var category by remember { mutableStateOf(Pages.SearchCategory.ALL) }
     var searching by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var shownFor by remember { mutableStateOf("") }
+    var querySuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
     val recentSearches by AppSettings.recentSearches.collectAsState()
     val moods by produceState(emptyList<com.opentune.data.model.MoodGenre>()) { value = runCatching { Pages.moods() }.getOrDefault(emptyList()) }
-    LaunchedEffect(searches) {
+
+    LaunchedEffect(searches, category) {
         val q = query.trim().takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
         AppSettings.addRecentSearch(q)
         searching = true
         failed = false
-        runCatching { Pages.search(q) }.onSuccess { results = it; shownFor = q }.onFailure { failed = true }
+        runCatching { Pages.searchAll(q, category) }.onSuccess {
+            results = it
+            shownFor = q
+            querySuggestions = emptyList()
+        }.onFailure { failed = true }
         searching = false
     }
-    // Cleared: back to browsing.
-    LaunchedEffect(query) { if (query.isBlank()) { results = null; shownFor = "" } }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            results = null
+            shownFor = ""
+            querySuggestions = emptyList()
+        } else if (results == null) {
+            kotlinx.coroutines.delay(200)
+            querySuggestions = Pages.suggestions(query).take(5)
+        }
+    }
+
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val found = results
-    ScrollPage("Search", spacing = 22.dp) {
+
+    ScrollPage("Search", spacing = 20.dp) {
         item(key = "field") { SearchField(query, onQuery, onSearch, focus) }
+
+        // Live autocomplete suggestions while typing
+        if (querySuggestions.isNotEmpty() && found == null) {
+            item(key = "suggestions") {
+                Column(Modifier.padding(horizontal = GUTTER).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Suggestions", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        querySuggestions.forEach { s ->
+                            Box(
+                                Modifier.clip(RoundedCornerShape(20.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .clickable { onQuery(s); onSearch() }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Rounded.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                    Text(s, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Category filter chips
+        item(key = "categories") {
+            Row(
+                Modifier.padding(horizontal = GUTTER).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Pages.SearchCategory.entries.forEach { cat ->
+                    val selected = cat == category
+                    val shape = RoundedCornerShape(20.dp)
+                    val bg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh
+                    val textCol = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                    Box(
+                        Modifier.clip(shape)
+                            .background(bg)
+                            .clickable {
+                                category = cat
+                                if (query.isNotBlank()) onSearch()
+                            }
+                            .padding(horizontal = 16.dp, vertical = 7.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(cat.label, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = textCol)
+                    }
+                }
+            }
+        }
+
         when {
             searching -> item(key = "loading") { Loading() }
             failed -> item(key = "failed") { Message("Couldn't search", "Check your connection and try again.") }
@@ -405,15 +492,118 @@ internal fun SearchPage(query: String, onQuery: (String) -> Unit, searches: Int,
                         BrowseTiles(moods) { onOpenAny(MoodKey(it.title, it.browseId, it.params)) }
                     }
                 }
-                if (recentSearches.isEmpty() && moods.isEmpty()) item(key = "hint") { Message("Find something to play", "Type a song or an artist and press Enter.", icon = Icons.Rounded.Search) }
+                if (recentSearches.isEmpty() && moods.isEmpty()) item(key = "hint") { Message("Find something to play", "Type a film, album, song or artist and press Enter.", icon = Icons.Rounded.Search) }
             }
-            found.isEmpty() -> item(key = "none") { Message("No results for “$shownFor”", "Try different words.", icon = Icons.Rounded.SearchOff) }
-            else -> {
-                item(key = "top") { TopResult(found) }
-                item(key = "all-head") {
-                    Text("Songs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER, vertical = 4.dp))
+            found.isEmpty -> item(key = "none") { Message("No results for “$shownFor”", "Try searching with a different movie title, song or artist.", icon = Icons.Rounded.SearchOff) }
+            category == Pages.SearchCategory.ALBUMS -> {
+                item(key = "all-albums-head") {
+                    Text("Albums & Movie Soundtracks (${found.albums.size})", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER))
                 }
-                tracks(found)
+                item(key = "all-albums-grid") {
+                    androidx.compose.foundation.layout.FlowRow(
+                        Modifier.padding(horizontal = GUTTER).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        found.albums.forEach { album ->
+                            Card(album) { onOpenAny(album) }
+                        }
+                    }
+                }
+            }
+            category == Pages.SearchCategory.SONGS -> {
+                item(key = "all-songs-head") {
+                    Text("Songs (${found.songs.size})", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER))
+                }
+                tracks(found.songs)
+            }
+            category == Pages.SearchCategory.ARTISTS -> {
+                item(key = "all-artists-head") {
+                    Text("Artists (${found.artists.size})", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER))
+                }
+                item(key = "all-artists-grid") {
+                    androidx.compose.foundation.layout.FlowRow(
+                        Modifier.padding(horizontal = GUTTER).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        found.artists.forEach { artist ->
+                            Card(artist) { onOpenAny(artist) }
+                        }
+                    }
+                }
+            }
+            category == Pages.SearchCategory.PLAYLISTS -> {
+                item(key = "all-playlists-head") {
+                    Text("Playlists (${found.playlists.size})", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER))
+                }
+                item(key = "all-playlists-grid") {
+                    androidx.compose.foundation.layout.FlowRow(
+                        Modifier.padding(horizontal = GUTTER).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        found.playlists.forEach { pl ->
+                            Card(pl) { onOpenAny(pl) }
+                        }
+                    }
+                }
+            }
+            else -> {
+                // ALL tab
+                if (found.topResult != null) {
+                    item(key = "top") { TopResultUnified(found.topResult, found.songs, onOpenAny) }
+                }
+
+                // Official Albums and Movie Soundtracks
+                if (found.albums.isNotEmpty()) {
+                    item(key = "albums-head") {
+                        Text("Albums & Movie Soundtracks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER, vertical = 4.dp))
+                    }
+                    item(key = "albums-row") {
+                        HRow(16.dp) {
+                            items(found.albums, key = { it.browseId ?: it.title }) { album ->
+                                Card(album) { onOpenAny(album) }
+                            }
+                        }
+                    }
+                }
+
+                // Songs list
+                if (found.songs.isNotEmpty()) {
+                    item(key = "songs-head") {
+                        Text("Songs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER, vertical = 4.dp))
+                    }
+                    tracks(found.songs)
+                }
+
+                // Artists
+                if (found.artists.isNotEmpty()) {
+                    item(key = "artists-head") {
+                        Text("Artists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER, vertical = 4.dp))
+                    }
+                    item(key = "artists-row") {
+                        HRow(16.dp) {
+                            items(found.artists, key = { it.browseId ?: it.title }) { artist ->
+                                Card(artist) { onOpenAny(artist) }
+                            }
+                        }
+                    }
+                }
+
+                // Playlists
+                if (found.playlists.isNotEmpty()) {
+                    item(key = "playlists-head") {
+                        Text("Playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = GUTTER, vertical = 4.dp))
+                    }
+                    item(key = "playlists-row") {
+                        HRow(16.dp) {
+                            items(found.playlists, key = { it.browseId ?: it.title }) { pl ->
+                                Card(pl) { onOpenAny(pl) }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -450,10 +640,79 @@ private fun SearchField(query: String, onQuery: (String) -> Unit, onSearch: () -
     }
 }
 
-/** The best match, large, beside the next four songs. */
+/** Unified top result supporting both songs and movie/album browse cards. */
 @Composable
-private fun TopResult(found: List<Song>) {
-    val top = found.first()
+private fun TopResultUnified(top: com.opentune.data.model.SearchResult, songs: List<Song>, onOpenAny: (Any) -> Unit) {
+    when (top) {
+        is com.opentune.data.model.SearchResult.TopTrack -> TopResultSong(top.song, songs)
+        is com.opentune.data.model.SearchResult.Track -> TopResultSong(top.song, songs)
+        is com.opentune.data.model.SearchResult.Browse -> {
+            val item = top.item
+            val shelf = ShelfItem(item.title, item.subtitle, item.thumbnailUrl, null, item.browseId, item.explicit)
+            TopResultBrowse(shelf, songs, onOpen = { onOpenAny(shelf) })
+        }
+    }
+}
+
+@Composable
+private fun TopResultBrowse(item: ShelfItem, songs: List<Song>, onOpen: () -> Unit) {
+    val base = MaterialTheme.colorScheme.surfaceContainer
+    val colour = rememberCoverColor(item.thumbnailUrl, base)
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    Row(Modifier.padding(horizontal = GUTTER).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+        Column(Modifier.width(400.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Top result", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Box(
+                Modifier.fillMaxWidth().height(232.dp).hoverLift(hover, 1.01f).clip(RoundedCornerShape(16.dp))
+                    .background(Brush.linearGradient(listOf(tint(colour, base, 0.55f), tint(colour, base, 0.2f))))
+                    .clickable(interactionSource = hover, indication = null) { onOpen() }.padding(20.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Cover(item.thumbnailUrl, 104.dp, RoundedCornerShape(12.dp), Modifier.shadow(16.dp, RoundedCornerShape(12.dp)))
+                    Text(item.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(item.subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            "Album / Movie", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.3f)).padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+                androidx.compose.animation.AnimatedVisibility(
+                    hovered, enter = fadeIn(Motion.fade(160)) + slideInVertically(Motion.soft()) { it / 2 }, exit = fadeOut(Motion.fade(120)),
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                ) {
+                    Box(Modifier.size(52.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.PlayArrow, "Open", tint = Color.Black, modifier = Modifier.size(30.dp))
+                    }
+                }
+            }
+        }
+        if (songs.isNotEmpty()) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Popular Songs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                songs.take(4).forEachIndexed { i, s ->
+                    val h = remember { MutableInteractionSource() }
+                    Row(
+                        Modifier.fillMaxWidth().hoverWash(h, RoundedCornerShape(10.dp)).clickable(interactionSource = h, indication = null) { Player.playAll(songs, i) }.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Cover(s.thumbnailUrl, 44.dp, RoundedCornerShape(8.dp))
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(s.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text(s.durationText.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopResultSong(top: Song, found: List<Song>) {
     val base = MaterialTheme.colorScheme.surfaceContainer
     val colour = rememberCoverColor(top.thumbnailUrl, base)
     val hover = remember { MutableInteractionSource() }
@@ -464,7 +723,7 @@ private fun TopResult(found: List<Song>) {
             Box(
                 Modifier.fillMaxWidth().height(232.dp).hoverLift(hover, 1.01f).clip(RoundedCornerShape(16.dp))
                     .background(Brush.linearGradient(listOf(tint(colour, base, 0.55f), tint(colour, base, 0.2f))))
-                    .clickable(interactionSource = hover, indication = null) { Player.playAll(found, 0) }.padding(20.dp),
+                    .clickable(interactionSource = hover, indication = null) { Player.playAll(found.ifEmpty { listOf(top) }, 0) }.padding(20.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Cover(top.thumbnailUrl, 104.dp, RoundedCornerShape(12.dp), Modifier.shadow(16.dp, RoundedCornerShape(12.dp)))
@@ -572,6 +831,15 @@ internal fun LibraryPage(shelf: Shelf, onShelf: (Shelf) -> Unit, onPlaylist: (St
                 coverUrl = liked.firstOrNull()?.thumbnailUrl, kind = "Playlist", title = "Liked songs", subtitle = "Songs you hearted, newest first", songs = liked,
             )
         }
+        Shelf.DOWNLOADS -> {
+            val downloaded by Library.downloaded.collectAsState()
+            CollectionLayout("Downloaded", downloaded.firstOrNull()?.thumbnailUrl, downloaded, failed = false, onRemove = { DownloadManager.delete(it) }, empty = "Downloaded songs will appear here.") {
+                CollectionHero(
+                    cover = { m -> IconCover(Icons.Rounded.DownloadDone, listOf(Color(0xFF0288D1), Color(0xFF81D4FA)), m) },
+                    coverUrl = downloaded.firstOrNull()?.thumbnailUrl, kind = "Offline", title = "Downloaded", subtitle = if (downloaded.isEmpty()) "No offline songs" else "${downloaded.size} songs saved for offline listening", songs = downloaded,
+                )
+            }
+        }
         Shelf.RECENT -> CollectionLayout("Recently played", played.firstOrNull()?.thumbnailUrl, played, failed = false, empty = "Songs you play show here.") {
             CollectionHero(
                 cover = { m -> IconCover(Icons.Rounded.History, listOf(Color(0xFF0F7B6C), Color(0xFF7FE0C8)), m) },
@@ -596,16 +864,16 @@ internal fun IconCover(icon: ImageVector, colours: List<Color>, modifier: Modifi
     }
 }
 
-internal enum class Shelf(val label: String) { LIKED("Liked songs"), PLAYLISTS("Playlists"), SERVER("Your server"), RECENT("Recently played") }
+internal enum class Shelf(val label: String) { LIKED("Liked songs"), DOWNLOADS("Downloaded"), PLAYLISTS("Playlists"), SERVER("Your server"), RECENT("Recently played") }
 
 /** A plain list of songs under a big title, such as Up next. */
 @Composable
-private fun SongPage(title: String, songs: List<Song>, empty: String, current: Int = -1, onPlay: (List<Song>, Int) -> Unit) {
+private fun SongPage(title: String, songs: List<Song>, empty: String, current: Int = -1, onRemove: ((Song) -> Unit)? = null, onPlay: (List<Song>, Int) -> Unit) {
     ScrollPage(title, if (songs.isEmpty()) null else lengthLine(songs), spacing = 4.dp) {
         if (songs.isEmpty()) item { Message(empty, null) }
         else {
             item { TrackHeader() }
-            tracks(songs)
+            tracks(songs, onRemove)
         }
     }
 }
@@ -665,11 +933,27 @@ internal fun SongList(songs: List<Song>, current: Int = -1, onRemove: ((Song) ->
                         }
                     }
                 }
+                val downloaded by Library.downloaded.collectAsState()
+                val isDownloaded = downloaded.any { it.videoId == song.videoId }
+                val activeDownloads by DownloadManager.active.collectAsState()
+                val isDownloading = song.videoId in activeDownloads
+                var menuOpen by remember { mutableStateOf(false) }
+
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                    Text(
-                        song.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge,
-                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            song.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (isDownloading) {
+                            Spacer(Modifier.width(6.dp))
+                            CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
+                        } else if (isDownloaded) {
+                            Spacer(Modifier.width(6.dp))
+                            Icon(Icons.Rounded.DownloadDone, "Downloaded", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                        }
+                    }
                     Text(
                         listOfNotNull(song.artist.takeIf { it.isNotBlank() }, song.durationText).joinToString(" • "),
                         maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -682,6 +966,12 @@ internal fun SongList(songs: List<Song>, current: Int = -1, onRemove: ((Song) ->
                     AddToPlaylistMenu(song, adding) { adding = false }
                 }
                 LikeButton(isLiked, { Library.setLiked(song, !isLiked) }, size = 24.dp)
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Rounded.MoreVert, "More", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TrackContextMenu(song, menuOpen, onDismiss = { menuOpen = false }, onAddToPlaylist = { adding = true })
+                }
                 if (onRemove != null) {
                     IconButton(onClick = { onRemove(song) }) {
                         Icon(Icons.Rounded.Close, "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -776,5 +1066,78 @@ internal object Time {
     fun format(ms: Long): String {
         val s = (ms / 1000).coerceAtLeast(0)
         return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+    }
+}
+
+@Composable
+internal fun MiniPlayerView(song: Song) {
+    val playing by Player.playing.collectAsState()
+    val loading by Player.loading.collectAsState()
+    val liked by Library.liked.collectAsState()
+    val isLiked = liked.any { it.videoId == song.videoId }
+    val downloaded by Library.downloaded.collectAsState()
+    val isDownloaded = downloaded.any { it.videoId == song.videoId }
+
+    Surface(
+        modifier = Modifier.fillMaxSize().windowDrag(),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Row(
+            Modifier.fillMaxSize().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Artwork(song.thumbnailUrl, Modifier.size(72.dp), RoundedCornerShape(8.dp))
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        song.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (isDownloaded) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Rounded.DownloadDone, "Downloaded", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                    }
+                }
+                Text(
+                    song.artist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = Player::previous, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Rounded.SkipPrevious, "Previous", Modifier.size(18.dp))
+                    }
+                    Box(
+                        Modifier.padding(horizontal = 4.dp).size(28.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(onClick = Player::toggle),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (loading) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        else Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = Player::next, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Rounded.SkipNext, "Next", Modifier.size(18.dp))
+                    }
+                    LikeButton(isLiked, { Library.setLiked(song, !isLiked) }, size = 18.dp)
+                }
+            }
+            Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween, horizontalAlignment = Alignment.End) {
+                IconButton(onClick = { DesktopWindow.toggleMiniPlayer() }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Rounded.OpenInFull, "Restore", Modifier.size(16.dp))
+                }
+                IconButton(onClick = { DesktopWindow.close() }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Rounded.Close, "Close", Modifier.size(16.dp))
+                }
+            }
+        }
     }
 }

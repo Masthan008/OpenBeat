@@ -84,6 +84,25 @@ object DesktopWindow {
         val w = window ?: return
         w.extendedState = if (w.extendedState and Frame.MAXIMIZED_BOTH != 0) Frame.NORMAL else Frame.MAXIMIZED_BOTH
     }
+
+    private var normalBounds: java.awt.Rectangle? = null
+    val isMiniPlayer = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    fun toggleMiniPlayer() {
+        val w = window ?: return
+        if (isMiniPlayer.value) {
+            normalBounds?.let { w.bounds = it }
+            w.isAlwaysOnTop = false
+            w.minimumSize = java.awt.Dimension(760, 520)
+            isMiniPlayer.value = false
+        } else {
+            normalBounds = w.bounds
+            w.minimumSize = java.awt.Dimension(340, 110)
+            w.setSize(380, 130)
+            w.isAlwaysOnTop = true
+            isMiniPlayer.value = true
+        }
+    }
 }
 
 /**

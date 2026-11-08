@@ -36,6 +36,12 @@ object Relay {
         val kind = Streams.Kind.entries.firstOrNull { name.endsWith(".${it.extension}") } ?: return exchange.sendResponseHeaders(404, -1)
         val videoId = name.removeSuffix(".${kind.extension}").takeIf { it.matches(VIDEO_ID) }
             ?: return exchange.sendResponseHeaders(404, -1)
+
+        val localFile = Library.downloadFileFor(videoId)
+        if (localFile != null && localFile.isFile) {
+            serveLocalFile(exchange, localFile, kind)
+            return
+        }
         var stream = runCatching { runBlocking { Streams.resolve(videoId, kind = kind) } }.getOrElse {
             System.err.println("Relay: no stream for $videoId: $it")
             return exchange.sendResponseHeaders(502, -1)
@@ -89,6 +95,35 @@ object Relay {
         }
     }
 
+    private fun serveLocalFile(exchange: HttpExchange, file: java.io.File, kind: Streams.Kind) {
+        val size = file.length()
+        val (from, to) = Ranges.parse(exchange.requestHeaders.getFirst("Range"), size) ?: run {
+            exchange.responseHeaders.add("Content-Range", "bytes */$size")
+            return exchange.sendResponseHeaders(416, -1)
+        }
+        val mime = if (kind == Streams.Kind.AAC) "audio/mp4" else "audio/webm"
+        exchange.responseHeaders.add("Content-Type", mime)
+        exchange.responseHeaders.add("Accept-Ranges", "bytes")
+        val partial = exchange.requestHeaders.getFirst("Range") != null
+        if (partial) exchange.responseHeaders.add("Content-Range", "bytes $from-$to/$size")
+        exchange.sendResponseHeaders(if (partial) 206 else 200, to - from + 1)
+        if (exchange.requestMethod == "HEAD") return
+        runCatching {
+            java.io.RandomAccessFile(file, "r").use { raf ->
+                raf.seek(from)
+                val buf = ByteArray(32768)
+                var remaining = to - from + 1
+                val out = exchange.responseBody
+                while (remaining > 0) {
+                    val read = raf.read(buf, 0, minOf(buf.size.toLong(), remaining).toInt())
+                    if (read <= 0) break
+                    out.write(buf, 0, read)
+                    remaining -= read
+                }
+            }
+        }
+    }
+
     private val VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")
 }
 
@@ -112,4 +147,6 @@ internal object Ranges {
             }
         }
     }
+
+
 }
