@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "dist",
+  "functions": {
+    "api/yt.ts": {
+      "maxDuration": 15
+    }
+  },
   "headers": [
     {
       "source": "/downloads/(.*)\\.zip",
@@ -26,11 +31,15 @@
       "destination": "/downloads/$1"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/yt/(.*)",
+      "destination": "/api/yt?__subpath=$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/api/yt",
+      "destination": "/api/yt"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

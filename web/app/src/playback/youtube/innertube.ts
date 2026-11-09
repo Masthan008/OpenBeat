@@ -87,6 +87,7 @@ async function simpleRequestFetch(input: RequestInfo | URL, init?: RequestInit):
     const proxyUrl = new URL(`/api/yt${url.pathname}${url.search}`, origin);
     const forwardHeaders = new Headers(init?.headers ?? request?.headers);
     forwardHeaders.set('x-proxy-target', url.origin);
+    forwardHeaders.set('x-proxy-path', `${url.pathname}${url.search}`);
     if (!forwardHeaders.has('Content-Type') && body != null) {
       forwardHeaders.set('Content-Type', 'text/plain;charset=UTF-8');
     }
