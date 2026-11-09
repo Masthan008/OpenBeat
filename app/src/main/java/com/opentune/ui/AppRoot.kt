@@ -49,7 +49,6 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -143,7 +142,7 @@ private fun dockTabIcons(tab: Tab, style: com.opentune.data.settings.DockIconSty
         com.opentune.data.settings.DockIconStyle.DEFAULT -> tab.icon to tab.selectedIcon
         com.opentune.data.settings.DockIconStyle.NEON -> when (tab) {
             Tab.HOME -> Icons.Rounded.GraphicEq to Icons.Rounded.GraphicEq
-            Tab.EXPLORE -> Icons.Rounded.AutoAwesome to Icons.Rounded.AutoAwesome
+            Tab.EXPLORE -> Icons.Rounded.Explore to Icons.Rounded.Explore
             Tab.PODCASTS -> Icons.Rounded.Mic to Icons.Rounded.Mic
             Tab.LIBRARY -> Icons.AutoMirrored.Rounded.QueueMusic to Icons.AutoMirrored.Rounded.QueueMusic
         }
@@ -154,7 +153,7 @@ private fun dockTabIcons(tab: Tab, style: com.opentune.data.settings.DockIconSty
             Tab.LIBRARY -> Icons.Rounded.Album to Icons.Rounded.Album
         }
         com.opentune.data.settings.DockIconStyle.FESTIVE -> when (tab) {
-            Tab.HOME -> Icons.Rounded.AutoAwesome to Icons.Rounded.AutoAwesome
+            Tab.HOME -> Icons.Rounded.Home to Icons.Rounded.Home
             Tab.EXPLORE -> Icons.Rounded.Star to Icons.Rounded.Star
             Tab.PODCASTS -> tab.icon to tab.selectedIcon
             Tab.LIBRARY -> Icons.Rounded.Favorite to Icons.Rounded.Favorite

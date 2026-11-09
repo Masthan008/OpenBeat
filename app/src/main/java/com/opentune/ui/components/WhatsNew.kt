@@ -18,7 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material.icons.rounded.TabletAndroid
@@ -87,7 +89,7 @@ object WhatsNew {
             Note(Icons.Rounded.Waves, "Vivo Origin Player & Audio Source Registration", "Registered OpenBlast under Vivo audio categories, intent filters, and media button receivers for Origin Player and Jovi widgets."),
             Note(Icons.Rounded.Download, "Direct Wi-Fi Only Toggle Switch", "Direct on/off switch in Settings › Downloads. Default is OFF so downloads start immediately on mobile data or Wi-Fi."),
             Note(Icons.Rounded.Palette, "Web Player Backdrops & New Accents", "Fluid mesh, gradient, and echo glow player backdrops plus Electric Violet and Sunset Coral accent themes in the web player."),
-            Note(Icons.Rounded.AutoAwesome, "Cross-Platform Notes & Android TV", "Clear platform tags across official release notes, enhanced Android TV 10-foot experience, and iOS branding updates."),
+            Note(Icons.Rounded.Tv, "Cross-Platform Notes & Android TV", "Clear platform tags across official release notes, enhanced Android TV 10-foot experience, and iOS branding updates."),
         ),
         "1.0.8" to listOf(
             Note(Icons.Rounded.Waves, "Vivo OriginOS Header Capsule", "Live audio waveforms, track details, and quick controls in the top center status bar cutout (Origin Island / Atomic Capsule) and Origin Player widgets."),
@@ -105,7 +107,7 @@ object WhatsNew {
             Note(Icons.Rounded.Favorite, "Diwali Favorite Animation (Beta)", "Celebrate your favourite songs with authentic Diwali joy: a glowing terracotta diya with a dancing flame, anar fountain sparks, and radiant phuljhadi sparklers. Switch styles in Settings › Motion and feel."),
             Note(Icons.Rounded.BlurOn, "New Dock Animations & Icon Styles", "Added Float and Bounce dock motions alongside classic Minimize, Capsule, and Sink. Choose from fresh dock icon styles (Neon Glow, Minimal, Festive Sparkle) alongside Classic defaults."),
             Note(Icons.Rounded.TouchApp, "Distinct Custom Widget Designs", "Bespoke visual identity for home widgets: vintage dark titanium vinyl turntable with gold rims and concentric vinyl grooves, and vibrant color-coded quick-access tiles."),
-            Note(Icons.Rounded.AutoAwesome, "Package Identity & Rebrand Polish", "Updated Android application ID to com.openblast, modernized widget intent actions, and refreshed third-party license documentation in THIRD_PARTY_NOTICES.md."),
+            Note(Icons.Rounded.Palette, "Package Identity & Rebrand Polish", "Updated Android application ID to com.openblast, modernized widget intent actions, and refreshed third-party license documentation in THIRD_PARTY_NOTICES.md."),
         ),
 
         "1.0.5" to listOf(
@@ -116,7 +118,7 @@ object WhatsNew {
             Note(Icons.Rounded.NewReleases, "OpenBeat update pipeline", "Direct update tracking and downloads powered by Masthan008/OpenBeat."),
         ),
         "1.0.4" to listOf(
-            Note(Icons.Rounded.AutoAwesome, "OpenBlast", "A fresh high-octane rebrand with modern adaptive launcher icons, dark & gold vector emblems, and refined styling."),
+            Note(Icons.Rounded.RocketLaunch, "OpenBlast", "A fresh high-octane rebrand with modern adaptive launcher icons, dark & gold vector emblems, and refined styling."),
             Note(Icons.Rounded.TouchApp, "Home screen widget controls", "Full 4x2 and 4x1 home screen widgets with instant, responsive play, pause, next, and previous playback controls."),
             Note(Icons.Rounded.Lyrics, "4 new lyrics animation styles", "Brand-new lyric visual styles: Neon glow, Kinetic wave, Stage spotlight, and Cascade drift alongside classic Fluid, Karaoke, Focus zoom, and Minimal."),
             Note(Icons.Rounded.GraphicEq, "Smooth opening & 60/120 Hz performance", "Opening reveal animation optimized with viewport-bounded rasterization and dynamic compositing to eliminate GPU stalls and frame drops."),
@@ -125,7 +127,7 @@ object WhatsNew {
         "0.4.17" to listOf(
             Note(Icons.Rounded.Notifications, "In the status bar", "On Android 16 and newer, the playing song shows as a Live Update: a chip in the status bar counts down the time left, and the lock screen shows a bar in the cover's colour. Turn it off in Settings › Playback."),
             Note(Icons.Rounded.VisibilityOff, "Not interested", "A song's menu can now keep that song, or everything by its artist, out of radio, mixes and Home. Your own playlists, likes and downloads stay as they are. Undo it in Settings › Playback › Hidden songs and artists."),
-            Note(Icons.Rounded.AutoAwesome, "Smart shuffle", "Tap shuffle twice in the player, or long-press Shuffle on a playlist, and a similar song joins after every four. The added ones have a sparkle, and you can keep any of them in your playlist."),
+            Note(Icons.Rounded.Shuffle, "Smart shuffle", "Tap shuffle twice in the player, or long-press Shuffle on a playlist, and a similar song joins after every four. The added ones have a sparkle, and you can keep any of them in your playlist."),
             Note(Icons.Rounded.Swipe, "Swipe to queue", "Swipe a song right to play it next, or left to add it to the queue."),
             Note(Icons.Rounded.Image, "Covers that move", "Song and album covers on Home drift gently like the player's, while they're on screen and you're not scrolling. They stay still in battery saver."),
             Note(Icons.Rounded.TabletAndroid, "Room on big screens", "On tablets and unfolded phones the tabs move to a rail on the left, pages keep a readable width, and on large screens the player stays open beside the page."),
@@ -147,7 +149,7 @@ object WhatsNew {
             Note(Icons.Rounded.Waves, "A beam for lossless", "When a song plays lossless, a glowing beam runs round the quality pill. Words in synced lyrics no longer jump twice."),
             Note(Icons.Rounded.TouchApp, "Opening and closing the player", "Tap the mini player and its cover grows into the player. Going back from Home while music plays shrinks the app up towards the notification."),
             Note(Icons.Rounded.Download, "Updates that don't fall behind", "The update offered is always the newest, even when several came out since yours. One you put off leaves a red dot on the account button until it's installed, and Settings › Storage can delete a downloaded update."),
-            Note(Icons.Rounded.AutoAwesome, "Clarity, as loud as off", "Clarity no longer makes music quieter. Settings still being worked on carry a Beta tag."),
+            Note(Icons.Rounded.GraphicEq, "Clarity, as loud as off", "Clarity no longer makes music quieter. Settings still being worked on carry a Beta tag."),
             Note(Icons.Rounded.Favorite, "Support OpenBlast", "From Settings › About you can star OpenBlast on GitHub, or send a small thank-you."),
         ),
         "0.4.9" to listOf(

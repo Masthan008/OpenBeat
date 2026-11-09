@@ -46,7 +46,7 @@ import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Animation
-import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BlurOff
@@ -930,7 +930,7 @@ private fun settingsSections(
                     ToggleRow("Mono audio", pb.monoAudio, { v -> AppSettings.updatePlayback { it.copy(monoAudio = v) } }, summary = "Combines left and right channels for listening with a single earbud", icon = com.opentune.ui.player.PlayerIcons.Headphones)
                 },
                 Entry("Clarity", "studio master clarity presence air bass clear enhance") {
-                    ToggleRow("Clarity", pb.clarity, { v -> AppSettings.updatePlayback { it.copy(clarity = v) } }, summary = "Firmer bass, less mud, more presence and air, at the same loudness. Off plays the stream untouched.", icon = Icons.Rounded.AutoAwesome, beta = true)
+                    ToggleRow("Clarity", pb.clarity, { v -> AppSettings.updatePlayback { it.copy(clarity = v) } }, summary = "Firmer bass, less mud, more presence and air, at the same loudness. Off plays the stream untouched.", icon = Icons.Rounded.GraphicEq, beta = true)
                 },
                 Entry("Spatial audio", "stereo widen immersive") {
                     ToggleRow("Spatial audio", pb.spatialAudio, { v -> AppSettings.updatePlayback { it.copy(spatialAudio = v) } }, summary = "Widens stereo tracks for a more open sound", icon = Icons.Rounded.SurroundSound, beta = true)
@@ -946,7 +946,7 @@ private fun settingsSections(
                         "Recommendations",
                         { recommenderDialog = true },
                         summary = "Whose picks autoplay adds and Home's \"Because you played\" shows. Songs still play from YouTube Music.",
-                        icon = Icons.Rounded.AutoAwesome,
+                        icon = Icons.AutoMirrored.Rounded.QueueMusic,
                         value = pb.recommender.label,
                     )
                 },
@@ -965,7 +965,7 @@ private fun settingsSections(
                     ToggleRow("Don't repeat songs in current session", pb.noRepeatInSession, { v -> AppSettings.updatePlayback { it.copy(noRepeatInSession = v) } }, summary = "Autoplay won't add a song already played or queued this session", icon = Icons.Rounded.History)
                 },
                 Entry("Smart shuffle", "shuffle similar songs mix recommendations playlist album sparkle") {
-                    ToggleRow("Smart shuffle", pb.smartShuffle, { v -> AppSettings.updatePlayback { it.copy(smartShuffle = v) } }, summary = "Mixes a similar song in after every four. Tap the player's shuffle button twice, or long-press Shuffle on a playlist or album", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Smart shuffle", pb.smartShuffle, { v -> AppSettings.updatePlayback { it.copy(smartShuffle = v) } }, summary = "Mixes a similar song in after every four. Tap the player's shuffle button twice, or long-press Shuffle on a playlist or album", icon = Icons.Rounded.Shuffle)
                 },
                 Entry("Hidden songs and artists", "not interested don't play hide block artist unhide suggestions") {
                     val count = hidden.songs.size + hidden.artists.size
@@ -1006,13 +1006,13 @@ private fun settingsSections(
                     })
                 },
                 Entry("Color from artwork", "tint album cover") {
-                    ToggleRow("Color from artwork", theme.colorFromArtwork, { v -> AppSettings.updateTheme { it.copy(colorFromArtwork = v) } }, summary = "Tint the app with the playing song's cover", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Color from artwork", theme.colorFromArtwork, { v -> AppSettings.updateTheme { it.copy(colorFromArtwork = v) } }, summary = "Tint the app with the playing song's cover", icon = Icons.Rounded.Palette)
                 },
                 Entry("Mini player takes the cover's colour", "mini player pill tint colour artwork plain") {
-                    ToggleRow("Mini player takes the cover's colour", ui.miniPlayerTint, { v -> AppSettings.updateUi { it.copy(miniPlayerTint = v) } }, summary = "Off keeps the small player's glass plain, whatever is playing", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Mini player takes the cover's colour", ui.miniPlayerTint, { v -> AppSettings.updateUi { it.copy(miniPlayerTint = v) } }, summary = "Off keeps the small player's glass plain, whatever is playing", icon = Icons.Rounded.Palette)
                 },
                 Entry("Artist pages take the photo's colour", "artist page tint colour photo background") {
-                    ToggleRow("Artist pages take the photo's colour", ui.artistPageTint, { v -> AppSettings.updateUi { it.copy(artistPageTint = v) } }, summary = "Off keeps artist pages in the app's own colours", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Artist pages take the photo's colour", ui.artistPageTint, { v -> AppSettings.updateUi { it.copy(artistPageTint = v) } }, summary = "Off keeps artist pages in the app's own colours", icon = Icons.Rounded.Palette)
                 },
                 Entry("Material You", "wallpaper dynamic color") {
                     val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -1085,7 +1085,7 @@ private fun settingsSections(
                     NavRow("Dock lens", { dockLensDialog = true }, summary = ui.dockLens.summary, icon = Icons.Rounded.Lens, value = ui.dockLens.label)
                 },
                 Entry("Dock icon style", "navigation bar dock tab icon glyphs neon minimal festive") {
-                    NavRow("Dock icon style", { dockIconStyleDialog = true }, summary = ui.dockIconStyle.summary, icon = Icons.Rounded.AutoAwesome, value = ui.dockIconStyle.label)
+                    NavRow("Dock icon style", { dockIconStyleDialog = true }, summary = ui.dockIconStyle.summary, icon = Icons.Rounded.Dock, value = ui.dockIconStyle.label)
                 },
 
                 Entry("Opening animation", "splash start launch intro logo reveal dive") {
@@ -1094,7 +1094,7 @@ private fun settingsSections(
                         ui.openingAnimation,
                         { v -> AppSettings.updateUi { it.copy(openingAnimation = v) } },
                         summary = "When OpenBlast starts, the screen dives into the logo and the app comes through it",
-                        icon = Icons.Rounded.AutoAwesome,
+                        icon = Icons.Rounded.PlayCircle,
                     )
                 },
                 Entry("Page transitions", "navigation animation screen open back slide fade zoom rise") {
@@ -1104,7 +1104,7 @@ private fun settingsSections(
                     ToggleRow("Double-tap to skip 10 seconds", ui.doubleTapSeek, { v -> AppSettings.updateUi { it.copy(doubleTapSeek = v) } }, summary = "Double-tap the left of the cover to go back 10 seconds, the right to go on", icon = Icons.Rounded.TouchApp)
                 },
                 Entry("Glow under the cover", "glow shadow light cover colour bass pulse") {
-                    ToggleRow("Glow under the cover", ui.coverGlow, { v -> AppSettings.updateUi { it.copy(coverGlow = v) } }, summary = "A soft light in the cover's colours under it, swelling a little with the bass", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Glow under the cover", ui.coverGlow, { v -> AppSettings.updateUi { it.copy(coverGlow = v) } }, summary = "A soft light in the cover's colours under it, swelling a little with the bass", icon = Icons.Rounded.Flare)
                 },
                 Entry("Song change", "cover change next song skip animation flip carousel deck fade") {
                     NavRow("Song change", { coverChangeDialog = true }, summary = ui.coverChange.summary, icon = Icons.Rounded.SwapHoriz, value = ui.coverChange.label)
@@ -1218,7 +1218,7 @@ private fun settingsSections(
                         { v -> AppSettings.updateUi { it.copy(liquidGlass = v) } },
                         summary = if (liquidGlassSupported) "Bends and lifts what's behind the floating bars, like Apple's glass"
                         else "Needs Android 13 or newer; frosted glass is used instead",
-                        icon = Icons.Rounded.AutoAwesome,
+                        icon = Icons.Rounded.BlurOn,
                         enabled = liquidGlassSupported && !ui.reduceBlur,
                     )
                 },
@@ -1498,7 +1498,7 @@ private fun settingsSections(
                     NavRow("Replay", onOpenReplay, summary = "Your top songs, artists and albums", icon = Icons.Rounded.BarChart)
                 },
                 Entry("Wrapped", "wrapped story year review stats recap top artists") {
-                    NavRow("Wrapped", onOpenWrapped, summary = "Your listening as an animated story", icon = Icons.Rounded.AutoAwesome)
+                    NavRow("Wrapped", onOpenWrapped, summary = "Your listening as an animated story", icon = Icons.Rounded.Equalizer)
                 },
                 Entry("Export data", "backup json") {
                     NavRow("Export data", { exporter.launchSafely(context, "openblast-backup.json") }, summary = "Settings, history, likes and playlists, as one JSON file", icon = Icons.Rounded.Upload)

@@ -39,7 +39,6 @@ import androidx.compose.material.icons.rounded.AllInclusive
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
@@ -259,7 +258,7 @@ private fun QueueRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, handle:
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (song.smartShuffle) {
-                    Icon(Icons.Rounded.AutoAwesome, "Added by smart shuffle", Modifier.padding(end = 6.dp).size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Rounded.Shuffle, "Added by smart shuffle", Modifier.padding(end = 6.dp).size(16.dp), tint = MaterialTheme.colorScheme.primary)
                 }
                 // Songs queued by hand stay next whatever is started; autoplay's come after everything.
                 when (song.queueTier) {
@@ -523,7 +522,7 @@ fun ModesPill(
             },
             shuffle != ShuffleMode.OFF,
             SegmentMotion.WIGGLE,
-            badge = if (shuffle == ShuffleMode.SMART) Icons.Rounded.AutoAwesome else null,
+            badge = if (shuffle == ShuffleMode.SMART) Icons.Rounded.Shuffle else null,
             enabled = enabled,
         ) {
             val next = shuffle.next(smartShuffleAvailable)

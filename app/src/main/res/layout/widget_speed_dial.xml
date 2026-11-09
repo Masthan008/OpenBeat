@@ -121,7 +121,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_widget_sparkle"
+                android:src="@drawable/ic_widget_radio"
                 android:tint="#FFFFD54F"
                 tools:ignore="UseAppTint" />
 

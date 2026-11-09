@@ -34,8 +34,8 @@ class RoomCode private constructor(val raw: String) {
     fun open(sealed: String): String? = gcmOpen(key, tag, sealed)
 
     /** A link that opens the room in OpenTune. */
-    val appLink: String get() = "opentune://together/$raw"
-    val link: String get() = "https://justshivv.github.io/Opentune/together/#code=$raw"
+    val appLink: String get() = "openblast://together/$raw"
+    val link: String get() = "https://openblast.vercel.app/together/#code=$raw"
 
     override fun equals(other: Any?) = other is RoomCode && other.raw == raw
     override fun hashCode() = raw.hashCode()
@@ -56,8 +56,13 @@ class RoomCode private constructor(val raw: String) {
             val value = text.trim()
             val uri = runCatching { java.net.URI(value) }.getOrNull()
             val candidate = when {
-                uri?.scheme.equals("opentune", ignoreCase = true) && uri?.host == "together" -> uri.path.trim('/')
-                uri?.scheme == "https" && uri.host == "justshivv.github.io" && uri.path.trimEnd('/') == "/Opentune/together" ->
+                (uri?.scheme.equals("openblast", ignoreCase = true) || uri?.scheme.equals("opentune", ignoreCase = true)) && uri?.host == "together" -> uri.path.trim('/')
+                uri?.scheme == "https" && (uri.host == "openblast.vercel.app" || uri.host == "openbeat-site.vercel.app") && (uri.path.trimEnd('/') == "/together" || uri.path.trimEnd('/') == "") ->
+                    (uri.fragment?.takeIf { it.startsWith("code=") }?.removePrefix("code=")
+                        ?: uri.query?.split("&")?.firstOrNull { it.startsWith("code=") }?.removePrefix("code=")
+                        ?: uri.path.trimEnd('/').split('/').lastOrNull()?.takeIf { it != "together" && it.isNotBlank() }
+                        ?: return null)
+                uri?.scheme == "https" && (uri.host == "justshivv.github.io" || uri.host == "masthan008.github.io") && (uri.path.trimEnd('/') == "/Opentune/together" || uri.path.trimEnd('/') == "/OpenBeat/together") ->
                     uri.fragment?.takeIf { it.startsWith("code=") }?.removePrefix("code=") ?: return null
                 uri?.scheme != null -> return null
                 else -> value
@@ -70,7 +75,7 @@ class RoomCode private constructor(val raw: String) {
         /** A valid invite URL or printed code in a shared message. */
         fun find(text: String?): RoomCode? {
             text ?: return null
-            Regex("""(?:https://|opentune://)\S+""").findAll(text).forEach { match ->
+            Regex("""(?:https://|openblast://|opentune://)\S+""").findAll(text).forEach { match ->
                 parse(match.value.trimEnd('.', ',', ')'))?.let { return it }
             }
             val group = "[$ALPHABET]{4}"

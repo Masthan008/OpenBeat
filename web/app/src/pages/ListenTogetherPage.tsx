@@ -1,6 +1,6 @@
 import { Check, Copy, Crown, LogOut, Send, UserMinus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router';
+import { useLocation, useParams } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
 import { approve, createRoom, dismissEnded, joinRoom, leaveRoom, parseCode, reject, removeMember, savedName, say, setAskToJoin, setOpen, useRoom } from '@/together/room';
 import type { RoomView } from '@/together/session';
@@ -30,8 +30,13 @@ const PHASE: Record<RoomView['phase'], string> = {
  */
 export default function ListenTogetherPage() {
   const params = useParams();
+  const location = useLocation();
   const view = useRoom((s) => s.view);
-  const invite = parseCode(params.code);
+  const hash = typeof window !== 'undefined' ? window.location.hash : location.hash;
+  const search = typeof window !== 'undefined' ? window.location.search : location.search;
+  const hashCandidate = hash ? (hash.startsWith('#code=') ? hash.slice(6) : hash.startsWith('#') ? hash.slice(1) : hash) : null;
+  const searchCandidate = search ? new URLSearchParams(search).get('code') : null;
+  const invite = parseCode(params.code || hashCandidate || searchCandidate);
   return (
     <div className={settingsUi.centered}>
       <PageHeader title="Listen Together" back={{ to: '/settings', label: 'Settings' }} />
@@ -87,7 +92,7 @@ function Room({ view }: { view: RoomView }) {
   const autoplay = usePlayer((s) => s.autoplay);
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const copy = (what: 'code' | 'link') => {
-    const text = what === 'code' ? pretty(view.code) : `https://justshivv.github.io/Opentune/together/#code=${view.code}`;
+    const text = what === 'code' ? pretty(view.code) : `${typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://openblast.vercel.app"}/together/#code=${view.code}`;
     void navigator.clipboard.writeText(text).then(() => { setCopied(what); setTimeout(() => setCopied(null), 1500); }, () => undefined);
   };
   const ended = view.phase === 'ended';

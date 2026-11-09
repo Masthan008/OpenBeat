@@ -1,6 +1,6 @@
 import { useRemoteConfig } from '@/config/remote';
 import { syncPublished } from '@/addons/client';
-import { Clock, RefreshCw, Settings, Sparkles, ListMusic } from 'lucide-react';
+import { Clock, RefreshCw, Settings, Radio, ListMusic } from 'lucide-react';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { queryClient } from '@/lib/queryClient';
 import { homeSections } from './homeSections';
@@ -98,7 +98,7 @@ export default function HomePage() {
             <div className="ot-quick-title"><h2>{title('Quick picks')}</h2><PrefetchLink className="ot-circle-button" to="/library/recent" aria-label="Listening history"><Clock size={20} /></PrefetchLink></div>
             {arranged.quick ? <Shelves shelves={[{ ...arranged.quick, title: title('Quick picks') }]} /> : recent.length > 0 && <TrackShelf title={title('Quick picks')} to="/library/recent" tracks={recent} source={RECENT_SOURCE} />}
           </Fragment>;
-          case 'mixes': return <div className="ot-home-links" key={section.id}><PrefetchLink to="/library/made-for-you"><Sparkles size={18} />{title('Made for you')}</PrefetchLink><PrefetchLink to="/library/playlists"><ListMusic size={18} />Your playlists</PrefetchLink></div>;
+          case 'mixes': return <div className="ot-home-links" key={section.id}><PrefetchLink to="/library/made-for-you"><Radio size={18} />{title('Made for you')}</PrefetchLink><PrefetchLink to="/library/playlists"><ListMusic size={18} />Your playlists</PrefetchLink></div>;
           case 'featured-playlists': return runtime.playlists.length > 0 && <Shelves key={section.id} shelves={[{
             title: title('From the community'), strapline: null, layout: 'square', seeAll: null,
             items: runtime.playlists.map(p => ({ kind: 'playlist', id: p.browseId, title: p.title, subtitle: 'OpenBlast picks', artists: [], album: null, thumbnail: p.artwork || null, wide: false, durationSec: null, explicit: false })),

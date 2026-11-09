@@ -96,9 +96,46 @@ export class RoomCode {
   static parse(text: string | null | undefined): string | null {
     if (!text) return null;
     let value = text.trim();
-    const link = value.match(/^(?:https:\/\/(?:masthan008|justshivv)\.github\.io\/(?:OpenBeat|Opentune)\/together\/?#code=|(?:openblast|opentune):\/\/together\/)([A-Za-z0-9-]+)/i);
-    if (link) value = link[1]!;
-    else if (/^[a-z]+:\/\//i.test(value)) return null;
+    if (/^[a-z]+:\/\//i.test(value)) {
+      try {
+        const url = new URL(value);
+        if (url.protocol === 'openblast:' || url.protocol === 'opentune:') {
+          value = url.pathname.replace(/^\/+/g, '') || url.hostname;
+        } else if (
+          url.hostname === 'openblast.vercel.app' ||
+          url.hostname === 'openbeat-site.vercel.app' ||
+          url.hostname.endsWith('.vercel.app') ||
+          url.hostname === 'localhost' ||
+          url.hostname === '127.0.0.1' ||
+          url.hostname === 'masthan008.github.io' ||
+          url.hostname === 'justshivv.github.io' ||
+          url.pathname.includes('/together') ||
+          url.pathname.includes('/invite')
+        ) {
+          const hashMatch = url.hash.match(/#(?:code=)?([A-Za-z0-9-]+)/i);
+          if (hashMatch) {
+            value = hashMatch[1]!;
+          } else {
+            const q = url.searchParams.get('code');
+            if (q) {
+              value = q;
+            } else {
+              const segments = url.pathname.split('/').filter(Boolean);
+              const last = segments[segments.length - 1];
+              if (last && last !== 'together' && last !== 'invite') {
+                value = last;
+              } else {
+                return null;
+              }
+            }
+          }
+        } else {
+          return null;
+        }
+      } catch {
+        return null;
+      }
+    }
     if (!/^[A-Za-z0-9\s-]+$/.test(value)) return null;
     const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     return cleaned.length === CODE_LENGTH && [...cleaned].every((c) => ALPHABET.includes(c)) ? cleaned : null;

@@ -21,6 +21,9 @@ describe('room code, as the Android app makes it', () => {
   it('reads a code in any form people paste it', () => {
     expect(RoomCode.parse('k7qx m2pa-9dte')).toBe(raw);
     expect(RoomCode.parse(`https://justshivv.github.io/Opentune/together/#code=${raw}`)).toBe(raw);
+    expect(RoomCode.parse(`https://openblast.vercel.app/together/#code=${raw}`)).toBe(raw);
+    expect(RoomCode.parse(`https://openblast.vercel.app/together/?code=${raw}`)).toBe(raw);
+    expect(RoomCode.parse(`openblast://together/${raw}`)).toBe(raw);
     expect(RoomCode.parse(`opentune://together/${raw}`)).toBe(raw);
     expect(RoomCode.parse('K7QX-M2PA-9DT0')).toBeNull(); // 0 isn't in the alphabet
     expect(RoomCode.parse('https://example.com/K7QXM2PA9DTE')).toBeNull();

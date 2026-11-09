@@ -124,6 +124,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="openblast.vercel.app" android:pathPrefix="/pair" />
                 <data android:scheme="https" android:host="masthan008.github.io" android:pathPrefix="/OpenBeat/pair/" />
                 <data android:scheme="https" android:host="justshivv.github.io" android:pathPrefix="/Opentune/pair/" />
             </intent-filter>
@@ -141,6 +142,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="openblast.vercel.app" android:pathPrefix="/together" />
                 <data android:scheme="https" android:host="masthan008.github.io" android:pathPrefix="/OpenBeat/together/" />
                 <data android:scheme="https" android:host="justshivv.github.io" android:pathPrefix="/Opentune/together/" />
             </intent-filter>

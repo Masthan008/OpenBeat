@@ -26,8 +26,8 @@ data class AppConfig(
     val sections: List<RemoteSection> = RemoteConfigProtocol.sectionIds.map { RemoteSection(it) },
     val banners: List<RemoteBanner> = emptyList(), val playlists: List<RemotePlaylist> = emptyList(),
     val sources: List<RemoteSource>? = null,
-    val github: String = "https://github.com/justshivv/Opentune", val discord: String = "https://discord.gg/6udrCVh5n",
-    val web: String = "https://justshivv.github.io/Opentune/player/", val tv: String = "https://justshivv.github.io/Opentune/",
+    val github: String = "https://github.com/Masthan008/OpenBeat", val discord: String = "https://discord.gg/6udrCVh5n",
+    val web: String = "https://openblast.vercel.app/", val tv: String = "https://openblast.vercel.app/",
     val timeoutMs: Long = 8000, val retries: Int = 2, val communityPrompts: Boolean = true,
 ) {
     fun title(id: String, fallback: String) = sections.firstOrNull { it.id == id }?.title?.ifBlank { fallback } ?: fallback
