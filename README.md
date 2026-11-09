@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/Masthan008/OpenBeat/releases/latest"><b>Download the latest APK</b></a>
   &nbsp;·&nbsp;
-  <a href="https://justshivv.github.io/Opentune/">Website</a>
+  <a href="https://openbeat-site.vercel.app/">Website</a>
   
   &nbsp;·&nbsp;
   <a href="#features">Features</a>
@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white" alt="Android 8.0+">
   <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin and Jetpack Compose">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="GPL-3.0"></a>
-  <a href="https://justshivv.github.io/Opentune/usage/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fopentune-usage.create-a-new-site-with-sites.workers.dev%2Fv1%2Fbadge%3Flabel%3Dactive%2520this%2520month&cacheSeconds=300" alt="Active installations this month"></a>
+  <a href="https://openbeat-site.vercel.app/"><img src="https://img.shields.io/badge/Website-OpenBlast-00C853?logo=vercel&logoColor=white" alt="OpenBlast Official Site"></a>
 </p>
 
 # OpenBlast
@@ -54,7 +54,7 @@ documented in [service integrations](docs/service-integrations.md).
    from the last several years; `universal` runs on anything.
 2. Open the file and allow your browser or file manager to install apps
    when Android asks.
-3. That's it. OpenTune checks this repository for new releases once a day
+3. That's it. OpenBlast checks this repository for new releases once a day
    and can update itself from Settings.
 
 Each release lists SHA-256 checksums of its APKs in `SHA256SUMS.txt`.
@@ -62,7 +62,7 @@ Each release lists SHA-256 checksums of its APKs in `SHA256SUMS.txt`.
 ### iPhone and iPad
 
 **Requires iOS/iPadOS 16 or newer. An Android APK cannot be installed on an iPhone.**
-OpenTune's native iOS build is an `.ipa`. It is not currently on the App Store or TestFlight.
+OpenBlast's native iOS build is an `.ipa`. It is not currently on the App Store or TestFlight.
 
 **Recommended: SideStore, or classic AltStore (not AltStore PAL)**
 
@@ -74,24 +74,24 @@ OpenTune's native iOS build is an `.ipa`. It is not currently on the App Store o
    **Sources → Add source (+)** and paste this exact URL:
 
    ```text
-   https://justshivv.github.io/Opentune/ios/source.json
+   https://openbeat-site.vercel.app/ios/source.json
    ```
 
-3. Open the new OpenTune source, choose **OpenTune**, and tap **Install**. Let the
+3. Open the new OpenTune source, choose **OpenBlast**, and tap **Install**. Let the
    installer sign the app with your Apple ID. Enter Apple credentials only into the
-   installer you chose, never into an OpenTune issue, chat or website form.
+   installer you chose, never into an OpenBlast issue, chat or website form.
 4. If iOS asks, enable **Settings → Privacy & Security → Developer Mode**, restart,
    and confirm. If it reports an untrusted developer, open **Settings → General →
    VPN & Device Management**, select your developer profile and choose **Trust**.
    These prompts depend on the installer and iOS version.
-5. Open OpenTune from the Home Screen. Keep the same installer/source for updates.
+5. Open OpenBlast from the Home Screen. Keep the same installer/source for updates.
    With a free Apple ID the app normally needs re-signing every **7 days**:
    enable the installer's refresh setup and check its expiry date. Background refresh
    is not guaranteed, so refresh manually in the installer before expiry if needed.
 
 **Alternative: install the IPA with a computer**
 
-1. Download [OpenTune-iOS.ipa](https://github.com/Masthan008/OpenBeat/releases/download/ios/OpenTune-iOS.ipa)
+1. Download [OpenBlast-iOS.ipa](https://github.com/Masthan008/OpenBeat/releases/download/ios/OpenBlast-iOS.ipa)
    and install [Sideloadly](https://sideloadly.io) on your PC or Mac.
 2. Connect and unlock your iPhone/iPad, tap **Trust this computer**, choose that device
    in Sideloadly, select the IPA, then follow its signing/install instructions.
@@ -109,7 +109,7 @@ OpenTune's native iOS build is an `.ipa`. It is not currently on the App Store o
 - **Signing/device limit error**: free Apple accounts have signing and active-app limits.
   Follow your installer's guidance to deactivate another app or wait for a signing slot.
 
-Without sideloading, you can also open the [web player](https://justshivv.github.io/Opentune/player/)
+Without sideloading, you can also open the [web player](https://openbeat-site.vercel.app/player/)
 from Safari and choose **Share → Add to Home Screen**. This installs the web app,
 not the native IPA. Safari on iOS cannot run our Chrome/Firefox session extension,
 so extension-dependent playback and account features are unavailable there.
@@ -135,7 +135,7 @@ your phone instead:
 1. Install the same APK on the TV, from the
    [releases](https://github.com/Masthan008/OpenBeat/releases) page.
 2. On the TV, open Settings → Account and choose Sign in with your phone.
-3. Scan the QR code with a phone that has OpenTune, on the same Wi-Fi,
+3. Scan the QR code with a phone that has OpenBlast, on the same Wi-Fi,
    and approve sharing your YouTube Music session. The code expires after
    two minutes.
 
@@ -151,7 +151,7 @@ load a preview package in developer mode. Your library stays in that
 browser.
 
 Open it at
-[justshivv.github.io/Opentune/player](https://justshivv.github.io/Opentune/player/).
+[openbeat-site.vercel.app/player](https://openbeat-site.vercel.app/player/).
 
 It's a preview, so not everything from the Android app is there. Audio
 add-ons work for direct FLAC over CORS-enabled media, and the audio stays
@@ -193,7 +193,7 @@ on your own connection with no hosted proxy.
 
 - **Two stream engines that switch on their own.**
   InnerTubeX leads and
-  OpenTune's own client walk backs it up; after a failure the walk leads
+  OpenBlast's own client walk backs it up; after a failure the walk leads
   for ten minutes, then InnerTubeX gets its turn back. NewPipeExtractor is
   the last resort. Every stream URL is
   test-fetched before playback, so a dead link fails fast instead of
@@ -201,7 +201,7 @@ on your own connection with no hosted proxy.
 - **Best audio by default.** Streams are ranked by how they sound, not by
   raw bitrate, so Opus wins over AAC at a similar rate, on Wi-Fi and mobile
   data alike, with a lower ceiling available per network.
-- **Quality upgrade.** A few seconds into a song, OpenTune looks for a
+- **Quality upgrade.** A few seconds into a song, OpenBlast looks for a
   clearly better copy (your Premium account's 256 kbps streams, or Opus
   when the song started on AAC) and switches to it without stopping. The
   player's "…" menu has "Upgrade quality" to ask on demand.
@@ -216,7 +216,7 @@ on your own connection with no hosted proxy.
   ones lifted; headphones and Bluetooth are fully levelled.
 - **Your phone's own sound effects.** The audio session is opened to the
   system, so Dolby Atmos, Samsung SoundAlive, the system equalizer and
-  similar effects apply to OpenTune the way they do to the stock players.
+  similar effects apply to OpenBlast the way they do to the stock players.
 - **A clean signal path.** With the equalizer and effects off, decoded
   audio goes to the output untouched. When they're on, the app's own DSP
   adds headroom so boosts don't clip. The player's Signal path dialog
@@ -282,7 +282,7 @@ on your own connection with no hosted proxy.
 - **Cast to a TV or speaker.** The Play on button in the player finds
   Chromecasts (and TVs and speakers with Chromecast built in) and DLNA
   renderers (most smart TVs, many network speakers, Kodi, VLC) on the same
-  Wi-Fi. No Google libraries are involved: OpenTune speaks the Cast
+  Wi-Fi. No Google libraries are involved: OpenBlast speaks the Cast
   protocol and DLNA itself. The phone serves each song to the device from
   a small web server of its own, so downloads, songs on the phone and
   streams all cast. The queue, autoplay, the notification and every button
@@ -329,7 +329,7 @@ on your own connection with no hosted proxy.
   "Catch up" puts you back in step. Rooms run over public Nostr relays with
   no account or server: messages are encrypted with a key from the room
   code and sent as ephemeral events that relays don't keep. Invites open
-  with an `opentune://together/<code>` link or by typing the code.
+  with an `openblast://together/<code>` link or by typing the code.
 - **Picks up where you left off.** The queue, song and position come back
   at launch, paused, without fetching anything until you press play.
 - **Home-screen widget.** Cover, title and artist, with previous,
@@ -379,7 +379,7 @@ on your own connection with no hosted proxy.
   from your own server and JioSaavn still play through JavaFX, which needs
   the system's FFmpeg libraries (libavcodec).
 - **Opens YouTube links.** music.youtube.com, youtube.com and youtu.be
-  links, or links shared to the app, open in OpenTune.
+  links, or links shared to the app, open in OpenBlast.
 
 ### Library and account
 
@@ -451,12 +451,12 @@ on your own connection with no hosted proxy.
   - a **YouTube Music or YouTube playlist link**, read in full however long
     it is, and saved as a playlist on the phone (or played straight away);
   - a **Spotify playlist, album or song link**, pasted or shared to
-    OpenTune from the Spotify app, with no sign-in. Each song is looked up
+    OpenBlast from the Spotify app, with no sign-in. Each song is looked up
     on YouTube Music and the closest catalogue match kept, with misses
     listed. A song link plays straight away. Without signing in, Spotify
     only shows a playlist's first 100 songs;
   - **Export from Spotify**, for every song of any playlist or your Liked
-    Songs: [Exportify](https://exportify.app) opens inside OpenTune, you
+    Songs: [Exportify](https://exportify.app) opens inside OpenBlast, you
     sign in with Spotify there and tap Export (or Export All), and the
     playlist comes straight back ready to import, with no file to find.
     A CSV from Exportify, TuneMyMusic, Soundiiz and others can also be
@@ -476,9 +476,9 @@ on your own connection with no hosted proxy.
   the catalogue doesn't label still show.
 - **Set as ringtone.** A downloaded song or a file on the phone can be the
   ringtone, notification sound or alarm. A downloaded song is copied to
-  Ringtones/OpenTune first, since the system can't read app storage.
+  Ringtones/OpenBlast first, since the system can't read app storage.
 - **Export and import** of settings, history, likes and playlists as JSON.
-- **Updates in the app.** OpenTune checks this repository's GitHub releases
+- **Updates in the app.** OpenBlast checks this repository's GitHub releases
   every few hours: whenever the app comes to the front, hourly while it's
   open, and twice a day in the background, with a notification when a new
   version is out (or whenever you ask). When GitHub's API is over its
@@ -508,7 +508,7 @@ on your own connection with no hosted proxy.
   full-screen cover too. It's made from the cover itself, so it works for
   every song. Off in Settings, or with reduced motion.
 - **Pull to refresh with the logo.** On Home and Podcasts, pulling down
-  brings in the OpenTune mark and fills it with the playing song's colours
+  brings in the OpenBlast mark and fills it with the playing song's colours
   from left to right while the page follows your finger with some give; past the line
   it ticks and pops, while it loads the mark sways like a sound wave with
   light running across it, and when it's done it shrinks away.
@@ -658,7 +658,7 @@ remains lossy. Source availability varies, and a FLAC header does not prove
 that the upstream master was never transcoded. See the
 [source review](docs/audio-source-review.md) for current limitations.
 
-OpenTune does not decrypt Deezer streams. Animated covers use the token
+OpenBlast does not decrypt Deezer streams. Animated covers use the token
 Apple Music's web player ships in its own page, and Spotify Canvas uses the
 web player's token for your own Spotify sign-in, as do the Spotify
 playlists in Library and the personal Spotify suggestions; Spotify's
@@ -749,12 +749,12 @@ folder of cover images (they aren't kept in the repository).
 
 The screenshots and video show real albums, artists and songs to show the
 app as it's used. Cover art, names and recordings belong to their owners.
-OpenTune isn't affiliated with or endorsed by YouTube, Google, Spotify or
+OpenBlast isn't affiliated with or endorsed by YouTube, Google, Spotify or
 any artist or label shown.
 
 ## License
 
-OpenTune is licensed under the GNU General Public License v3.0. See
+OpenBlast is licensed under the GNU General Public License v3.0. See
 [LICENSE](LICENSE). Code, libraries, fonts and data from other projects
 are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), as their
 licences require.
