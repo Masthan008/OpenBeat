@@ -20,7 +20,11 @@ async function handleEdge(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const headerPath = req.headers.get('x-proxy-path');
     const queryPath = url.searchParams.get('__subpath');
-    const rawSubpath = headerPath || (queryPath ? (queryPath.startsWith('/') ? queryPath : `/${queryPath}`) : '') || url.pathname.replace(/^\/api\/yt/, '') || '/';
+    const rawSubpath =
+      headerPath ||
+      (queryPath ? (queryPath.startsWith('/') ? queryPath : `/${queryPath}`) : '') ||
+      url.pathname.replace(/^\/api\/yt/, '') ||
+      '/';
 
     const isSaavn = rawSubpath.startsWith('/saavn');
     const actualSubpath = isSaavn ? rawSubpath.replace(/^\/saavn/, '') : rawSubpath;
@@ -86,6 +90,7 @@ async function handleEdge(req: Request): Promise<Response> {
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
     responseHeaders.delete('content-encoding');
+    responseHeaders.delete('content-length');
 
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
@@ -118,7 +123,11 @@ async function handleNode(req: any, res: any): Promise<void> {
     const parsedUrl = new URL(req.url, 'http://localhost');
     const headerPath = req.headers['x-proxy-path'] as string | undefined;
     const queryPath = parsedUrl.searchParams.get('__subpath');
-    const rawSubpath = headerPath || (queryPath ? (queryPath.startsWith('/') ? queryPath : `/${queryPath}`) : '') || parsedUrl.pathname.replace(/^\/api\/yt/, '') || '/';
+    const rawSubpath =
+      headerPath ||
+      (queryPath ? (queryPath.startsWith('/') ? queryPath : `/${queryPath}`) : '') ||
+      parsedUrl.pathname.replace(/^\/api\/yt/, '') ||
+      '/';
 
     const isSaavn = rawSubpath.startsWith('/saavn');
     const actualSubpath = isSaavn ? rawSubpath.replace(/^\/saavn/, '') : rawSubpath;
@@ -182,16 +191,20 @@ async function handleNode(req: any, res: any): Promise<void> {
       body: bodyBuffer as any,
     });
 
+    const data = await upstreamResponse.arrayBuffer();
+    const buffer = Buffer.from(data);
+
     res.statusCode = upstreamResponse.status;
     upstreamResponse.headers.forEach((val, key) => {
-      if (key !== 'content-encoding') {
+      const lower = key.toLowerCase();
+      if (lower !== 'content-encoding' && lower !== 'content-length' && lower !== 'transfer-encoding') {
         res.setHeader(key, val);
       }
     });
+    res.setHeader('Content-Length', String(buffer.byteLength));
     res.setHeader('Access-Control-Allow-Origin', '*');
 
-    const data = await upstreamResponse.arrayBuffer();
-    return res.end(Buffer.from(data));
+    return res.end(buffer);
   } catch (err: unknown) {
     res.statusCode = 502;
     res.setHeader('Content-Type', 'application/json');
