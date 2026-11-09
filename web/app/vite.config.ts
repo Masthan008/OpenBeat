@@ -24,16 +24,30 @@ function ytDevProxyPlugin(): Plugin {
           const subpath = req.url.replace(/^\/api\/yt/, '') || '/';
           const isSaavn = subpath.startsWith('/saavn');
           const actualSubpath = isSaavn ? subpath.replace(/^\/saavn/, '') : subpath;
-          const targetHost = isSaavn
-            ? 'https://www.jiosaavn.com'
-            : actualSubpath.startsWith('/s/player') || actualSubpath.startsWith('/sw.js_data')
-              ? 'https://www.youtube.com'
-              : 'https://music.youtube.com';
+          const proxyTarget = req.headers['x-proxy-target'] as string | undefined;
+          let targetHost: string;
+          if (isSaavn) {
+            targetHost = 'https://www.jiosaavn.com';
+          } else if (proxyTarget && (proxyTarget.includes('youtube.com') || proxyTarget.includes('jiosaavn.com'))) {
+            targetHost = proxyTarget;
+          } else if (actualSubpath.startsWith('/youtubei/')) {
+            targetHost = 'https://music.youtube.com';
+          } else {
+            targetHost = 'https://www.youtube.com';
+          }
 
           const targetUrl = new URL(actualSubpath, targetHost);
           const headers = new Headers();
-          headers.set('Origin', isSaavn ? 'https://www.jiosaavn.com' : 'https://music.youtube.com');
-          headers.set('Referer', isSaavn ? 'https://www.jiosaavn.com/' : 'https://music.youtube.com/');
+          if (targetHost.includes('jiosaavn.com')) {
+            headers.set('Origin', 'https://www.jiosaavn.com');
+            headers.set('Referer', 'https://www.jiosaavn.com/');
+          } else if (targetHost.includes('music.youtube.com')) {
+            headers.set('Origin', 'https://music.youtube.com');
+            headers.set('Referer', 'https://music.youtube.com/');
+          } else {
+            headers.set('Origin', 'https://www.youtube.com');
+            headers.set('Referer', 'https://www.youtube.com/');
+          }
           headers.set(
             'User-Agent',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',

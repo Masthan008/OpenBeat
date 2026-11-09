@@ -86,6 +86,7 @@ async function simpleRequestFetch(input: RequestInfo | URL, init?: RequestInit):
     const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'http://localhost:5173';
     const proxyUrl = new URL(`/api/yt${url.pathname}${url.search}`, origin);
     const forwardHeaders = new Headers(init?.headers ?? request?.headers);
+    forwardHeaders.set('x-proxy-target', url.origin);
     if (!forwardHeaders.has('Content-Type') && body != null) {
       forwardHeaders.set('Content-Type', 'text/plain;charset=UTF-8');
     }
@@ -174,25 +175,36 @@ async function create(fetch: typeof globalThis.fetch = simpleRequestFetch): Prom
   };
 
   const firstRun = await isFirstRun();
+  const hasBridge = getBridge() !== null;
+  let yt: Innertube;
   try {
-    const yt = await Innertube.create({
+    yt = await Innertube.create({
       cache: new UniversalCache(true),
       fetch,
-      retrieve_player: true,
+      retrieve_player: hasBridge,
     });
-    const client = yt.session.context.client;
-    trackLog.i(
-      `InnerTube ready in ${Math.round(performance.now() - started)}ms ` +
-        `(${client.clientName} ${client.clientVersion}, player ${yt.session.player?.player_id ?? 'none'})`,
-    );
-    return yt;
-  } catch (error) {
-    // YouTube.js falls back to a locally generated session when /sw.js_data
-    // fails on the very first run, and those sessions fail playback later.
-    // Dropping its cache makes the next start retry for real (Kira does this).
-    if (firstRun) indexedDB.deleteDatabase('youtubei.js');
-    trackLog.e(`InnerTube failed to start: ${String(error)}`);
-    throw error;
+  } catch (initialError) {
+    // If retrieving the player script failed (e.g. YouTube changed player bundle URL or offline),
+    // fall back cleanly to running without the player script so browsing, exploration, and search work reliably
+    trackLog.w(`InnerTube create with player failed: ${String(initialError)}; falling back without player`);
+    try {
+      yt = await Innertube.create({
+        cache: new UniversalCache(false),
+        fetch,
+        retrieve_player: false,
+      });
+    } catch (error) {
+      if (firstRun) indexedDB.deleteDatabase('youtubei.js');
+      trackLog.e(`InnerTube failed to start: ${String(error)}`);
+      throw error;
+    }
   }
+
+  const client = yt.session.context.client;
+  trackLog.i(
+    `InnerTube ready in ${Math.round(performance.now() - started)}ms ` +
+      `(${client.clientName} ${client.clientVersion}, player ${yt.session.player?.player_id ?? 'none'})`,
+  );
+  return yt;
 }
 

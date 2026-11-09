@@ -24,22 +24,30 @@ export default async function handler(req: Request): Promise<Response> {
     const isSaavn = subpath.startsWith('/saavn');
     const actualSubpath = isSaavn ? subpath.replace(/^\/saavn/, '') : subpath;
 
-    let targetHost = 'https://music.youtube.com';
+    const proxyTarget = req.headers.get('x-proxy-target');
+    let targetHost: string;
     if (isSaavn) {
       targetHost = 'https://www.jiosaavn.com';
-    } else if (actualSubpath.startsWith('/s/player') || actualSubpath.startsWith('/sw.js_data')) {
+    } else if (proxyTarget && (proxyTarget.includes('youtube.com') || proxyTarget.includes('jiosaavn.com'))) {
+      targetHost = proxyTarget;
+    } else if (actualSubpath.startsWith('/youtubei/')) {
+      targetHost = 'https://music.youtube.com';
+    } else {
       targetHost = 'https://www.youtube.com';
     }
 
     const targetUrl = new URL(actualSubpath + url.search, targetHost);
 
     const forwardHeaders = new Headers();
-    if (isSaavn) {
+    if (targetHost.includes('jiosaavn.com')) {
       forwardHeaders.set('Origin', 'https://www.jiosaavn.com');
       forwardHeaders.set('Referer', 'https://www.jiosaavn.com/');
-    } else {
+    } else if (targetHost.includes('music.youtube.com')) {
       forwardHeaders.set('Origin', 'https://music.youtube.com');
       forwardHeaders.set('Referer', 'https://music.youtube.com/');
+    } else {
+      forwardHeaders.set('Origin', 'https://www.youtube.com');
+      forwardHeaders.set('Referer', 'https://www.youtube.com/');
     }
 
     forwardHeaders.set(
