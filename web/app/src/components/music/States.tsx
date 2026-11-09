@@ -24,13 +24,30 @@ export function NeedsExtension({ what = 'YouTube Music' }: { what?: string }) {
 }
 
 export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const isNetworkOrCors = error instanceof Error && /failed to fetch|networkerror|cors/i.test(error.message);
   return (
     <div className={stateStyles.state}>
-      <p className={stateStyles.title}>Couldn’t load this page</p>
-      <p className={stateStyles.detail}>{error instanceof Error ? error.message : String(error)}</p>
-      <button className={stateStyles.button} onClick={onRetry}>
-        Try Again
-      </button>
+      <p className={stateStyles.title}>{isNetworkOrCors ? 'Extension Required' : 'Couldn’t load this page'}</p>
+      <p className={stateStyles.detail}>
+        {isNetworkOrCors
+          ? 'Browsing and playing YouTube Music in your browser requires the OpenBlast companion extension to bypass cross-origin restrictions.'
+          : error instanceof Error
+            ? error.message
+            : String(error)}
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
+        {isNetworkOrCors && (
+          <PrefetchLink to="/extension" className={stateStyles.button}>
+            Get the Extension
+          </PrefetchLink>
+        )}
+        <button
+          className={`${stateStyles.button} ${isNetworkOrCors ? 'bg-quinary text-primary hover:bg-quaternary' : ''}`}
+          onClick={onRetry}
+        >
+          Try Again
+        </button>
+      </div>
     </div>
   );
 }

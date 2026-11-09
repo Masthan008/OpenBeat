@@ -69,7 +69,7 @@ export default function ArtistPage() {
   );
   usePageTint(tint);
 
-  // Standalone web browsing allowed; missing extension handled non-blockingly
+  if (missing) return <NeedsExtension what="artists" />;
   if (artist.isError) return <LoadError error={artist.error} onRetry={() => void artist.refetch()} />;
   if (!artist.data) return <ArtistSkeleton />;
 

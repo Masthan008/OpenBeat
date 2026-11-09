@@ -8,7 +8,8 @@ import { hrefFor } from '@/components/music/links';
 import { playTrack } from '@/components/music/play';
 import { SearchField } from '@/components/music/SearchField';
 import { Shelves } from '@/components/music/ShelfView';
-import { EmptyState, LoadError } from '@/components/music/States';
+import { EmptyState, LoadError, NeedsExtension } from '@/components/music/States';
+import { useYouTubeReady } from '@/data/music/queries';
 import { useCategories, useSearch } from '@/data/music/queries';
 import type { MusicItem, SearchResults, Shelf } from '@/data/music/types';
 import { SkeletonBlock, SkeletonLine } from '@/components/Skeleton';
@@ -226,6 +227,7 @@ function Landing({ onSelectSearch }: { onSelectSearch: (q: string) => void }) {
 
 /** Search: sticky bar with category chips, recent searches, and grouped results. */
 export default function SearchPage() {
+  const { missing } = useYouTubeReady();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
   const [category, setCategory] = useState<SearchCategory>('all');
@@ -239,7 +241,7 @@ export default function SearchPage() {
     <>
       <div className="sticky top-0 z-[calc(var(--z-default)+5)] flex flex-col items-center px-(--body-gutter) pt-3 pb-2 before:absolute before:inset-0 before:-z-1 before:bg-header-material before:[backdrop-filter:saturate(180%)_blur(20px)]">
         <SearchField initial={query} onSearch={handleSearch} />
-        {query && (
+        {query && !missing && (
           <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-2 [scrollbar-width:none]">
             {SEARCH_CATEGORIES.map((cat) => (
               <button
@@ -257,7 +259,13 @@ export default function SearchPage() {
           </div>
         )}
       </div>
-      {query ? <Results query={query} category={category} /> : <Landing onSelectSearch={handleSearch} />}
+      {missing ? (
+        <NeedsExtension what="and search YouTube Music" />
+      ) : query ? (
+        <Results query={query} category={category} />
+      ) : (
+        <Landing onSelectSearch={handleSearch} />
+      )}
     </>
   );
 }
