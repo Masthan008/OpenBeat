@@ -1,3 +1,4 @@
+import { getBridge } from '@/extension/bridge';
 import { desEcbDecrypt } from './des';
 
 /** JioSaavn's catalog API, reached through the extension (it sends no CORS headers); its CDN plays directly. */
@@ -9,7 +10,10 @@ export type Wanted = { title: string; artist: string; album?: string | null; dur
 export type SaavnStream = { url: string; kbps: number; title: string };
 
 function api(call: string, params: Record<string, string>): string {
-  const url = new URL(`${JIOSAAVN_ORIGIN}/api.php`);
+  const hasBridge = typeof window !== 'undefined' && getBridge() !== null;
+  const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'http://localhost:5173';
+  const base = hasBridge ? JIOSAAVN_ORIGIN : `${origin}/api/yt/saavn`;
+  const url = new URL(`${base}/api.php`);
   url.search = new URLSearchParams({ __call: call, _format: 'json', _marker: '0', ctx: 'android', api_version: '4', ...params }).toString();
   return url.href;
 }

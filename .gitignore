@@ -35,7 +35,6 @@ node_modules/
 /web/**/dist/
 /web/extension/.wxt/
 /web/extension/.output/
-/web/app/public/downloads/
 /web/extension/public/icon/
 /web/fixtures/
 

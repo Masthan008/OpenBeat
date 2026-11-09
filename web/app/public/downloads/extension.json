@@ -1,0 +1,8 @@
+{
+  "version": "0.1.7",
+  "builtAt": "2026-11-05T22:19:34.548Z",
+  "files": {
+    "chrome": "openblast-extension-chrome.zip",
+    "firefox": "openblast-extension-firefox.zip"
+  }
+}

@@ -21,6 +21,9 @@ import {
   type QueueSource,
 } from '@/playback/queue/timeline';
 import { trackLog } from '@/playback/trackLog';
+import { iframeDeck } from '@/playback/youtube/iframeDeck';
+import { findJioSaavn } from '@/addons/jiosaavn';
+import { fetchJson, useAddons } from '@/addons/client';
 import type { LoadedTrack, YouTubeEngine } from '@/playback/youtube/engine';
 
 export interface NowPlaying {
@@ -335,10 +338,21 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   togglePlay() {
-    const audio = getAudio();
     const { nowPlaying, status, index } = get();
     if (!nowPlaying) return;
     if (partyHooks?.intercept({ kind: 'toggle' })) return;
+    if (iframeDeck.isActive()) {
+      if (iframeDeck.isPaused()) {
+        iframeDeck.play();
+        usePlayer.setState({ status: 'playing' });
+      } else {
+        iframeDeck.pause();
+        usePlayer.setState({ status: 'paused' });
+      }
+      intent();
+      return;
+    }
+    const audio = getAudio();
     if (!audio || status === 'error') {
       // A stopped or failed track starts again from where it was.
       void startAt(index, { startSec: audio?.currentTime ?? 0 });
@@ -352,10 +366,16 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   seek(seconds) {
-    const audio = getAudio();
-    if (!audio) return;
     if (partyHooks?.intercept({ kind: 'seek', ms: seconds * 1000 })) return;
     cancelCrossfade();
+    if (iframeDeck.isActive()) {
+      iframeDeck.seekTo(seconds);
+      updatePositionState();
+      intent();
+      return;
+    }
+    const audio = getAudio();
+    if (!audio) return;
     audio.currentTime = Math.max(0, Math.min(seconds, audio.duration || seconds));
     updatePositionState();
     intent();
@@ -402,13 +422,17 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   setVolume(volume) {
-    set({ volume: Math.min(1, Math.max(0, volume)), muted: false });
+    const v = Math.min(1, Math.max(0, volume));
+    set({ volume: v, muted: false });
+    if (iframeDeck.isActive()) iframeDeck.setVolume(v);
     applyVolumes();
     saveSettings(get());
   },
 
   toggleMute() {
-    set({ muted: !get().muted });
+    const muted = !get().muted;
+    set({ muted });
+    if (iframeDeck.isActive()) iframeDeck.setMuted(muted);
     applyVolumes();
     saveSettings(get());
   },
@@ -449,16 +473,6 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   cancelCrossfade();
   const token = ++loadToken;
 
-  if (!extensionReady()) {
-    usePlayer.setState({
-      index: at,
-      nowPlaying: { ...hintOf(entry.track), title: entry.track.title || 'Can’t play this here yet' },
-      status: 'error',
-      error: 'YouTube playback needs the OpenBlast extension.',
-    });
-    return;
-  }
-
   usePlayer.setState({ index: at, nowPlaying: hintOf(entry.track), status: 'loading', error: null });
   updateMediaSession(usePlayer.getState().nowPlaying);
   try {
@@ -467,9 +481,74 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     all[1 - active]!.engine.stop().catch(() => {});
     deck.gain = 1;
     applyVolumes();
-    const track = await deck.engine.load(entry.track.videoId, { startSec, autoplay, hint: searchHintOf(entry.track) });
-    if (token !== loadToken) return;
-    applyTrack(track, entry.track);
+
+    if (!extensionReady()) {
+      iframeDeck.bindAudioElement(deck.audio);
+      iframeDeck.setOnEnded(() => {
+        void advance(true).then(intent);
+      });
+
+      // Tier 1: Try JioSaavn 320 kbps first for native HTML5 audio with 10-band Web Audio Equalizer
+      const addons = useAddons.getState();
+      let playedDirect = false;
+      if (addons.jioSaavn) {
+        try {
+          const saavn = await findJioSaavn(
+            { title: entry.track.title, artist: artistNames(entry.track), duration: entry.track.durationSec ?? 0 },
+            fetchJson,
+          );
+          if (saavn?.stream && token === loadToken) {
+            iframeDeck.setActive(false);
+            deck.audio.src = saavn.stream.url;
+            deck.audio.crossOrigin = 'anonymous';
+            if (startSec > 0) deck.audio.currentTime = startSec;
+            if (autoplay) await deck.audio.play();
+            applyTrack(
+              {
+                videoId: entry.track.videoId,
+                title: saavn.stream.title || entry.track.title,
+                author: artistNames(entry.track),
+                durationSec: entry.track.durationSec ?? 0,
+                thumbnails: [{ url: entry.track.thumbnail ?? '', width: 500, height: 500 }],
+                client: 'JIOSAAVN',
+                format: 'JioSaavn · AAC 320 kbps',
+                loudnessDb: null,
+              },
+              entry.track,
+            );
+            playedDirect = true;
+          }
+        } catch {
+          // Fall through to YouTube IFrame player
+        }
+      }
+
+      if (!playedDirect && token === loadToken) {
+        // Tier 2: Universal YouTube IFrame Player fallback (zero extension, zero CORS issues worldwide)
+        await iframeDeck.load(entry.track.videoId, { startSec, autoplay });
+        if (token !== loadToken) return;
+        applyTrack(
+          {
+            videoId: entry.track.videoId,
+            title: entry.track.title,
+            author: artistNames(entry.track),
+            durationSec: entry.track.durationSec ?? 0,
+            thumbnails: [{ url: entry.track.thumbnail ?? '', width: 500, height: 500 }],
+            client: 'WEB' as any,
+            format: 'YouTube Web Audio Deck',
+            loudnessDb: null,
+          },
+          entry.track,
+        );
+      }
+    } else {
+      // Tier 3: Extension installed, use high-bitrate Opus MSE player
+      iframeDeck.setActive(false);
+      const track = await deck.engine.load(entry.track.videoId, { startSec, autoplay, hint: searchHintOf(entry.track) });
+      if (token !== loadToken) return;
+      applyTrack(track, entry.track);
+    }
+
     if (!autoplay) usePlayer.setState({ status: 'paused' });
     afterTrackStarted();
   } catch (error) {

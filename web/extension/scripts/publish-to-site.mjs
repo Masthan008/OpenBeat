@@ -3,9 +3,11 @@
 //
 //   web/app/public/downloads/openblast-extension-chrome (<version>).zip
 //   web/app/public/downloads/openblast-extension-firefox (<version>).zip
+//   web/app/public/downloads/openblast-extension-chrome.zip
+//   web/app/public/downloads/openblast-extension-firefox.zip
 //   web/app/public/downloads/extension.json    { version, builtAt, files }
 //
-// Each zip holds a single folder (opentune-extension-<browser> (<version>)/) rather than
+// Each zip holds a single folder (openblast-extension-<browser> (<version>)/) rather than
 // loose files, so "Extract here" leaves one tidy folder to load unpacked.
 //
 //   corepack pnpm --dir web/extension package   (builds both, then runs this)
@@ -47,9 +49,14 @@ for (const [browser, folder] of Object.entries(builds)) {
     entries[`${parent}/${relative(root, file).split(sep).join('/')}`] = readFileSync(file);
   }
   const name = `${parent}.zip`;
-  writeFileSync(join(target, name), zipSync(entries, { level: 9 }));
-  files[browser] = name;
-  console.log(`${folder} -> app/public/downloads/${name} (${parent}/, v${version})`);
+  const zipBuffer = zipSync(entries, { level: 9 });
+  writeFileSync(join(target, name), zipBuffer);
+
+  // Also write the unversioned name to guarantee stable static URLs without SPA fallback
+  const staticName = `openblast-extension-${browser}.zip`;
+  writeFileSync(join(target, staticName), zipBuffer);
+  files[browser] = staticName;
+  console.log(`${folder} -> app/public/downloads/${name} & ${staticName} (${parent}/, v${version})`);
 }
 
 writeFileSync(
@@ -57,4 +64,3 @@ writeFileSync(
   `${JSON.stringify({ version, builtAt: new Date().toISOString(), files }, null, 2)}\n`,
 );
 console.log(`app/public/downloads/extension.json (v${version})`);
-

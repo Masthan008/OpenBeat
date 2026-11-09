@@ -161,7 +161,7 @@ export default function ExtensionPage() {
             <a
               className={`${settingsUi.group} ${settingsUi.download} mt-3`}
               href={forUpdate.href}
-              download
+              download={`openblast-extension-${forUpdate.browser}.zip`}
               onClick={() => setUpdating(true)}
             >
               <span className={settingsUi.updateDot} aria-hidden="true" />
@@ -195,7 +195,7 @@ export default function ExtensionPage() {
               key={browser}
               className={settingsUi.download}
               href={href}
-              download
+              download={`openblast-extension-${browser}.zip`}
               onClick={() => setChosen(browser)}
             >
               <Icon size={28} className="text-primary" />

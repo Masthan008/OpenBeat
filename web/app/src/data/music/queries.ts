@@ -90,8 +90,10 @@ export function useYouTubeReady(): { ready: boolean; missing: boolean; hasExtens
   const extension = useExtension();
   const hasExtension = extension.state === 'present' && extension.extension.info.capabilities.includes('yt');
   return {
-    ready: hasExtension,
-    missing: extension.state === 'missing',
+    // Browsing and search queries are always ready via the edge proxy or extension
+    ready: true,
+    // Do not block pages with the NeedsExtension screen; browsing and playback work universally
+    missing: false,
     hasExtension,
   };
 }

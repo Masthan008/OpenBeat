@@ -75,16 +75,35 @@ async function simpleRequestFetch(input: RequestInfo | URL, init?: RequestInit):
   }
 
   const method = init?.method ?? request?.method ?? 'GET';
+  let body: BodyInit | null | undefined = init?.body;
+  if (body === undefined && request && method !== 'GET' && method !== 'HEAD') {
+    body = await request.text();
+  }
+
+  // If no extension bridge is present, route through our serverless edge proxy to bypass CORS
+  const hasBridge = getBridge() !== null;
+  if (!hasBridge) {
+    const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'http://localhost:5173';
+    const proxyUrl = new URL(`/api/yt${url.pathname}${url.search}`, origin);
+    const forwardHeaders = new Headers(init?.headers ?? request?.headers);
+    if (!forwardHeaders.has('Content-Type') && body != null) {
+      forwardHeaders.set('Content-Type', 'text/plain;charset=UTF-8');
+    }
+    return fetch(proxyUrl, {
+      method,
+      headers: forwardHeaders,
+      body: body ?? null,
+      signal: init?.signal ?? request?.signal ?? null,
+      credentials: 'omit',
+    });
+  }
+
   const source = new Headers(init?.headers ?? request?.headers);
   const headers = new Headers();
   source.forEach((value, key) => {
     if (SAFELISTED.has(key.toLowerCase())) headers.set(key, value);
   });
 
-  let body: BodyInit | null | undefined = init?.body;
-  if (body === undefined && request && method !== 'GET' && method !== 'HEAD') {
-    body = await request.text();
-  }
   if (body != null) headers.set('Content-Type', 'text/plain;charset=UTF-8');
 
   return fetch(url, {
