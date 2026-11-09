@@ -1,4 +1,24 @@
-import { ArrowUpRight, AudioLines, ChevronRight, Info, Mic2, Palette, Play, Plug, Smartphone, Tv, Users, Wrench, type LucideIcon } from 'lucide-react';
+import {
+  ArrowUpRight,
+  AudioLines,
+  ChevronRight,
+  Globe,
+  HardDrive,
+  Info,
+  Mic2,
+  Palette,
+  Play,
+  Plug,
+  Search,
+  Sliders,
+  Smartphone,
+  Trash2,
+  Tv,
+  Users,
+  Wrench,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
 import { SiApplemusic, SiDiscord, SiGithub, SiSpotify, SiYoutubemusic } from 'react-icons/si';
@@ -14,6 +34,9 @@ import { useYtAuth } from '@/extension/useYtAuth';
 import { useRoom } from '@/together/room';
 import { useHistorySettings } from '@/playback/historyReporting';
 import { CROSSFADE_CHOICES, usePlayer } from '@/state/player';
+import { EqualizerView } from '@/components/music/EqualizerView';
+import { clearAllOfflineStorage, getOfflineStorageStats } from '@/playback/download';
+import { EmptyState } from '@/components/music/States';
 import { AppleMusicIntegration, AppleMusicToggles, CanvasToggle, LyricSourcesAccess, SpotifyIntegration, Toggle } from './IntegrationSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { settingsUi } from './settingsStyles';
@@ -57,15 +80,25 @@ function ExternalRow({ href, icon, title, value }: { href: string; icon: ReactNo
   );
 }
 
+export interface SettingSectionConfig {
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  color: string;
+  keywords: string[];
+}
+
 /** The page's sections, in order: the side list and the chips are built from this. */
-const SECTIONS: { id: string; name: string; icon: LucideIcon; color: string }[] = [
-  { id: 'audio', name: 'Audio', icon: AudioLines, color: '#e5483a' },
-  { id: 'playback', name: 'Playback', icon: Play, color: '#2fa84f' },
-  { id: 'lyrics', name: 'Lyrics', icon: Mic2, color: '#d6337a' },
-  { id: 'appearance', name: 'Appearance', icon: Palette, color: '#8e5bd8' },
-  { id: 'accounts', name: 'Accounts', icon: Plug, color: '#3478f6' },
-  { id: 'together', name: 'Listen Together', icon: Users, color: '#f08a24' },
-  { id: 'about', name: 'About', icon: Info, color: '#636366' },
+export const SECTIONS: SettingSectionConfig[] = [
+  { id: 'audio', name: 'Audio', icon: AudioLines, color: '#e5483a', keywords: ['flac', 'lossless', 'jiosaavn', 'sources', 'stream', 'bitrate'] },
+  { id: 'playback', name: 'Playback', icon: Play, color: '#2fa84f', keywords: ['autoplay', 'crossfade', 'queue'] },
+  { id: 'equalizer', name: 'Equalizer', icon: Sliders, color: '#f59e0b', keywords: ['eq', 'bass', 'treble', 'vocal', 'preamp', 'bands', 'speed', 'pitch', 'dsp', 'sound'] },
+  { id: 'storage', name: 'Downloads & Storage', icon: HardDrive, color: '#10b981', keywords: ['downloads', 'offline', 'cache', 'storage', 'clear', 'database'] },
+  { id: 'lyrics', name: 'Lyrics', icon: Mic2, color: '#d6337a', keywords: ['kugou', 'musixmatch', 'genius', 'timing', 'syllables'] },
+  { id: 'appearance', name: 'Appearance', icon: Palette, color: '#8e5bd8', keywords: ['theme', 'dark', 'light', 'oled', 'accent', 'motion', 'color'] },
+  { id: 'accounts', name: 'Accounts', icon: Plug, color: '#3478f6', keywords: ['youtube', 'spotify', 'discord', 'apple', 'extension'] },
+  { id: 'together', name: 'Listen Together', icon: Users, color: '#f08a24', keywords: ['party', 'rooms', 'friends', 'sync'] },
+  { id: 'about', name: 'About', icon: Info, color: '#636366', keywords: ['version', 'github', 'website', 'android', 'tv', 'openblast'] },
 ];
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
@@ -77,9 +110,8 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
-/** Which section the reader is in: the last one whose title has passed the top quarter of the page. */
-function useCurrentSection(): string {
-  const [current, setCurrent] = useState(SECTIONS[0]!.id);
+function useCurrentSection(sections: SettingSectionConfig[]): string {
+  const [current, setCurrent] = useState(sections[0]?.id ?? 'audio');
   useEffect(() => {
     const page = document.getElementById('scrollable-page');
     if (!page) return;
@@ -87,13 +119,14 @@ function useCurrentSection(): string {
     const read = () => {
       frame = 0;
       const line = page.getBoundingClientRect().top + page.clientHeight * 0.25;
-      let at = SECTIONS[0]!.id;
-      for (const { id } of SECTIONS) {
+      let at = sections[0]?.id ?? 'audio';
+      for (const { id } of sections) {
         const el = document.getElementById(`set-${id}`);
         if (el && el.getBoundingClientRect().top <= line) at = id;
       }
-      // At the very bottom the last sections may never reach the line; the last one is current.
-      if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) at = SECTIONS[SECTIONS.length - 1]!.id;
+      if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4 && sections.length > 0) {
+        at = sections[sections.length - 1]!.id;
+      }
       setCurrent(at);
     };
     const onScroll = () => { frame ||= requestAnimationFrame(read); };
@@ -103,7 +136,7 @@ function useCurrentSection(): string {
       page.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [sections]);
   return current;
 }
 
@@ -112,13 +145,8 @@ function jumpTo(id: string) {
   document.getElementById(`set-${id}`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
 }
 
-/**
- * The sections, twice over: a list beside the page where there's room for one,
- * chips that stick to the top where there isn't. CSS shows one or the other.
- */
-function SectionNav({ current }: { current: string }) {
+function SectionNav({ current, sections }: { current: string; sections: SettingSectionConfig[] }) {
   const chips = useRef<HTMLDivElement>(null);
-  // Keeps the current chip in view as the page scrolls past sections.
   useEffect(() => {
     const row = chips.current;
     const chip = row?.querySelector<HTMLElement>('[aria-current="true"]');
@@ -131,7 +159,7 @@ function SectionNav({ current }: { current: string }) {
   return (
     <>
       <nav className="ot-set-side" aria-label="Settings sections">
-        {SECTIONS.map(({ id, name, icon: Icon, color }) => (
+        {sections.map(({ id, name, icon: Icon, color }) => (
           <button key={id} aria-current={current === id || undefined} onClick={() => jumpTo(id)}>
             <span style={{ background: color }}><Icon size={14} strokeWidth={2.4} /></span>
             {name}
@@ -139,7 +167,7 @@ function SectionNav({ current }: { current: string }) {
         ))}
       </nav>
       <div ref={chips} className="ot-set-jump" role="navigation" aria-label="Settings sections">
-        {SECTIONS.map(({ id, name }) => (
+        {sections.map(({ id, name }) => (
           <button key={id} aria-current={current === id || undefined} onClick={() => jumpTo(id)}>{name}</button>
         ))}
       </div>
@@ -156,7 +184,14 @@ function youtubeText(auth: ReturnType<typeof useYtAuth>): string {
   return active ? active.name : 'Signed in';
 }
 
-/** The extension's state at the top: what works now, and the one thing to do next. */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+}
+
 function ExtensionCard() {
   const extension = useExtension();
   const yt = useYtAuth();
@@ -179,11 +214,6 @@ function ExtensionCard() {
   );
 }
 
-/**
- * Settings (SettingsSheet on the phone): sources and playback first, then
- * how it looks, the accounts it uses, Listen Together, and where OpenTune
- * lives. One page, grouped rows, a list of the sections beside it.
- */
 export default function SettingsPage() {
   const links = useRemoteConfig((s) => s.config.data.links);
   const extension = useExtension();
@@ -200,7 +230,32 @@ export default function SettingsPage() {
   const jioSaavn = useAddons((st) => st.jioSaavn);
   const sourcesText = [sources ? `${sources} add-on${sources === 1 ? '' : 's'}` : 'No add-ons', jioSaavn ? 'JioSaavn' : null].filter(Boolean).join(' · ');
   const present = extension.state === 'present';
-  const current = useCurrentSection();
+
+  const [search, setSearch] = useState('');
+  const [storageStats, setStorageStats] = useState<{ count: number; totalBytes: number }>({ count: 0, totalBytes: 0 });
+  const [clearing, setClearing] = useState(false);
+
+  useEffect(() => {
+    getOfflineStorageStats().then(setStorageStats);
+  }, []);
+
+  const handleClearCache = async () => {
+    if (!window.confirm('Remove all offline downloaded music from local browser cache?')) return;
+    setClearing(true);
+    await clearAllOfflineStorage();
+    const stats = await getOfflineStorageStats();
+    setStorageStats(stats);
+    setClearing(false);
+  };
+
+  const filteredSections = SECTIONS.filter((s) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase().trim();
+    return s.name.toLowerCase().includes(q) || s.keywords.some((k) => k.includes(q));
+  });
+
+  const current = useCurrentSection(filteredSections);
+
   const discordText = !present
     ? 'Needs the extension'
     : discord.state === 'ready' && discord.discord.connected
@@ -214,129 +269,211 @@ export default function SettingsPage() {
   return (
     <div className="ot-settings">
       <div className="ot-set-frame">
-      <PageHeader title="Settings" />
-      <div className="ot-set-layout">
-        <SectionNav current={current} />
-        <div className="ot-set-content">
-          <ExtensionCard />
+        <PageHeader title="Settings" />
 
-          <Section id="audio" title="Audio">
-            <section className={settingsUi.group}>
-              <LinkRow to="/settings/addons" icon={<Glyph Icon={AudioLines} color="#e5483a" />} title="Audio sources" value={sourcesText} />
-            </section>
-            <p className={settingsUi.footer}>Lossless FLAC from add-ons and 320 kbps from JioSaavn, in the order you choose. YouTube Music is the fallback.</p>
-          </Section>
-
-          <Section id="playback" title="Playback">
-            <section className={settingsUi.group}>
-              <Toggle label="AutoPlay" detail="When the queue ends, keep playing similar music." checked={autoplay} onChange={setAutoplay} />
-              <label className={settingsUi.controlRow}>
-                <span className={settingsUi.rowText}>
-                  <span>Crossfade</span>
-                  <span className={settingsUi.rowDetail}>Blend the end of one song into the next.</span>
-                </span>
-                <select className={settingsUi.select} value={crossfadeSec} onChange={(e) => setCrossfade(Number(e.currentTarget.value))}>
-                  {CROSSFADE_CHOICES.map((seconds) => (
-                    <option key={seconds} value={seconds}>
-                      {seconds === 0 ? 'Off' : `${seconds} seconds`}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </section>
-          </Section>
-
-          <Section id="lyrics" title="Lyrics">
-            <section className={settingsUi.group}>
-              <button className={`${settingsUi.integrationPlain} ${settingsUi.linkRow}`} onClick={() => setLyrics(true)}>
-                <span className={settingsUi.rowText}>
-                  <span>Lyric sources</span>
-                  <span className={settingsUi.rowDetail}>Order, sources, syllable timing</span>
-                </span>
-                <ChevronRight size={16} className="text-tertiary" />
+        {/* Real-time Settings Search Bar */}
+        <div className="relative mb-6 mx-(--body-gutter)">
+          <div className="relative flex items-center">
+            <Search size={16} className="absolute left-3.5 text-secondary pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search settings (equalizer, audio, cache, theme, lyrics...)"
+              className="w-full h-10 pl-10 pr-9 rounded-xl bg-quinary text-sm text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-key transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 text-secondary hover:text-primary transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X size={16} />
               </button>
-              <div className={settingsUi.integrationPlain}>
-                <span className={settingsUi.rowText}>
-                  <span>Access to lyric sites</span>
-                  <span className={settingsUi.rowDetail}>KuGou, Musixmatch, Genius and others answer only the extension.</span>
-                </span>
-                {present ? <LyricSourcesAccess /> : <span className={settingsUi.value}>Needs the extension</span>}
-              </div>
-            </section>
-          </Section>
-
-          <Section id="appearance" title="Appearance">
-            <AppearanceSettings />
-          </Section>
-
-          <Section id="accounts" title="Accounts & integrations">
-            <section className={settingsUi.group}>
-              <div className={settingsUi.integration}>
-                <Glyph Icon={SiYoutubemusic} color="#ffffff" ink="#ff0033" />
-                <span className={settingsUi.integrationName}>YouTube Music</span>
-                <span className={settingsUi.value}><span>{youtubeText(yt)}</span></span>
-              </div>
-              <div className={settingsUi.integration}>
-                <Glyph Icon={SiSpotify} color="#1ed760" ink="#000000" />
-                <span className={settingsUi.integrationName}>Spotify</span>
-                {present ? <SpotifyIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
-              </div>
-              <LinkRow to="/settings/discord" icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Discord" value={discordText} />
-              <LinkRow
-                to="/extension"
-                icon={<Glyph Icon={MdOutlineExtension} color="#636366" />}
-                title="OpenBlast Extension"
-                value={present ? `v${extension.extension.info.version}` : 'Not installed'}
-              />
-            </section>
-            <section className={`${settingsUi.group} mt-3 empty:hidden`}>
-              <Toggle
-                label="Share listening activity to YouTube"
-                detail={
-                  present && !extension.extension.info.capabilities.includes('yt.stats')
-                    ? 'Update the OpenBlast extension to share: this version can’t send plays to YouTube.'
-                    : 'Songs you play here go to your YouTube Music history and shape its recommendations.'
-                }
-                checked={shareHistory}
-                onChange={setShareHistory}
-              />
-              <CanvasToggle />
-            </section>
-            <h3 className={settingsUi.sectionHeader}>Apple Music</h3>
-            <section className={settingsUi.group}>
-              <div className={settingsUi.integration}>
-                <Glyph Icon={SiApplemusic} color="#fa2d48" />
-                <span className={settingsUi.integrationName}>Access to Apple Music</span>
-                {present ? <AppleMusicIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
-              </div>
-              <AppleMusicToggles />
-            </section>
-            <p className={settingsUi.footer}>Animated covers and artist art from Apple Music’s public pages. No Apple Music account needed.</p>
-          </Section>
-
-          <Section id="together" title="Listen Together">
-            <section className={settingsUi.group}>
-              <LinkRow
-                to="/settings/listen-together"
-                icon={<Glyph Icon={Users} color="#f08a24" />}
-                title="Rooms"
-                value={room && room.phase !== 'ended' ? (room.hosting ? 'Hosting a room' : `In ${room.hostName ?? 'a'}’s room`) : 'With the web player and the Android app'}
-              />
-            </section>
-          </Section>
-
-          <Section id="about" title="About">
-            <section className={settingsUi.group}>
-              <ExternalRow href={config.androidAppUrl} icon={<Glyph Icon={Smartphone} color="#2fa84f" />} title="OpenBlast for Android" value="Download" />
-              <ExternalRow href={links.tv} icon={<Glyph Icon={Tv} color="#3478f6" />} title="OpenBlast on TV" />
-              <ExternalRow href="https://masthan008.github.io/OpenBeat/addons/" icon={<Glyph Icon={Wrench} color="#e5483a" />} title="Build an add-on" />
-              <ExternalRow href={links.github} icon={<Glyph Icon={SiGithub} color="#24292f" />} title="Source code" value="GitHub" />
-              <ExternalRow href={links.discord} icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Community" value="Discord" />
-            </section>
-            <p className={settingsUi.footer}>OpenBlast is free and open source. Report bugs, suggest features and share the add-ons you build.</p>
-          </Section>
+            )}
+          </div>
         </div>
-      </div>
+
+        {filteredSections.length === 0 ? (
+          <EmptyState
+            title="No settings found"
+            detail={`No settings matched “${search}”. Try searching for audio, equalizer, storage, or theme.`}
+          />
+        ) : (
+          <div className="ot-set-layout">
+            <SectionNav current={current} sections={filteredSections} />
+            <div className="ot-set-content">
+              {!search && <ExtensionCard />}
+
+              {filteredSections.some((s) => s.id === 'audio') && (
+                <Section id="audio" title="Audio">
+                  <section className={settingsUi.group}>
+                    <LinkRow to="/settings/addons" icon={<Glyph Icon={AudioLines} color="#e5483a" />} title="Audio sources" value={sourcesText} />
+                  </section>
+                  <p className={settingsUi.footer}>Lossless FLAC from add-ons and 320 kbps from JioSaavn, in the order you choose. YouTube Music is the fallback.</p>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'playback') && (
+                <Section id="playback" title="Playback">
+                  <section className={settingsUi.group}>
+                    <Toggle label="AutoPlay" detail="When the queue ends, keep playing similar music." checked={autoplay} onChange={setAutoplay} />
+                    <label className={settingsUi.controlRow}>
+                      <span className={settingsUi.rowText}>
+                        <span>Crossfade</span>
+                        <span className={settingsUi.rowDetail}>Blend the end of one song into the next.</span>
+                      </span>
+                      <select className={settingsUi.select} value={crossfadeSec} onChange={(e) => setCrossfade(Number(e.currentTarget.value))}>
+                        {CROSSFADE_CHOICES.map((seconds) => (
+                          <option key={seconds} value={seconds}>
+                            {seconds === 0 ? 'Off' : `${seconds} seconds`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </section>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'equalizer') && (
+                <Section id="equalizer" title="Equalizer & Sound">
+                  <section className={`${settingsUi.group} p-4`}>
+                    <EqualizerView />
+                  </section>
+                  <p className={settingsUi.footer}>
+                    Shape audio frequencies using Web Audio API peaking filters with custom preamp gain and speed presets.
+                  </p>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'storage') && (
+                <Section id="storage" title="Downloads & Storage">
+                  <section className={settingsUi.group}>
+                    <LinkRow
+                      to="/library/downloaded"
+                      icon={<Glyph Icon={HardDrive} color="#10b981" />}
+                      title="Offline Downloaded Music"
+                      value={`${storageStats.count} track${storageStats.count === 1 ? '' : 's'} (${formatBytes(storageStats.totalBytes)})`}
+                    />
+                    <button
+                      onClick={handleClearCache}
+                      disabled={clearing || storageStats.count === 0}
+                      className={`${settingsUi.integrationPlain} ${settingsUi.linkRow} text-left disabled:opacity-50 cursor-pointer`}
+                    >
+                      <span className={settingsUi.rowText}>
+                        <span className="text-red-400">Clear offline cache</span>
+                        <span className={settingsUi.rowDetail}>Remove all offline downloaded audio blobs from browser storage.</span>
+                      </span>
+                      <Trash2 size={16} className="flex-none text-red-400" />
+                    </button>
+                  </section>
+                  <p className={settingsUi.footer}>Downloaded songs are saved locally in browser IndexedDB storage for full offline playback.</p>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'lyrics') && (
+                <Section id="lyrics" title="Lyrics">
+                  <section className={settingsUi.group}>
+                    <button className={`${settingsUi.integrationPlain} ${settingsUi.linkRow}`} onClick={() => setLyrics(true)}>
+                      <span className={settingsUi.rowText}>
+                        <span>Lyric sources</span>
+                        <span className={settingsUi.rowDetail}>Order, sources, syllable timing</span>
+                      </span>
+                      <ChevronRight size={16} className="text-tertiary" />
+                    </button>
+                    <div className={settingsUi.integrationPlain}>
+                      <span className={settingsUi.rowText}>
+                        <span>Access to lyric sites</span>
+                        <span className={settingsUi.rowDetail}>KuGou, Musixmatch, Genius and others answer only the extension.</span>
+                      </span>
+                      {present ? <LyricSourcesAccess /> : <span className={settingsUi.value}>Needs the extension</span>}
+                    </div>
+                  </section>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'appearance') && (
+                <Section id="appearance" title="Appearance">
+                  <AppearanceSettings />
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'accounts') && (
+                <Section id="accounts" title="Accounts & integrations">
+                  <section className={settingsUi.group}>
+                    <div className={settingsUi.integration}>
+                      <Glyph Icon={SiYoutubemusic} color="#ffffff" ink="#ff0033" />
+                      <span className={settingsUi.integrationName}>YouTube Music</span>
+                      <span className={settingsUi.value}><span>{youtubeText(yt)}</span></span>
+                    </div>
+                    <div className={settingsUi.integration}>
+                      <Glyph Icon={SiSpotify} color="#1ed760" ink="#000000" />
+                      <span className={settingsUi.integrationName}>Spotify</span>
+                      {present ? <SpotifyIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
+                    </div>
+                    <LinkRow to="/settings/discord" icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Discord" value={discordText} />
+                    <LinkRow
+                      to="/extension"
+                      icon={<Glyph Icon={MdOutlineExtension} color="#636366" />}
+                      title="OpenBlast Extension"
+                      value={present ? `v${extension.extension.info.version}` : 'Not installed'}
+                    />
+                  </section>
+                  <section className={`${settingsUi.group} mt-3 empty:hidden`}>
+                    <Toggle
+                      label="Share listening activity to YouTube"
+                      detail={
+                        present && !extension.extension.info.capabilities.includes('yt.stats')
+                          ? 'Update the OpenBlast extension to share: this version can’t send plays to YouTube.'
+                          : 'Songs you play here go to your YouTube Music history and shape its recommendations.'
+                      }
+                      checked={shareHistory}
+                      onChange={setShareHistory}
+                    />
+                    <CanvasToggle />
+                  </section>
+                  <h3 className={settingsUi.sectionHeader}>Apple Music</h3>
+                  <section className={settingsUi.group}>
+                    <div className={settingsUi.integration}>
+                      <Glyph Icon={SiApplemusic} color="#fa2d48" />
+                      <span className={settingsUi.integrationName}>Access to Apple Music</span>
+                      {present ? <AppleMusicIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
+                    </div>
+                    <AppleMusicToggles />
+                  </section>
+                  <p className={settingsUi.footer}>Animated covers and artist art from Apple Music’s public pages. No Apple Music account needed.</p>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'together') && (
+                <Section id="together" title="Listen Together">
+                  <section className={settingsUi.group}>
+                    <LinkRow
+                      to="/settings/listen-together"
+                      icon={<Glyph Icon={Users} color="#f08a24" />}
+                      title="Rooms"
+                      value={room && room.phase !== 'ended' ? (room.hosting ? 'Hosting a room' : `In ${room.hostName ?? 'a'}’s room`) : 'With the web player and the Android app'}
+                    />
+                  </section>
+                </Section>
+              )}
+
+              {filteredSections.some((s) => s.id === 'about') && (
+                <Section id="about" title="About">
+                  <section className={settingsUi.group}>
+                    <ExternalRow href="https://openbeat-site.vercel.app/" icon={<Glyph Icon={Globe} color="#3478f6" />} title="Official Website" value="Visit" />
+                    <ExternalRow href={config.androidAppUrl} icon={<Glyph Icon={Smartphone} color="#2fa84f" />} title="OpenBlast for Android" value="Download" />
+                    <ExternalRow href={links.tv} icon={<Glyph Icon={Tv} color="#8e5bd8" />} title="OpenBlast on TV" />
+                    <ExternalRow href="https://openbeat-site.vercel.app/" icon={<Glyph Icon={Wrench} color="#e5483a" />} title="Add-on Directory" />
+                    <ExternalRow href={links.github} icon={<Glyph Icon={SiGithub} color="#24292f" />} title="Source code" value="GitHub" />
+                    <ExternalRow href={links.discord} icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Community" value="Discord" />
+                  </section>
+                  <p className={settingsUi.footer}>OpenBlast v1.0.9 is free and open source. Report bugs, suggest features and share your music.</p>
+                </Section>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       {lyrics && (
         <Suspense fallback={null}>

@@ -19,7 +19,7 @@ export default function AlbumPage() {
   usePageTint(useArtworkColor(album.data?.thumbnail));
   const motion = useAlbumMotion(album.data?.title, album.data?.artists.map((a) => a.name).join(', '));
 
-  if (missing) return <NeedsExtension />;
+  // Standalone web browsing allowed; missing extension handled non-blockingly
   if (album.isError) return <LoadError error={album.error} onRetry={() => void album.refetch()} />;
   if (!album.data) return <AlbumSkeleton />;
 

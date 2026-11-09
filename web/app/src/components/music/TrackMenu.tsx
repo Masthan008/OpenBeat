@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, ListEnd, ListPlus, ListStart, MoreHorizontal, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, ListEnd, ListPlus, ListStart, MoreHorizontal, Star } from 'lucide-react';
+import { downloadTrack } from '@/playback/download';
 import { useCallback, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import {
@@ -90,6 +91,9 @@ function TrackMenuItems({ track, onClose }: { track: Track; onClose: () => void 
       </MenuItem>
       <MenuItem icon={<ListEnd size={15} />} onSelect={() => (onClose(), addToQueue([track]))}>
         Add to Queue
+      </MenuItem>
+      <MenuItem icon={<Download size={15} />} onSelect={() => { onClose(); void downloadTrack(track); }}>
+        Download
       </MenuItem>
       {signedIn && <AccountItems track={track} onClose={onClose} onPlaylists={() => setView('playlists')} />}
     </>

@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { Clock, X } from 'lucide-react';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { Artwork } from '@/components/music/Artwork';
 import { CategoryTiles } from '@/components/music/CategoryTiles';
@@ -6,11 +8,19 @@ import { hrefFor } from '@/components/music/links';
 import { playTrack } from '@/components/music/play';
 import { SearchField } from '@/components/music/SearchField';
 import { Shelves } from '@/components/music/ShelfView';
-import { EmptyState, LoadError, NeedsExtension } from '@/components/music/States';
-import { useCategories, useSearch, useYouTubeReady } from '@/data/music/queries';
+import { EmptyState, LoadError } from '@/components/music/States';
+import { useCategories, useSearch } from '@/data/music/queries';
 import type { MusicItem, SearchResults, Shelf } from '@/data/music/types';
 import { SkeletonBlock, SkeletonLine } from '@/components/Skeleton';
 import { ShelfSkeleton } from '@/skeletons/ShelfSkeleton';
+import {
+  SEARCH_CATEGORIES,
+  addSearchHistory,
+  clearSearchHistory,
+  getSearchHistory,
+  removeSearchHistoryItem,
+  type SearchCategory,
+} from './searchHistory';
 
 const KIND_LABEL: Record<MusicItem['kind'], string> = {
   song: 'Song',
@@ -24,13 +34,27 @@ const KIND_LABEL: Record<MusicItem['kind'], string> = {
   unknown: '',
 };
 
-/** Apple's result shelves, in its order, from results grouped by kind. */
-function shelvesFor(results: SearchResults): Shelf[] {
+/** Grouped shelves filtered by category. */
+function shelvesFor(results: SearchResults, category: SearchCategory): Shelf[] {
   const shelf = (title: string, items: MusicItem[], layout: Shelf['layout']): Shelf | null =>
     items.length ? { title, strapline: null, layout, items, seeAll: null } : null;
+
+  if (category === 'songs') {
+    return [shelf('Songs', results.songs, 'tracks')].filter((s): s is Shelf => !!s);
+  }
+  if (category === 'albums') {
+    return [shelf('Albums & Movie Soundtracks', results.albums, 'square')].filter((s): s is Shelf => !!s);
+  }
+  if (category === 'artists') {
+    return [shelf('Artists', results.artists, 'circle')].filter((s): s is Shelf => !!s);
+  }
+  if (category === 'playlists') {
+    return [shelf('Playlists', results.playlists, 'square')].filter((s): s is Shelf => !!s);
+  }
+
   return [
     shelf('Artists', results.artists, 'circle'),
-    shelf('Albums', results.albums, 'square'),
+    shelf('Albums & Soundtracks', results.albums, 'square'),
     shelf('Songs', results.songs, 'tracks'),
     shelf('Playlists', results.playlists, 'square'),
     shelf('Videos', results.videos, 'video'),
@@ -38,11 +62,10 @@ function shelvesFor(results: SearchResults): Shelf[] {
 }
 
 const sectionTitle = 'mx-(--body-gutter) mt-3 type-title-2-emphasized';
-// Top Results: 3 columns, gap 20px; 118px cards with 90px artwork.
 const topGrid =
   'mx-(--body-gutter) mt-3 mb-8 grid grid-cols-3 gap-5 max-lg:grid-cols-2 max-[607px]:grid-cols-[minmax(0,1fr)] max-[607px]:gap-1';
 const top =
-  'grid min-h-[118px] grid-cols-[90px_minmax(0,1fr)] items-center gap-x-3.5 rounded-[8px] bg-quinary px-3 py-3.5 text-left hover:bg-quaternary';
+  'grid min-h-[118px] grid-cols-[90px_minmax(0,1fr)] items-center gap-x-3.5 rounded-[8px] bg-quinary px-3 py-3.5 text-left hover:bg-quaternary transition-colors';
 const topText = 'flex min-w-0 flex-col gap-0.5';
 
 function TopResult({ item }: { item: MusicItem }) {
@@ -94,22 +117,29 @@ function ResultsSkeleton() {
   );
 }
 
-function Results({ query }: { query: string }) {
+function Results({ query, category }: { query: string; category: SearchCategory }) {
   const search = useSearch(query);
   if (search.isError) return <LoadError error={search.error} onRetry={() => void search.refetch()} />;
   if (!search.data) return <ResultsSkeleton />;
   const results = search.data;
-  const shelves = shelvesFor(results);
-  if (!results.top.length && !shelves.length) {
-    return <EmptyState title="No Results" detail={`Try a new search for something other than “${query}”.`} />;
+  const shelves = shelvesFor(results, category);
+
+  let topItems = results.top;
+  if (category === 'songs') topItems = topItems.filter((i) => i.kind === 'song');
+  else if (category === 'albums') topItems = topItems.filter((i) => i.kind === 'album');
+  else if (category === 'artists') topItems = topItems.filter((i) => i.kind === 'artist');
+  else if (category === 'playlists') topItems = topItems.filter((i) => i.kind === 'playlist' || i.kind === 'spotify-playlist');
+
+  if (!topItems.length && !shelves.length) {
+    return <EmptyState title="No Results" detail={`Try searching for something other than “${query}”.`} />;
   }
   return (
     <>
-      {results.top.length > 0 && (
+      {topItems.length > 0 && (
         <section aria-label="Top Results">
           <h2 className={sectionTitle}>Top Results</h2>
           <div className={topGrid}>
-            {results.top.map((item) => (
+            {topItems.map((item) => (
               <TopResult key={item.id} item={item} />
             ))}
           </div>
@@ -120,38 +150,114 @@ function Results({ query }: { query: string }) {
   );
 }
 
-function Landing() {
-  const categories = useCategories();
-  if (categories.isError) return <LoadError error={categories.error} onRetry={() => void categories.refetch()} />;
-  if (!categories.data) {
-    return (
-      <div className="mx-(--body-gutter) mt-[46px] mb-8 grid grid-cols-4 gap-5" aria-busy="true">
-        {Array.from({ length: 12 }, (_, i) => (
-          <SkeletonBlock key={i} aspectRatio="16 / 9" radius="var(--radius-artwork-large)" />
+function RecentSearches({ onSelect }: { onSelect: (q: string) => void }) {
+  const [history, setHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    setHistory(getSearchHistory());
+  }, []);
+
+  if (!history.length) return null;
+
+  return (
+    <section className="mx-(--body-gutter) mt-4 mb-6" aria-label="Recent Searches">
+      <div className="flex items-center justify-between mb-2.5">
+        <h2 className="type-title-3 font-semibold text-primary">Recent Searches</h2>
+        <button
+          onClick={() => {
+            clearSearchHistory();
+            setHistory([]);
+          }}
+          className="text-xs font-medium text-tertiary hover:text-primary transition-colors cursor-pointer"
+        >
+          Clear all
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {history.map((term) => (
+          <div
+            key={term}
+            className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-quinary hover:bg-quaternary text-sm text-secondary hover:text-white transition-colors"
+          >
+            <button
+              onClick={() => onSelect(term)}
+              className="inline-flex items-center gap-1.5 text-left cursor-pointer"
+            >
+              <Clock size={13} className="text-tertiary" />
+              <span>{term}</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeSearchHistoryItem(term);
+                setHistory(getSearchHistory());
+              }}
+              aria-label={`Remove ${term}`}
+              className="text-tertiary hover:text-white transition-colors p-0.5 rounded-full hover:bg-white/10"
+            >
+              <X size={12} />
+            </button>
+          </div>
         ))}
       </div>
-    );
-  }
-  return <CategoryTiles groups={categories.data.map((g) => ({ ...g, title: g.title || 'Browse Categories' }))} />;
+    </section>
+  );
 }
 
-/** Search (report §6): a sticky bar with the field, then categories or grouped results. */
+function Landing({ onSelectSearch }: { onSelectSearch: (q: string) => void }) {
+  const categories = useCategories();
+  return (
+    <>
+      <RecentSearches onSelect={onSelectSearch} />
+      {categories.isError ? (
+        <LoadError error={categories.error} onRetry={() => void categories.refetch()} />
+      ) : !categories.data ? (
+        <div className="mx-(--body-gutter) mt-6 mb-8 grid grid-cols-4 gap-5 max-md:grid-cols-2" aria-busy="true">
+          {Array.from({ length: 12 }, (_, i) => (
+            <SkeletonBlock key={i} aspectRatio="16 / 9" radius="var(--radius-artwork-large)" />
+          ))}
+        </div>
+      ) : (
+        <CategoryTiles groups={categories.data.map((g) => ({ ...g, title: g.title || 'Browse Categories' }))} />
+      )}
+    </>
+  );
+}
+
+/** Search: sticky bar with category chips, recent searches, and grouped results. */
 export default function SearchPage() {
-  const { missing } = useYouTubeReady();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
+  const [category, setCategory] = useState<SearchCategory>('all');
+
+  const handleSearch = (q: string) => {
+    if (q) addSearchHistory(q);
+    setParams(q ? { q } : {});
+  };
 
   return (
     <>
-      {/*
-        The sticky scope bar holding the field (report §6: 62px, padding 12px 0). Its glass sits on
-        a layer behind it, not on the bar: an element with a backdrop-filter is a backdrop root, so
-        the suggestions inside it could only blur the bar itself and showed the page underneath unblurred.
-      */}
-      <div className="sticky top-0 z-[calc(var(--z-default)+5)] flex justify-center px-(--body-gutter) py-3 before:absolute before:inset-0 before:-z-1 before:bg-header-material before:[backdrop-filter:saturate(180%)_blur(20px)]">
-        <SearchField initial={query} onSearch={(q) => setParams(q ? { q } : {})} />
+      <div className="sticky top-0 z-[calc(var(--z-default)+5)] flex flex-col items-center px-(--body-gutter) pt-3 pb-2 before:absolute before:inset-0 before:-z-1 before:bg-header-material before:[backdrop-filter:saturate(180%)_blur(20px)]">
+        <SearchField initial={query} onSearch={handleSearch} />
+        {query && (
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-2 [scrollbar-width:none]">
+            {SEARCH_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
+                className={`whitespace-nowrap px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  category === cat.id
+                    ? 'bg-key-bg text-white shadow-sm'
+                    : 'bg-quinary text-secondary hover:bg-quaternary hover:text-white'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {missing ? <NeedsExtension what="and search YouTube Music" /> : query ? <Results query={query} /> : <Landing />}
+      {query ? <Results query={query} category={category} /> : <Landing onSelectSearch={handleSearch} />}
     </>
   );
 }

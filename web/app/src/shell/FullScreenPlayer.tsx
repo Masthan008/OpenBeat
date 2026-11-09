@@ -1,4 +1,7 @@
-import { Maximize, Minimize, X } from 'lucide-react';
+import { Download, Maximize, Minimize, PictureInPicture2, Sliders, X } from 'lucide-react';
+import { EqualizerView } from '@/components/music/EqualizerView';
+import { downloadTrack } from '@/playback/download';
+import { togglePictureInPicture } from '@/playback/pip';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router';
 import {
@@ -149,7 +152,7 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
   const video = useHasVideo(nowPlaying?.videoId);
   // The right-hand column: the lyrics, Up Next, or nothing. Lyrics toggle bottom left, Up Next bottom right.
   // A music video opens on its own, without the lyrics.
-  const [panel, setPanel] = useState<'lyrics' | 'queue' | null>(() =>
+  const [panel, setPanel] = useState<'lyrics' | 'queue' | 'eq' | null>(() =>
     appearance.playerStyle === 'lyrics-first' && !(nowPlaying && useVideo.getState().videoId === nowPlaying.videoId) ? 'lyrics' : null,
   );
   // Once the listener picks a column, a video arriving late doesn't take it away.
@@ -217,7 +220,8 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
   const hasLyrics = !!lyrics.data || (lyrics.isPending && lyrics.fetchStatus !== 'idle');
   const showLyrics = panel === 'lyrics' && hasLyrics;
   const showQueue = panel === 'queue';
-  const togglePanel = (p: 'lyrics' | 'queue') => {
+  const showEq = panel === 'eq';
+  const togglePanel = (p: 'lyrics' | 'queue' | 'eq') => {
     picked.current = true;
     setPanel((on) => (on === p ? null : p));
   };
@@ -273,7 +277,7 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
   const { videoId, title, artist } = nowPlaying;
   const album = track?.album ?? null;
   // With a right-hand column; on narrow windows that column fills the screen and the controls sit under it, without the artwork.
-  const column = showLyrics || showQueue;
+  const column = showLyrics || showQueue || showEq;
   // A music video on its own fills the window.
   const theater = video && !column;
   // ...and hides the controls and the pointer while it plays undisturbed.
@@ -322,6 +326,25 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
           {browserFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
         </button>
       )}
+      <button
+        data-morph-fade
+        className={`${corner} top-4 right-16`}
+        aria-label="Picture in Picture"
+        title="Floating Mini-Player"
+        onClick={() => void togglePictureInPicture()}
+      >
+        <PictureInPicture2 size={18} />
+      </button>
+      <button
+        data-morph-fade
+        className={`${corner} ot-toggle top-4 right-28 aria-pressed:text-primary`}
+        aria-label="Equalizer"
+        title="Equalizer & Sound"
+        aria-pressed={showEq}
+        onClick={() => togglePanel('eq')}
+      >
+        <Sliders size={18} />
+      </button>
 
       {/* Apple's grid areas "controls lyrics": the artwork column, then the lyrics. */}
       <div
@@ -416,6 +439,16 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
               className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary"
               size={18}
             />
+            {track && (
+              <button
+                onClick={() => void downloadTrack(track)}
+                className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary transition-colors cursor-pointer"
+                title="Download Track"
+                aria-label="Download"
+              >
+                <Download size={16} />
+              </button>
+            )}
           </div>
 
           <Scrubber />
@@ -435,6 +468,17 @@ export function FullScreenPlayer({ closing = false, onClosed }: { closing?: bool
             data-morph-fade
           >
             <UpNext />
+          </section>
+        )}
+        {showEq && (
+          <section className="flex min-h-0 animate-fade-in flex-col self-stretch p-5 rounded-2xl bg-black/45 backdrop-blur-md overflow-y-auto" aria-label="Equalizer" data-morph-fade>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="type-title-3 font-semibold text-primary">Graphic Equalizer</h3>
+              <button onClick={() => togglePanel('eq')} className="text-secondary hover:text-primary p-1 cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+            <EqualizerView />
           </section>
         )}
       </div>

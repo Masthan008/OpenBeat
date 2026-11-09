@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
 import { CircleLockup, SquareLockup, VideoLockup } from '@/components/music/Lockups';
@@ -7,8 +7,57 @@ import { TrackList } from '@/components/music/TrackList';
 import { isLibrarySection, LIBRARY_SECTIONS } from '@/data/music/library';
 import { useLibrary, useSignedIn, useYouTubeReady } from '@/data/music/queries';
 import { useYtAuth } from '@/extension/useYtAuth';
+import { getOfflineTracks, type OfflineTrackRecord } from '@/playback/download';
+import type { Track } from '@/data/music/types';
 import { PlainSkeleton } from '@/skeletons/PageSkeletons';
 import { seeAllGrid, seeAllTracks } from './pageStyles';
+
+function DownloadedLibrary() {
+  const [tracks, setTracks] = useState<OfflineTrackRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getOfflineTracks().then((items) => {
+      setTracks(items);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <PlainSkeleton />;
+
+  const musicTracks: Track[] = tracks.map((t, i) => ({
+    videoId: t.videoId,
+    title: t.title,
+    artists: t.artists,
+    album: t.album ? { name: t.album.name, id: t.album.id } : null,
+    durationSec: t.durationSec,
+    explicit: false,
+    thumbnail: t.thumbnail,
+    index: i + 1,
+    plays: null,
+  }));
+
+  const context = { source: { title: 'Downloaded', type: 'playlist' as const, id: 'downloaded' } };
+
+  return (
+    <>
+      <PageHeader title="Downloaded Music" />
+      {tracks.length === 0 ? (
+        <EmptyState
+          title="No downloaded tracks"
+          detail="Download songs using the ⋯ menu on any track to listen offline."
+        />
+      ) : (
+        <>
+          <div className="mx-(--body-gutter) mb-4 flex items-center justify-between text-xs text-secondary">
+            <span>{tracks.length} song{tracks.length === 1 ? '' : 's'} saved offline</span>
+          </div>
+          <TrackList tracks={musicTracks} variant="playlist" source={context.source} />
+        </>
+      )}
+    </>
+  );
+}
 
 /** Asks for the next page when [target] scrolls into view. */
 function useLoadMore(onVisible: (() => void) | null) {
@@ -39,6 +88,7 @@ export default function LibraryPage() {
   );
 
   if (!isLibrarySection(section)) return <Navigate to="/home" replace />;
+  if (section === 'downloaded') return <DownloadedLibrary />;
   const title = LIBRARY_SECTIONS[section].title;
   if (missing) return <NeedsExtension what="your library" />;
   if (auth.state === 'ready' && !signedIn) {

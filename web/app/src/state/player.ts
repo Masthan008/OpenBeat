@@ -151,6 +151,7 @@ function getDecks(): Promise<Deck[]> {
         applyTrack(track, entry?.track.videoId === track.videoId ? entry.track : undefined);
       };
       bindElement(deck, n);
+      void import('@/playback/dsp').then((m) => m.initAudioDsp(deck.audio));
       return deck;
     });
     applyVolumes();
@@ -419,7 +420,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
 }));
 
 // For browser-driven tests, next to __bcAudio.
-if (import.meta.env.DEV) Object.assign(window, { __bcPlayer: usePlayer });
+if (typeof window !== 'undefined' && import.meta.env.DEV) Object.assign(window, { __bcPlayer: usePlayer });
 
 function positions(queue: readonly QueueEntry[]): Map<string, number> {
   return new Map(queue.map((e, i) => [e.entryId, i]));

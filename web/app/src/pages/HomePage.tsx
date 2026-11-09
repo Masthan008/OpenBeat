@@ -64,14 +64,7 @@ export default function HomePage() {
   const banners = runtime.banners.filter(b => b.enabled && b.platforms.includes('web')).map(b => (
     <section className="ot-banner" key={b.id} aria-label={b.title}><h2>{b.title}</h2><p>{b.body}</p><div><a href={b.url} target="_blank" rel="noreferrer">{b.action} ↗</a></div></section>
   ));
-  if (missing) {
-    return (
-      <>
-        {heading}{banners}
-        <NeedsExtension />
-      </>
-    );
-  }
+  // Standalone web browsing allowed without extension blocking
   // Only a failed first page replaces the feed; a later one is shown under it.
   if (home.isError && !home.data) {
     return (

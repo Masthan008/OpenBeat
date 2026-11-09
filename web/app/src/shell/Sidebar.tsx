@@ -1,4 +1,4 @@
-import { ArrowUpRight, ListMusic, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
+import { ArrowUpRight, Download, ListMusic, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
 import { SiSpotify } from 'react-icons/si';
@@ -38,11 +38,14 @@ const PRIMARY: NavItem[] = [
   { to: '/new', label: 'New', Icon: NewIcon },
 ];
 
+const DownloadNavIcon = (props: NavIconProps) => <Download size={props.size ?? 20} className={props.className} />;
+
 const LIBRARY_ICONS: Record<Exclude<LibrarySection, 'playlists'>, NavItem['Icon']> = {
   recent: RecentlyAddedIcon,
   artists: ArtistsIcon,
   albums: AlbumsIcon,
   songs: SongsIcon,
+  downloaded: DownloadNavIcon,
   'made-for-you': MadeForYouIcon,
 };
 

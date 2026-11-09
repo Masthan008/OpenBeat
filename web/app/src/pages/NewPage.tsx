@@ -9,14 +9,7 @@ export default function NewPage() {
   const { missing } = useYouTubeReady();
   const explore = useExplore();
 
-  if (missing) {
-    return (
-      <>
-        <PageHeader title="New" />
-        <NeedsExtension />
-      </>
-    );
-  }
+  // Standalone web browsing allowed
   if (explore.isError) {
     return (
       <>

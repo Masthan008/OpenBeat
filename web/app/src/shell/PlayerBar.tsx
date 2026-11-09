@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { PictureInPicture2 } from 'lucide-react';
+import { togglePictureInPicture } from '@/playback/pip';
 import {
   BackwardIcon,
   ForwardIcon,
@@ -144,6 +146,14 @@ export function PlayerBar() {
           }}
         >
           <FavoriteButton videoId={videoId} className={fading} />
+          <button
+            className={fading}
+            aria-label="Picture in Picture"
+            title="Floating Mini-Player"
+            onClick={() => void togglePictureInPicture()}
+          >
+            <PictureInPicture2 size={18} />
+          </button>
           {hasLyrics && (
             <button
               className={fading}

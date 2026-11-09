@@ -15,7 +15,7 @@ export default function BrowsePage() {
   const { missing } = useYouTubeReady();
   const browse = useBrowse({ browseId, params: params.get('params') });
 
-  if (missing) return <NeedsExtension />;
+  // Standalone web browsing allowed; missing extension handled non-blockingly
   if (browse.isError) return <LoadError error={browse.error} onRetry={() => void browse.refetch()} />;
   if (!browse.data) return <PlainSkeleton />;
 

@@ -23,7 +23,7 @@ export default function PlaylistPage() {
     if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
-  if (missing) return <NeedsExtension />;
+  // Standalone web browsing allowed
   if (playlist.isError && !playlist.data) return <LoadError error={playlist.error} onRetry={() => void playlist.refetch()} />;
   if (!playlist.data || !header) return <PlaylistSkeleton />;
 

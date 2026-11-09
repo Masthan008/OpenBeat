@@ -85,12 +85,14 @@ export const playlistQuery = (id: string) =>
     staleTime: STALE,
   });
 
-/** True once the extension has answered; queries wait on it. */
-export function useYouTubeReady(): { ready: boolean; missing: boolean } {
+/** True once the extension has answered; queries wait on it when required, but allow standalone web browsing. */
+export function useYouTubeReady(): { ready: boolean; missing: boolean; hasExtension: boolean } {
   const extension = useExtension();
+  const hasExtension = extension.state === 'present' && extension.extension.info.capabilities.includes('yt');
   return {
-    ready: extension.state === 'present' && extension.extension.info.capabilities.includes('yt'),
-    missing: extension.state === 'missing',
+    ready: true,
+    missing: false,
+    hasExtension,
   };
 }
 
