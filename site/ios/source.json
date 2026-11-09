@@ -1,0 +1,36 @@
+{
+  "name": "OpenBlast",
+  "identifier": "io.github.masthan008.openbeat",
+  "subtitle": "Free, open-source music player",
+  "sourceURL": "https://openbeat-site.vercel.app/ios/source.json",
+  "website": "https://openbeat-site.vercel.app/",
+  "iconURL": "https://openbeat-site.vercel.app/apple-touch-icon.png",
+  "tintColor": "FF8A65",
+  "apps": [
+    {
+      "name": "OpenBlast",
+      "bundleIdentifier": "com.opentune.ios",
+      "developerName": "Masthan Valli",
+      "subtitle": "Every song. No ads. No account.",
+      "localizedDescription": "A free, open-source music player for the YouTube Music catalogue, with synced lyrics, radio, background play, lock-screen controls and AirPlay.",
+      "iconURL": "https://openbeat-site.vercel.app/apple-touch-icon.png",
+      "tintColor": "FF8A65",
+      "category": "entertainment",
+      "versions": [
+        {
+          "version": "1.0.9",
+          "date": "2026-11-08T21:30:00Z",
+          "localizedDescription": "Early SwiftUI preview build with AltStore/SideStore sideload support and OpenBlast branding",
+          "downloadURL": "https://github.com/Masthan008/OpenBeat/releases/download/ios/OpenBlast-iOS.ipa",
+          "size": 18500000,
+          "minOSVersion": "16.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}
