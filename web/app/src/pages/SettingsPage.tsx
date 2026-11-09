@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
-import { SiApplemusic, SiDiscord, SiGithub, SiSpotify, SiYoutubemusic } from 'react-icons/si';
+import { SiApplemusic, SiDiscord, SiSpotify, SiYoutubemusic } from 'react-icons/si';
 import { PageHeader } from '@/components/PageHeader';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { LogoMark } from '@/components/icons/LogoMark';
@@ -98,7 +98,7 @@ export const SECTIONS: SettingSectionConfig[] = [
   { id: 'appearance', name: 'Appearance', icon: Palette, color: '#8e5bd8', keywords: ['theme', 'dark', 'light', 'oled', 'accent', 'motion', 'color'] },
   { id: 'accounts', name: 'Accounts', icon: Plug, color: '#3478f6', keywords: ['youtube', 'spotify', 'discord', 'apple', 'extension'] },
   { id: 'together', name: 'Listen Together', icon: Users, color: '#f08a24', keywords: ['party', 'rooms', 'friends', 'sync'] },
-  { id: 'about', name: 'About', icon: Info, color: '#636366', keywords: ['version', 'github', 'website', 'android', 'tv', 'openblast'] },
+  { id: 'about', name: 'About', icon: Info, color: '#636366', keywords: ['version', 'website', 'android', 'tv', 'openblast'] },
 ];
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
@@ -465,10 +465,8 @@ export default function SettingsPage() {
                     <ExternalRow href={config.androidAppUrl} icon={<Glyph Icon={Smartphone} color="#2fa84f" />} title="OpenBlast for Android" value="Download" />
                     <ExternalRow href={links.tv} icon={<Glyph Icon={Tv} color="#8e5bd8" />} title="OpenBlast on TV" />
                     <ExternalRow href="https://openbeat-site.vercel.app/" icon={<Glyph Icon={Wrench} color="#e5483a" />} title="Add-on Directory" />
-                    <ExternalRow href={links.github} icon={<Glyph Icon={SiGithub} color="#24292f" />} title="Source code" value="GitHub" />
-                    <ExternalRow href={links.discord} icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Community" value="Discord" />
                   </section>
-                  <p className={settingsUi.footer}>OpenBlast v1.0.9 is free and open source. Report bugs, suggest features and share your music.</p>
+                  <p className={settingsUi.footer}>OpenBlast v1.0.9. High-fidelity audio streaming and music discovery.</p>
                 </Section>
               )}
             </div>

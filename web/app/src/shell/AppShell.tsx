@@ -12,7 +12,6 @@ import { isMobileBrowser } from '@/lib/platform';
 import { useUi } from '@/state/ui';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { Banner, bannerButtonClass } from './Banner';
-import { answered, due, usedToday, type Invitation } from './invitations';
 import { MobileTopBar } from './MobileTopBar';
 import { PlayerBar } from './PlayerBar';
 import { SidePanel } from './SidePanel';
@@ -134,18 +133,7 @@ export function AppShell() {
     if (fullScreen) setPlayerUp(true);
   }, [fullScreen]);
   const { pathname } = useLocation();
-  // Once a month each, after some days of use, a GitHub star or Discord invitation;
-  // never over the install banners, and not straight after opening.
-  const [invitation, setInvitation] = useState<Invitation | null>(null);
-  useEffect(() => {
-    usedToday();
-    const timer = setTimeout(() => {
-      const next = due();
-      if (next) answered(next, false);
-      setInvitation(next);
-    }, 45_000);
-    return () => clearTimeout(timer);
-  }, []);
+
 
   let banner = null;
   if (mobile) {
@@ -175,31 +163,7 @@ export function AppShell() {
     );
   }
 
-  if (!banner && runtime.communityPrompts && invitation) {
-    const discord = invitation === 'discord';
-    const close = () => setInvitation(null);
-    banner = (
-      <Banner
-        title={discord ? 'Come say hi on Discord.' : 'Made for music. Built together.'}
-        detail={
-          discord
-            ? 'Talk to other listeners, swap add-ons, report bugs and hear about new features first.'
-            : 'OpenBlast is free and open source. A star on GitHub helps more listeners find it.'
-        }
-        action={
-          <span className="flex items-center gap-3">
-            <button className="type-body-emphasized text-white opacity-85 hover:opacity-100" onClick={() => { answered(invitation, true); close(); }}>
-              Don’t show again
-            </button>
-            <a className={bannerButtonClass} href={discord ? runtime.links.discord : runtime.links.github} target="_blank" rel="noreferrer" onClick={close}>
-              {discord ? 'Join the Discord' : 'Star on GitHub'}
-            </a>
-          </span>
-        }
-        onDismiss={close}
-      />
-    );
-  }
+
 
   return (
     <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">

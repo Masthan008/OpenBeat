@@ -100,7 +100,7 @@ export default function HomePage() {
           </Fragment>;
           case 'mixes': return <div className="ot-home-links" key={section.id}><PrefetchLink to="/library/made-for-you"><Radio size={18} />{title('Made for you')}</PrefetchLink><PrefetchLink to="/library/playlists"><ListMusic size={18} />Your playlists</PrefetchLink></div>;
           case 'featured-playlists': return runtime.playlists.length > 0 && <Shelves key={section.id} shelves={[{
-            title: title('From the community'), strapline: null, layout: 'square', seeAll: null,
+            title: title('Featured Playlists'), strapline: null, layout: 'square', seeAll: null,
             items: runtime.playlists.map(p => ({ kind: 'playlist', id: p.browseId, title: p.title, subtitle: 'OpenBlast picks', artists: [], album: null, thumbnail: p.artwork || null, wide: false, durationSec: null, explicit: false })),
           }]} />;
           case 'recommendations': return <Fragment key={section.id}>{section.title && <h2 className="mx-5 type-title-2-emphasized">{section.title}</h2>}<Shelves shelves={arranged.shelves} /></Fragment>;
