@@ -109,7 +109,7 @@ OpenBlast's native iOS build is an `.ipa`. It is not currently on the App Store 
 - **Signing/device limit error**: free Apple accounts have signing and active-app limits.
   Follow your installer's guidance to deactivate another app or wait for a signing slot.
 
-Without sideloading, you can also open the [web player](https://openbeat-site.vercel.app/player/)
+Without sideloading, you can also open the [web player](https://openblast.vercel.app/)
 from Safari and choose **Share → Add to Home Screen**. This installs the web app,
 not the native IPA. Safari on iOS cannot run our Chrome/Firefox session extension,
 so extension-dependent playback and account features are unavailable there.
@@ -151,7 +151,7 @@ load a preview package in developer mode. Your library stays in that
 browser.
 
 Open it at
-[openbeat-site.vercel.app/player](https://openbeat-site.vercel.app/player/).
+[openblast.vercel.app](https://openblast.vercel.app/).
 
 It's a preview, so not everything from the Android app is there. Audio
 add-ons work for direct FLAC over CORS-enabled media, and the audio stays

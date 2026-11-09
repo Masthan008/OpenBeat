@@ -30,6 +30,7 @@ website-reports/
 *.whl
 
 # Browser player generated dependencies and bundles
+node_modules/
 /web/**/node_modules/
 /web/**/dist/
 /web/extension/.wxt/

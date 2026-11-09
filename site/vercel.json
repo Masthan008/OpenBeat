@@ -1,5 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/player",
+      "destination": "https://openblast.vercel.app/",
+      "permanent": false
+    },
+    {
+      "source": "/player/:path*",
+      "destination": "https://openblast.vercel.app/:path*",
+      "permanent": false
+    }
+  ]
 }
