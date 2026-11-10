@@ -28,15 +28,15 @@ android {
     // A release key from the environment (CI secrets) when there is one;
     // otherwise release builds are signed with the debug key so they still
     // install. See .github/workflows/release.yml.
-    val releaseKeystore = System.getenv("OPENTUNE_KEYSTORE")?.let(::file)?.takeIf { it.exists() }
+    val releaseKeystore = System.getenv("OPENTUNE_KEYSTORE")?.takeUnless { it.isBlank() }?.let(::file)?.takeIf { it.exists() }
         ?: rootProject.file("keystore/release.keystore").takeIf { it.exists() }
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = releaseKeystore
-                storePassword = System.getenv("OPENTUNE_KEYSTORE_PASSWORD") ?: "android"
-                keyAlias = System.getenv("OPENTUNE_KEY_ALIAS") ?: "androiddebugkey"
-                keyPassword = System.getenv("OPENTUNE_KEY_PASSWORD") ?: "android"
+                storePassword = System.getenv("OPENTUNE_KEYSTORE_PASSWORD")?.takeUnless { it.isBlank() } ?: "android"
+                keyAlias = System.getenv("OPENTUNE_KEY_ALIAS")?.takeUnless { it.isBlank() } ?: "androiddebugkey"
+                keyPassword = System.getenv("OPENTUNE_KEY_PASSWORD")?.takeUnless { it.isBlank() } ?: "android"
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
