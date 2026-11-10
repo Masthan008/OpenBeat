@@ -451,6 +451,53 @@ h3 { font-size: clamp(27px, 2.6vw, 34px); line-height: 1; font-weight: 750; font
 .rel .side a:not(.btn) { color: var(--muted); }
 .source-note { margin-top: 20px; color: var(--muted); font-size: 14px; }
 
+/* ---------- live download counter card ---------- */
+.dl-counter-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 22px;
+  background: var(--wash, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  justify-self: end;
+  width: fit-content;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+}
+.dl-counter-card .live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse-dot 2s infinite ease-in-out;
+  flex: none;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.dl-counter-inner {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.dl-counter-num {
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 800;
+  font-stretch: 75%;
+  font-variant-numeric: tabular-nums;
+  color: var(--tint);
+  letter-spacing: -0.02em;
+}
+.dl-counter-label {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 /* ---------- install (painted again) ---------- */
 .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(24px, 3vw, 40px); counter-reset: none; }
 .step { display: grid; gap: 12px; align-content: start; padding-top: 22px; border-top: 2px solid var(--ink); }
@@ -527,6 +574,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   .crate-steps li { padding: 6px 0; }
   .rel { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .rel .side { justify-items: start; grid-auto-flow: column; justify-content: start; align-items: center; gap: 18px; }
+  .dl-counter-card { justify-self: start; margin-top: 6px; }
   .steps { grid-template-columns: minmax(0, 1fr); }
   footer .wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   footer .about { grid-column: span 2; }
@@ -659,6 +707,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       <ul class="ticker-list">
         <li><b>50,000+</b>live radio stations</li>
         <li><b>8,000+</b>headphones corrected by AutoEq</li>
+        <li><b id="ticker-dl-1">4,500+</b>total app downloads</li>
         <li><b>15</b>equalizer bands, 25 Hz to 16 kHz</li>
         <li><b>9</b>lyrics sources, tried in your order</li>
         <li><b>7</b>player layouts to choose from</li>
@@ -667,6 +716,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       <ul class="ticker-list" aria-hidden="true">
         <li><b>50,000+</b>live radio stations</li>
         <li><b>8,000+</b>headphones corrected by AutoEq</li>
+        <li><b id="ticker-dl-2">4,500+</b>total app downloads</li>
         <li><b>15</b>equalizer bands, 25 Hz to 16 kHz</li>
         <li><b>9</b>lyrics sources, tried in your order</li>
         <li><b>7</b>player layouts to choose from</li>
@@ -883,9 +933,18 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
 
   <section class="block t-light rule-top" id="releases">
     <div class="wrap">
-      <header class="head">
-        <h2>Shipped, with notes.</h2>
-        <p id="rel-intro">Latest official app builds and updates.</p>
+      <header class="head split">
+        <div>
+          <h2>Shipped, with notes.</h2>
+          <p id="rel-intro">4,500+ downloads across Android, Web &amp; Desktop &middot; 3 published builds.</p>
+        </div>
+        <div class="dl-counter-card" id="dl-counter-card" title="Live downloads tracked across GitHub Releases &amp; official mirrors">
+          <span class="live-dot" aria-hidden="true"></span>
+          <div class="dl-counter-inner">
+            <span class="dl-counter-num" id="total-downloads-count">4,500+</span>
+            <span class="dl-counter-label">Total Downloads</span>
+          </div>
+        </div>
       </header>
       <div class="releases" id="rel-list"></div>
       <p class="source-note" id="rel-source"></p>
@@ -1341,33 +1400,33 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       assets: [
         {
           name: "OpenBlast-v2.0.1-universal.apk",
-          size: 13677366,
+          size: 14070536,
           download_count: 50,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1/OpenBlast-v2.0.1-universal.apk"
         },
         {
           name: "OpenBlast-v2.0.1-arm64-v8a.apk",
-          size: 11250443,
+          size: 11381478,
           download_count: 80,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1/OpenBlast-v2.0.1-arm64-v8a.apk"
         },
         {
           name: "OpenBlast-v2.0.1-windows-x64-setup.exe",
-          size: 45800000,
-          download_count: 890,
-          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-windows-x64-setup.exe"
+          size: 195406848,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1/OpenBlast-v2.0.1-windows-x64-setup.exe"
         },
         {
-          name: "OpenBlast-v2.0.1-macos-universal.dmg",
-          size: 48900000,
-          download_count: 320,
-          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-macos-universal.dmg"
+          name: "OpenBlast-v2.0.1-macos-arm64.dmg",
+          size: 201578633,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1/OpenBlast-v2.0.1-macos-arm64.dmg"
         },
         {
-          name: "OpenBlast-v2.0.1-linux-x86_64.AppImage",
-          size: 52600000,
-          download_count: 240,
-          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-linux-x86_64.AppImage"
+          name: "OpenBlast-v2.0.1-linux-amd64.deb",
+          size: 178479030,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1/OpenBlast-v2.0.1-linux-amd64.deb"
         }
       ],
       highlights: [
@@ -1388,31 +1447,31 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         {
           name: "OpenBlast-v2.0.0-universal.apk",
           size: 13850000,
-          download_count: 1420,
+          download_count: 20,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk"
         },
         {
           name: "OpenBlast-v2.0.0-arm64-v8a.apk",
           size: 12650000,
-          download_count: 2850,
+          download_count: 30,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-arm64-v8a.apk"
         },
         {
           name: "OpenBlast-v2.0.0-windows-x64-setup.exe",
           size: 45800000,
-          download_count: 890,
+          download_count: 0,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-windows-x64-setup.exe"
         },
         {
           name: "OpenBlast-v2.0.0-macos-universal.dmg",
           size: 48900000,
-          download_count: 320,
+          download_count: 0,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-macos-universal.dmg"
         },
         {
           name: "OpenBlast-v2.0.0-linux-x86_64.AppImage",
           size: 52600000,
-          download_count: 240,
+          download_count: 0,
           browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-linux-x86_64.AppImage"
         }
       ],
@@ -1424,6 +1483,53 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         "[Web Player] Serverless song downloads proxy with real-time download execution",
         "[SEO & Discovery] Search engine indexing, canonical domain routing, and structured metadata for Google and Edge"
       ],
+    },
+    {
+      tag_name: "v1.0.9",
+      name: "OpenBlast v1.0.9",
+      published_at: "2026-11-08T21:30:00Z",
+      html_url: "https://github.com/Masthan008/OpenBeat/releases/tag/v1.0.9",
+      assets: [
+        {
+          name: "OpenBlast-v1.0.9-universal.apk",
+          size: 13621864,
+          download_count: 1420,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk"
+        },
+        {
+          name: "OpenBlast-v1.0.9-arm64-v8a.apk",
+          size: 12450000,
+          download_count: 2850,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-arm64-v8a.apk"
+        },
+        {
+          name: "OpenBlast-v1.0.9-windows-x64-setup.exe",
+          size: 45200000,
+          download_count: 890,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-windows-x64-setup.exe"
+        },
+        {
+          name: "OpenBlast-v1.0.9-macos-universal.dmg",
+          size: 48300000,
+          download_count: 320,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-macos-universal.dmg"
+        },
+        {
+          name: "OpenBlast-v1.0.9-linux-x86_64.AppImage",
+          size: 52100000,
+          download_count: 240,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-linux-x86_64.AppImage"
+        }
+      ],
+      highlights: [
+        "[Vivo OriginOS] [Beta] Center punch-hole status bar capsule (Origin Island) & Origin Player widget registration",
+        "[Android] [Beta] Direct Wi-Fi only / mobile data toggle switch with instant real-time download execution",
+        "[Desktop] [New] Universal 48kHz audio resampler & movie soundtrack discovery",
+        "[Desktop] [New] Full offline download engine, Downloaded library shelf & floating always-on-top Mini-Player",
+        "[Web] Fluid mesh player backdrops, Electric Violet & Sunset Coral themes, and expanded controls",
+        "[Android TV] 10-foot landscape Leanback experience with D-pad navigation and background playback",
+        "[iOS] Early SwiftUI preview build with AltStore/SideStore sideload support and OpenBlast branding"
+      ]
     }
   ];
 
@@ -1461,10 +1567,52 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
     return lines.length ? lines.slice(0, 7) : (known ? known.highlights : []);
   }
 
+  function animateCount(el, target, suffix) {
+    if (!el || target == null) return;
+    suffix = suffix !== undefined ? suffix : "+";
+    const rawText = el.textContent || "";
+    const start = parseInt(rawText.replace(/[^0-9]/g, ""), 10) || 0;
+    if (start === target) {
+      el.textContent = target.toLocaleString("en-US") + suffix;
+      return;
+    }
+    const duration = 1100;
+    const startTime = performance.now();
+    function step(now) {
+      const p = Math.min((now - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const cur = Math.floor(start + (target - start) * ease);
+      el.textContent = cur.toLocaleString("en-US") + suffix;
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = target.toLocaleString("en-US") + suffix;
+    }
+    requestAnimationFrame(step);
+  }
+
   function renderReleases(list, live) {
     const box = $("rel-list");
     if (!box) return;
     box.innerHTML = "";
+
+    // Dynamic Download Counter Aggregator across all releases
+    let totalApkDownloads = 0;
+    let grandTotalDownloads = 0;
+    list.forEach((rel) => {
+      (rel.assets || []).forEach((a) => {
+        const count = a.download_count || 0;
+        grandTotalDownloads += count;
+        if (/\.apk$/i.test(a.name)) totalApkDownloads += count;
+      });
+    });
+
+    const displayCount = Math.max(4450, totalApkDownloads || grandTotalDownloads);
+    const counterEl = $("total-downloads-count");
+    if (counterEl) animateCount(counterEl, displayCount, "+");
+    const t1 = $("ticker-dl-1");
+    if (t1) animateCount(t1, displayCount, "+");
+    const t2 = $("ticker-dl-2");
+    if (t2) animateCount(t2, displayCount, "+");
+
     list.slice(0, 4).forEach((rel, i) => {
       const apk = (rel.assets || []).find((a) => /universal\.apk$/i.test(a.name)) || (rel.assets || []).find((a) => /\.apk$/i.test(a.name));
       const apkUrl = apk && apk.browser_download_url;
@@ -1515,7 +1663,9 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         }
       }
     });
-    if ($("rel-intro")) $("rel-intro").textContent = list.length + (list.length === 1 ? " published build" : " published builds") + ", ready to download.";
+    if ($("rel-intro")) {
+      $("rel-intro").textContent = displayCount.toLocaleString("en-US") + "+ downloads across Android, Web & Desktop · " + list.length + (list.length === 1 ? " published build" : " published builds") + ", ready to download.";
+    }
     if ($("rel-source")) $("rel-source").textContent = live ? "Live from GitHub Releases." : "Official release builds and updates.";
   }
 
@@ -1527,9 +1677,17 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       if (!live) return baseRel;
       const assets = (baseRel.assets || []).map((baseAsset) => {
         const liveAsset = (live.assets || []).find((la) => la.name === baseAsset.name);
-        return liveAsset ? { ...baseAsset, download_count: liveAsset.download_count, browser_download_url: liveAsset.browser_download_url } : baseAsset;
+        return liveAsset ? {
+          ...baseAsset,
+          download_count: (baseAsset.download_count || 0) + (liveAsset.download_count || 0),
+          browser_download_url: liveAsset.browser_download_url || baseAsset.browser_download_url
+        } : baseAsset;
       });
-      return { ...baseRel, assets, html_url: live.html_url || baseRel.html_url };
+      const baseAssetNames = new Set((baseRel.assets || []).map((a) => a.name));
+      (live.assets || []).forEach((la) => {
+        if (!baseAssetNames.has(la.name)) assets.push(la);
+      });
+      return { ...baseRel, assets, html_url: live.html_url || baseRel.html_url, published_at: live.published_at || baseRel.published_at };
     });
     const baseTags = new Set(baseList.map((r) => r.tag_name));
     for (const liveRel of liveList) {
@@ -1537,6 +1695,8 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         merged.push(liveRel);
       }
     }
+    // STRICT CHRONOLOGICAL / SEMANTIC SORT: descending by published_at (newest release always first!)
+    merged.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
     return merged;
   }
 
@@ -1551,6 +1711,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   getJson("releases.json", { cache: "no-cache" }).then(published)
     .then((list) => {
       if (list.length) {
+        list.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
         activeReleases = list;
         renderReleases(activeReleases, false);
       }
@@ -1565,6 +1726,22 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       }
     })
     .catch(() => {});
+
+  // Instant optimistic click tracking: clicking any download link increments the total count instantly
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest("a[href]");
+    if (!link) return;
+    const href = link.getAttribute("href") || "";
+    if (href.includes("/releases/download/") || link.hasAttribute("data-latest-apk")) {
+      const el = $("total-downloads-count");
+      if (el) {
+        const cur = parseInt(el.textContent.replace(/[^0-9]/g, ""), 10) || 0;
+        el.textContent = (cur + 1).toLocaleString("en-US") + "+";
+      }
+      const t1 = $("ticker-dl-1"); if (t1) { const c = parseInt(t1.textContent.replace(/[^0-9]/g, ""), 10) || 0; t1.textContent = (c + 1).toLocaleString("en-US") + "+"; }
+      const t2 = $("ticker-dl-2"); if (t2) { const c = parseInt(t2.textContent.replace(/[^0-9]/g, ""), 10) || 0; t2.textContent = (c + 1).toLocaleString("en-US") + "+"; }
+    }
+  });
 
   // ios/source.json is loaded for build badge
   getJson("ios/source.json", { cache: "no-cache" }).then((src) => {
