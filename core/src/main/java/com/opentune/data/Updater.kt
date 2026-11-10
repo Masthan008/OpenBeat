@@ -71,7 +71,11 @@ object Updater {
         val target = File(dir, apk.name)
         if (target.isFile && target.length() > 0 && (apk.bytes <= 0 || target.length() == apk.bytes)) {
             val listed = release.sums?.let { listedSum(it, apk.name) }
-            if (listed == null || listed.equals(sha256(target), ignoreCase = true)) {
+            val sumMatches = listed == null || listed.equals(sha256(target), ignoreCase = true)
+            val isValidZip = runCatching {
+                java.util.zip.ZipFile(target).use { it.getEntry("AndroidManifest.xml") != null }
+            }.getOrDefault(false)
+            if (sumMatches && isValidZip) {
                 onProgress(1f)
                 return@withContext target
             }
@@ -111,6 +115,13 @@ object Updater {
                 part.delete()
                 throw IOException("The download is damaged (checksum mismatch)")
             }
+        }
+        val isValidZip = runCatching {
+            java.util.zip.ZipFile(part).use { it.getEntry("AndroidManifest.xml") != null }
+        }.getOrDefault(false)
+        if (!isValidZip) {
+            part.delete()
+            throw IOException("The downloaded package is incomplete or corrupted; try again")
         }
         if (!part.renameTo(target)) throw IOException("Couldn't save the download")
         target
@@ -187,7 +198,7 @@ object Updater {
                     Log.w(TAG, "Install failed: $status $message")
                     val text = when (status) {
                         PackageInstaller.STATUS_FAILURE_CONFLICT, PackageInstaller.STATUS_FAILURE_INCOMPATIBLE ->
-                            "This update is signed differently from the installed app. Uninstall OpenTune, then install the update."
+                            "This update is signed differently from the installed app. Uninstall OpenBlast, then install the update."
                         PackageInstaller.STATUS_FAILURE_ABORTED -> "Update cancelled"
                         PackageInstaller.STATUS_FAILURE_STORAGE -> "Not enough space for the update"
                         else -> "Update failed${message?.let { ": $it" } ?: ""}"

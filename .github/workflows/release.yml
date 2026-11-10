@@ -71,6 +71,9 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
             echo "OPENTUNE_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          elif [ -f "keystore/release.keystore" ]; then
+            echo "Using canonical repository release keystore."
+            echo "OPENTUNE_KEYSTORE=$GITHUB_WORKSPACE/keystore/release.keystore" >> "$GITHUB_ENV"
           else
             echo "No custom release keystore secret configured. Using fallback signing."
           fi

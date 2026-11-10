@@ -12,6 +12,7 @@ keystore.properties
 *.apk
 *.jks
 *.keystore
+!keystore/release.keystore
 /app/build
 .kotlin/
 
@@ -40,3 +41,5 @@ node_modules/
 
 # Design-check hook cache
 .impeccable/
+
+dist/

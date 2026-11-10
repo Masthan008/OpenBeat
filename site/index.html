@@ -1420,15 +1420,20 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
     list.slice(0, 4).forEach((rel, i) => {
       const apk = (rel.assets || []).find((a) => /universal\.apk$/i.test(a.name)) || (rel.assets || []).find((a) => /\.apk$/i.test(a.name));
       const apkUrl = apk && apk.browser_download_url;
+      const arm64 = (rel.assets || []).find((a) => /arm64-v8a\.apk$/i.test(a.name));
+      const arm64Url = arm64 && arm64.browser_download_url;
       const downloads = (rel.assets || []).filter((a) => /\.apk$/i.test(a.name)).reduce((n, a) => n + (a.download_count || 0), 0);
       const notes = notesOf(rel);
       const when = new Date(rel.published_at);
       const dated = isNaN(when) ? "" : when.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " &middot; " + ago(rel.published_at);
+      const buttonsHtml =
+        (apkUrl ? '<a class="btn btn-tint btn-small" href="' + esc(apkUrl) + '" title="Universal APK for all Android devices (Vivo, Samsung, Pixel, OnePlus)"><svg class="line-ico"><use href="#i-download"/></svg>Universal APK' + (apk.size ? ' <span class="sub">' + mb(apk.size) + '</span>' : '') + '</a>' : '') +
+        (arm64Url ? ' <a class="btn btn-ghost btn-small" href="' + esc(arm64Url) + '" title="Optimized 64-bit APK for modern Android phones"><svg class="line-ico"><use href="#i-download"/></svg>arm64' + (arm64.size ? ' <span class="sub">' + mb(arm64.size) + '</span>' : '') + '</a>' : '');
       const row = document.createElement("article"); row.className = "rel";
       row.innerHTML =
         '<div class="ver"><b>' + esc(rel.tag_name) + '</b>' + (i === 0 ? '<span class="new">Latest</span>' : '') + (dated ? '<small>' + dated + '</small>' : '') + '</div>' +
         '<div class="notes"><h3>' + esc(rel.name || rel.tag_name) + '</h3>' + (notes.length ? '<ul>' + notes.map((n) => '<li>' + formatNote(n) + '</li>').join("") + '</ul>' : '<p>See the release notes on GitHub.</p>') + '</div>' +
-        '<div class="side">' + (apkUrl ? '<a class="btn btn-tint btn-small" href="' + esc(apkUrl) + '"><svg class="line-ico"><use href="#i-download"/></svg>APK' + (apk.size ? ' <span class="sub">' + mb(apk.size) + '</span>' : '') + '</a>' : '') + (downloads ? '<span class="num">' + downloads.toLocaleString("en-US") + ' APK downloads</span>' : '') + '</div>';
+        '<div class="side">' + buttonsHtml + (downloads ? '<span class="num">' + downloads.toLocaleString("en-US") + ' APK downloads</span>' : '') + '</div>';
       box.appendChild(row);
 
       if (i === 0) {
