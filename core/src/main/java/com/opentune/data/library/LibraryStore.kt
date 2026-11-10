@@ -284,6 +284,12 @@ object LibraryStore {
         }
     }
 
+    /** Permanently applies a new song order to the playlist. */
+    @Synchronized
+    fun reorderPlaylist(id: String, newSongs: List<SongRef>) {
+        editPlaylist(id) { it.copy(songs = newSongs) }
+    }
+
     @Synchronized
     fun removeFromPlaylist(id: String, index: Int) {
         val gone = playlist(id)?.songs?.getOrNull(index) ?: return

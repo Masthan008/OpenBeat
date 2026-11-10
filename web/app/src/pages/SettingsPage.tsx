@@ -466,7 +466,19 @@ export default function SettingsPage() {
                     <ExternalRow href={links.tv} icon={<Glyph Icon={Tv} color="#8e5bd8" />} title="OpenBlast on TV" />
                     <ExternalRow href="https://openbeat-site.vercel.app/" icon={<Glyph Icon={Wrench} color="#e5483a" />} title="Add-on Directory" />
                   </section>
-                  <p className={settingsUi.footer}>OpenBlast v1.0.9. High-fidelity audio streaming and music discovery.</p>
+                  <section className={`${settingsUi.group} mt-3`}>
+                    <div className={settingsUi.integration}>
+                      <Glyph Icon={Info} color="#3478f6" />
+                      <span className={settingsUi.integrationName}>Developer</span>
+                      <span className={settingsUi.value}>Created by Masthan Valli</span>
+                    </div>
+                    <div className={settingsUi.integration}>
+                      <Glyph Icon={Users} color="#10b981" />
+                      <span className={settingsUi.integrationName}>Testers & Promoters</span>
+                      <span className={settingsUi.value}>Akshay, Akhil, Ganesh</span>
+                    </div>
+                  </section>
+                  <p className={settingsUi.footer}>OpenBlast v2.0.0. High-fidelity audio streaming and music discovery.</p>
                 </Section>
               )}
             </div>

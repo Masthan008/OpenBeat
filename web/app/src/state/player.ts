@@ -905,10 +905,16 @@ export const partyPlayer = {
     return startAt(index, { startSec, autoplay: play });
   },
   play(): void {
+    if (iframeDeck.isActive()) {
+      iframeDeck.play();
+    }
     const audio = getAudio();
     if (audio?.paused) void audio.play().catch((e: unknown) => trackLog.w(`party play() refused: ${String(e)}`));
   },
   pause(): void {
+    if (iframeDeck.isActive()) {
+      iframeDeck.pause();
+    }
     const audio = getAudio();
     if (audio && !audio.paused) {
       cancelCrossfade();
@@ -917,13 +923,20 @@ export const partyPlayer = {
   },
   seekTo(seconds: number): void {
     const audio = getAudio();
-    if (!audio) return;
-    cancelCrossfade();
-    audio.currentTime = Math.max(0, seconds);
+    if (audio) {
+      cancelCrossfade();
+      audio.currentTime = Math.max(0, seconds);
+    }
+    if (iframeDeck.isActive()) {
+      iframeDeck.seekTo(seconds);
+    }
     updatePositionState();
   },
   /** The playback speed, for nudging a guest back into step without a seek; 1 is normal. */
   setRate(rate: number): void {
+    if (iframeDeck.isActive()) {
+      iframeDeck.setPlaybackRate(rate);
+    }
     const audio = getAudio();
     if (audio && Math.abs(audio.playbackRate - rate) > 0.001) audio.playbackRate = rate;
   },

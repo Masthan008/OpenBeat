@@ -13,24 +13,24 @@
 <meta name="description" content="OpenBlast is a free, ad-free music player for Android phones and TVs, Windows, macOS, Linux and the browser, with synced lyrics, offline downloads, playlists, radio, podcasts and listening rooms.">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="theme-color" content="#E5483A">
-<link rel="canonical" href="https://masthan008.github.io/OpenBeat/">
+<link rel="canonical" href="https://openbeat-site.vercel.app/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="OpenBlast: free, open-source music for Android">
-<meta property="og:description" content="Every song. No ads. No account. Word-synced lyrics, live radio, podcasts and listening together.">
-<meta property="og:url" content="https://masthan008.github.io/OpenBeat/">
-<meta property="og:image" content="https://masthan008.github.io/OpenBeat/img/share-card-v3.jpg">
-<meta property="og:image:secure_url" content="https://masthan008.github.io/OpenBeat/img/share-card-v3.jpg">
+<meta property="og:title" content="OpenBlast: Free, Open-Source Music Player & Web Player">
+<meta property="og:description" content="Every song. No ads. No account. Word-synced lyrics, live radio, podcasts and synchronized Listen Together rooms.">
+<meta property="og:url" content="https://openbeat-site.vercel.app/">
+<meta property="og:image" content="https://openbeat-site.vercel.app/img/share-card-v3.jpg">
+<meta property="og:image:secure_url" content="https://openbeat-site.vercel.app/img/share-card-v3.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:alt" content="OpenBlast — free music, with the current waveform logo and app screenshots">
 <meta property="og:site_name" content="OpenBlast">
 <meta property="og:locale" content="en_US">
-<meta name="twitter:title" content="OpenBlast — Free, Open-Source Music Player for Android">
+<meta name="twitter:title" content="OpenBlast — Free, Open-Source Music Player for Android, Web & Desktop">
 <meta name="twitter:description" content="OpenBlast is a free, ad-free music player for Android phones and TVs, Windows, macOS, Linux and the browser, with synced lyrics, offline downloads, playlists, radio, podcasts and listening rooms.">
 <link rel="sitemap" type="application/xml" href="sitemap.xml">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://masthan008.github.io/OpenBeat/img/share-card-v3.jpg">
+<meta name="twitter:image" content="https://openbeat-site.vercel.app/img/share-card-v3.jpg">
 <meta name="twitter:image:alt" content="OpenBlast — free music, with the current waveform logo and app screenshots">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,20 +39,31 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "@id": "https://masthan008.github.io/OpenBeat/#app",
+  "@id": "https://openbeat-site.vercel.app/#app",
   "name": "OpenBlast",
-  "url": "https://masthan008.github.io/OpenBeat/",
+  "url": "https://openbeat-site.vercel.app/",
   "description": "OpenBlast is a free, ad-free music player for Android phones and TVs, Windows, macOS, Linux and the browser, with synced lyrics, offline downloads, playlists, radio, podcasts and listening rooms.",
   "applicationCategory": "MultimediaApplication",
-  "operatingSystem": "Android 8.0 or later",
+  "operatingSystem": "Android 8.0 or later, Windows, macOS, Linux, Web",
   "isAccessibleForFree": true,
   "license": "GPL-3.0",
-  "downloadUrl": "https://masthan008.github.io/OpenBeat/#releases",
-  "image": "https://masthan008.github.io/OpenBeat/img/openblast-logo.png",
+  "downloadUrl": "https://openbeat-site.vercel.app/#releases",
+  "image": "https://openbeat-site.vercel.app/img/openblast-logo.png",
   "screenshot": [
-    "https://masthan008.github.io/OpenBeat/img/01-player.jpg",
-    "https://masthan008.github.io/OpenBeat/img/02-lyrics.jpg"
+    "https://openbeat-site.vercel.app/img/01-player.jpg",
+    "https://openbeat-site.vercel.app/img/02-lyrics.jpg"
   ],
+  "author": {
+    "@type": "Person",
+    "name": "Masthan Valli"
+  },
+  "contributor": [
+    { "@type": "Person", "name": "Akshay", "jobTitle": "Tester & Promoter" },
+    { "@type": "Person", "name": "Akhil", "jobTitle": "Tester & Promoter" },
+    { "@type": "Person", "name": "Ganesh", "jobTitle": "Tester & Promoter" }
+  ]
+}
+</script>
   "offers": {
     "@type": "Offer",
     "price": "0",
@@ -598,7 +609,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-right">
-      <a data-latest-apk class="btn btn-small dl" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Android</a>
+      <a data-latest-apk class="btn btn-small dl" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Android</a>
       <a class="btn btn-line btn-small ios-btn" href="#iphone"><svg class="logo-ico"><use href="#i-apple"/></svg>iOS<span class="sub">early</span></a>
     </div>
   </div>
@@ -609,11 +620,11 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   <section class="hero t-tint" id="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <a class="badge fade-in" style="--d:.05s" href="#releases"><b id="ver-badge">Latest</b><span id="ver-note">See what's new in the latest release</span></a>
+        <a class="badge fade-in" style="--d:.05s" href="#releases"><b id="ver-badge">v2.0.0</b><span id="ver-note">Listen Together sync, voice calls, persistent sorting & downloads</span></a>
         <h1><span class="hl"><span>Every song.</span></span><span class="hl" style="--i:1"><span>No ads.</span></span><span class="hl" style="--i:2"><span><mark>No account.</mark></span></span></h1>
         <p class="lede fade-in" style="--d:.35s">OpenBlast is a free, open-source music player for Android phones and TVs, Windows, macOS, Linux and the browser, with an early version for iPhone. It plays the YouTube Music catalogue with word-synced lyrics, live radio, podcasts and rooms where friends listen in step.</p>
         <div class="ctas fade-in" style="--d:.45s">
-          <a data-latest-apk class="btn btn-ink" id="dl-hero" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk" target="_blank" rel="noopener"><svg class="logo-ico"><use href="#i-android"/></svg>Download for Android<span class="sub" id="dl-size">13.0 MB</span></a>
+          <a data-latest-apk class="btn btn-ink" id="dl-hero" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk" target="_blank" rel="noopener"><svg class="logo-ico"><use href="#i-android"/></svg>Download for Android<span class="sub" id="dl-size">13.8 MB</span></a>
           <a class="btn btn-line" href="#everywhere"><svg class="line-ico"><use href="#i-desktop"/></svg>Desktop, TV and web</a>
           <a class="btn btn-line" href="#iphone"><svg class="logo-ico"><use href="#i-apple"/></svg>iPhone and iPad<span class="sub">early</span></a>
         </div>
@@ -840,14 +851,14 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
           <h3>Android phones and tablets</h3>
           <p>The full app: downloads, Android Auto, widgets, USB DACs, the equalizer and every player design.</p>
           <p class="hint">Android 8.0 or newer.</p>
-          <div class="ctas"><a data-latest-apk class="btn btn-tint btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk" target="_blank" rel="noopener"><svg class="logo-ico"><use href="#i-android"/></svg>Download the APK</a></div>
+          <div class="ctas"><a data-latest-apk class="btn btn-tint btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk" target="_blank" rel="noopener"><svg class="logo-ico"><use href="#i-android"/></svg>Download the APK</a></div>
         </article>
         <article class="platform">
           <svg class="p-ico" aria-hidden="true"><use href="#i-tv"/></svg>
           <h3>Android TV and Google TV</h3>
           <p>The same APK opens a layout made for the TV, driven by the remote: the arrows go where you expect and seek through the song. Sign in by scanning a code with your phone instead of typing on the TV.</p>
           <p class="hint">Install the universal APK with Downloader or any file manager on the TV; OpenBlast joins the home screen's apps.</p>
-          <div class="ctas"><a data-latest-apk class="btn btn-line btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk" target="_blank" rel="noopener"><svg class="line-ico"><use href="#i-download"/></svg>APK for the TV</a></div>
+          <div class="ctas"><a data-latest-apk class="btn btn-line btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk" target="_blank" rel="noopener"><svg class="line-ico"><use href="#i-download"/></svg>APK for the TV</a></div>
         </article>
         <article class="platform">
           <svg class="p-ico" aria-hidden="true"><use href="#i-desktop"/></svg>
@@ -855,9 +866,9 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
           <p>A desktop app with a sidebar, synced lyrics beside the page, the queue, and Last.fm scrobbling. On Windows 11 it draws its own title bar over Mica.</p>
           <p class="hint">Not signed by Apple or Microsoft yet, so the first launch shows a warning. On a Mac, right-click the app and choose Open.</p>
           <div class="ctas">
-            <a data-desktop="windows" class="btn btn-tint btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-windows-x64-setup.exe" target="_blank" rel="noopener">Windows</a>
-            <a data-desktop="mac" class="btn btn-line btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-macos-universal.dmg" target="_blank" rel="noopener">macOS</a>
-            <a data-desktop="linux" class="btn btn-line btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-linux-x86_64.AppImage" target="_blank" rel="noopener">Linux</a>
+            <a data-desktop="windows" class="btn btn-tint btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-windows-x64-setup.exe" target="_blank" rel="noopener">Windows</a>
+            <a data-desktop="mac" class="btn btn-line btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-macos-universal.dmg" target="_blank" rel="noopener">macOS</a>
+            <a data-desktop="linux" class="btn btn-line btn-small" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-linux-x86_64.AppImage" target="_blank" rel="noopener">Linux</a>
           </div>
           <p class="hint other-builds" id="desktop-more">Also available as an .msi, a portable .zip, a .deb and an .rpm.</p>
         </article>
@@ -895,7 +906,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         <li class="step"><span class="n" aria-hidden="true">3</span><h3>Press play</h3><p>Sign in only if you want your likes and playlists. OpenBlast looks for new releases once a day and checks each download against its SHA-256 sums.</p><p class="hint">Nothing to buy, nothing upsold. See our <a href="privacy/">privacy policy</a>.</p></li>
       </ol>
       <div class="ctas install-cta">
-        <a data-latest-apk class="btn btn-ink" href="https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Download for Android</a>
+        <a data-latest-apk class="btn btn-ink" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Download for Android</a>
         <a class="btn btn-line" href="https://github.com/Masthan008/OpenBeat/releases">All releases</a>
       </div>
 
@@ -951,7 +962,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   <div class="wrap">
     <div class="about">
       <a class="brand" href="#top"><img src="img/openblast-logo.png" width="30" height="30" alt="" style="border-radius:6px" aria-hidden="true">OpenBlast</a>
-      <p>Free, modern music player. Created by Masthan Valli. OpenBlast isn't affiliated with or endorsed by YouTube, Google, Spotify or any artist or label shown. Covers are shown to illustrate the app.</p>
+      <p>Free, modern music player. Created by Masthan Valli · Testers & Promoters: Akshay, Akhil, Ganesh. OpenBlast isn't affiliated with or endorsed by YouTube, Google, Spotify or any artist or label shown. Covers are shown to illustrate the app.</p>
     </div>
     <div><h4>Product</h4><ul><li><a href="#live">Features</a></li><li><a href="#colour">Colour from the cover</a></li><li><a href="#releases">Releases</a></li><li><a href="#install">Install guide</a></li><li><a href="#everywhere">Desktop, TV and web</a></li><li><a href="#faq">FAQ</a></li><li><a href="https://openblast.vercel.app/" target="_blank" rel="noopener">Web player</a><a href="addons/">Audio add-ons</a><a href="privacy/">Privacy policy</a></li></ul></div>
     <div><h4>Downloads</h4><ul><li><a href="#releases">Latest Releases</a></li><li><a href="#install">Install Guide</a></li><li><a href="#everywhere">Desktop & TV</a></li><li><a href="#iphone">iOS Guide</a></li></ul></div>
@@ -1324,50 +1335,49 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   const LATEST_PAGE = "https://github.com/Masthan008/OpenBeat/releases";
   const GITHUB_RELEASES = "https://github.com/Masthan008/OpenBeat/releases";
   const FALLBACK = [{
-    tag_name: "v1.0.9",
-    name: "OpenBlast v1.0.9",
-    published_at: "2026-11-08T21:30:00Z",
-    html_url: "https://github.com/Masthan008/OpenBeat/releases/tag/v1.0.9",
+    tag_name: "v2.0.0",
+    name: "OpenBlast v2.0.0",
+    published_at: "2026-11-10T21:00:00Z",
+    html_url: "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.0",
     assets: [
       {
-        name: "OpenBlast-v1.0.9-universal.apk",
-        size: 13621864,
+        name: "OpenBlast-v2.0.0-universal.apk",
+        size: 13850000,
         download_count: 1420,
-        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-universal.apk"
+        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk"
       },
       {
-        name: "OpenBlast-v1.0.9-arm64-v8a.apk",
-        size: 12450000,
+        name: "OpenBlast-v2.0.0-arm64-v8a.apk",
+        size: 12650000,
         download_count: 2850,
-        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-arm64-v8a.apk"
+        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-arm64-v8a.apk"
       },
       {
-        name: "OpenBlast-v1.0.9-windows-x64-setup.exe",
-        size: 45200000,
+        name: "OpenBlast-v2.0.0-windows-x64-setup.exe",
+        size: 45800000,
         download_count: 890,
-        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-windows-x64-setup.exe"
+        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-windows-x64-setup.exe"
       },
       {
-        name: "OpenBlast-v1.0.9-macos-universal.dmg",
-        size: 48300000,
+        name: "OpenBlast-v2.0.0-macos-universal.dmg",
+        size: 48900000,
         download_count: 320,
-        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-macos-universal.dmg"
+        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-macos-universal.dmg"
       },
       {
-        name: "OpenBlast-v1.0.9-linux-x86_64.AppImage",
-        size: 52100000,
+        name: "OpenBlast-v2.0.0-linux-x86_64.AppImage",
+        size: 52600000,
         download_count: 240,
-        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.9/OpenBlast-v1.0.9-linux-x86_64.AppImage"
+        browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-linux-x86_64.AppImage"
       }
     ],
     highlights: [
-      "[Vivo OriginOS] [Beta] Center punch-hole status bar capsule (Origin Island) & Origin Player widget registration",
-      "[Android] [Beta] Direct Wi-Fi only / mobile data toggle switch with instant real-time download execution",
-      "[Desktop] [New] Universal 48kHz audio resampler & movie soundtrack discovery",
-      "[Desktop] [New] Full offline download engine, Downloaded library shelf & floating always-on-top Mini-Player",
-      "[Web] Fluid mesh player backdrops, Electric Violet & Sunset Coral themes, and expanded controls",
-      "[Android TV] 10-foot landscape Leanback experience with D-pad navigation and background playback",
-      "[iOS] Early SwiftUI preview build with AltStore/SideStore sideload support and OpenBlast branding"
+      "[Listen Together] Perfect multi-device audio synchronization: eliminated 1-5s playback drift",
+      "[Listen Together] Voice call & talk overhaul with high-sensitivity adaptive SpeechGate",
+      "[Library] Persistent playlist sorting: A-Z order remembered across restarts with save order option",
+      "[Contributors] Akshay, Akhil, and Ganesh added as official Testers & Promoters",
+      "[Web Player] Serverless song downloads proxy with real-time download execution",
+      "[SEO & Discovery] Search engine indexing, canonical domain routing, and structured metadata for Google and Edge"
     ],
   }];
 

@@ -199,7 +199,23 @@ export async function downloadTrack(track: Track): Promise<{ success: boolean; m
           blob = await response.blob();
         }
       } catch {
-        // Direct browser download via link if CORS blocked blob fetch
+        // Direct stream fetch blocked by CORS; proceed to serverless proxy
+      }
+    }
+
+    // 4. If direct blob download was blocked by CORS or stream was unresolvable locally, route through same-origin proxy
+    if (!blob) {
+      try {
+        const proxyDownloadUrl = streamUrl
+          ? `/api/yt/download?url=${encodeURIComponent(streamUrl)}&filename=${encodeURIComponent(`${filename}.${extension}`)}`
+          : `/api/yt/download?id=${encodeURIComponent(track.videoId)}&title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(artistName)}&filename=${encodeURIComponent(`${filename}.${extension}`)}`;
+
+        const proxyResponse = await fetch(proxyDownloadUrl);
+        if (proxyResponse.ok) {
+          blob = await proxyResponse.blob();
+        }
+      } catch (proxyErr) {
+        console.warn('Proxy download fetch failed:', proxyErr);
       }
     }
 
@@ -213,10 +229,13 @@ export async function downloadTrack(track: Track): Promise<{ success: boolean; m
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    } else if (streamUrl) {
+    } else {
+      // Fallback: direct browser trigger via serverless download attachment URL
+      const fallbackDownloadUrl = streamUrl
+        ? `/api/yt/download?url=${encodeURIComponent(streamUrl)}&filename=${encodeURIComponent(`${filename}.${extension}`)}`
+        : `/api/yt/download?id=${encodeURIComponent(track.videoId)}&title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(artistName)}&filename=${encodeURIComponent(`${filename}.${extension}`)}`;
       const a = document.createElement('a');
-      a.href = streamUrl;
-      a.target = '_blank';
+      a.href = fallbackDownloadUrl;
       a.download = `${filename}.${extension}`;
       document.body.appendChild(a);
       a.click();

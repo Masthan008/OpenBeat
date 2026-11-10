@@ -113,7 +113,7 @@ private const val TAG = "Together"
  * plays up to [MAX_NUDGE] faster or slower until it's within [IN_STEP_MS],
  * which can't be heard and doesn't stop the music the way a seek does.
  */
-internal const val DRIFT_MS = 400L
+internal const val DRIFT_MS = 250L
 internal const val IN_STEP_MS = 25L
 private const val MAX_NUDGE = 0.05f
 /** A drift this size gets the whole [MAX_NUDGE]; smaller ones a share of it. */

@@ -27,7 +27,97 @@ async function handleEdge(req: Request): Promise<Response> {
       '/';
 
     const isSaavn = rawSubpath.startsWith('/saavn');
+    const isDownload = rawSubpath.startsWith('/download');
     const actualSubpath = isSaavn ? rawSubpath.replace(/^\/saavn/, '') : rawSubpath;
+
+    if (isDownload) {
+      let targetStreamUrl = url.searchParams.get('url');
+      const videoId = url.searchParams.get('id');
+      const songTitle = url.searchParams.get('title') || 'Song';
+      const songArtist = url.searchParams.get('artist') || 'Unknown Artist';
+      const defaultFilename = `${songArtist} - ${songTitle}`.replace(/[\\/:*?"<>|]/g, '_');
+      const filename = url.searchParams.get('filename') || `${defaultFilename}.m4a`;
+
+      if (!targetStreamUrl && videoId) {
+        try {
+          const ytPlayerRes = await fetch('https://music.youtube.com/youtubei/v1/player', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14; en_US) gzip',
+              'X-YouTube-Client-Name': '21',
+              'X-YouTube-Client-Version': '6.42.52',
+            },
+            body: JSON.stringify({
+              videoId,
+              context: {
+                client: {
+                  clientName: 'ANDROID_MUSIC',
+                  clientVersion: '6.42.52',
+                  androidSdkVersion: 34,
+                  hl: 'en',
+                  gl: 'US',
+                },
+              },
+            }),
+          });
+          if (ytPlayerRes.ok) {
+            const ytData = (await ytPlayerRes.json()) as any;
+            const formats = (ytData?.streamingData?.adaptiveFormats || []).filter(
+              (f: any) => f.mimeType && f.mimeType.startsWith('audio/') && f.url,
+            );
+            formats.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+            if (formats[0]?.url) {
+              targetStreamUrl = formats[0].url;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to resolve YouTube audio stream for download:', e);
+        }
+      }
+
+      if (!targetStreamUrl) {
+        return new Response(JSON.stringify({ error: 'Could not resolve audio stream for download' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const streamHeaders = new Headers();
+      streamHeaders.set(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      );
+      if (targetStreamUrl.includes('googlevideo.com') || targetStreamUrl.includes('youtube.com')) {
+        streamHeaders.set('Origin', 'https://www.youtube.com');
+        streamHeaders.set('Referer', 'https://www.youtube.com/');
+      } else if (targetStreamUrl.includes('jiosaavn.com')) {
+        streamHeaders.set('Origin', 'https://www.jiosaavn.com');
+        streamHeaders.set('Referer', 'https://www.jiosaavn.com/');
+      }
+
+      const upstream = await fetch(targetStreamUrl, {
+        method: 'GET',
+        headers: streamHeaders,
+      });
+
+      if (!upstream.ok) {
+        return new Response(`Upstream error: ${upstream.status} ${upstream.statusText}`, { status: upstream.status });
+      }
+
+      const respHeaders = new Headers();
+      respHeaders.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      respHeaders.set('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
+      const contentLength = upstream.headers.get('content-length');
+      if (contentLength) respHeaders.set('Content-Length', contentLength);
+      respHeaders.set('Access-Control-Allow-Origin', '*');
+      respHeaders.set('Cache-Control', 'public, max-age=86400');
+
+      return new Response(upstream.body, {
+        status: 200,
+        headers: respHeaders,
+      });
+    }
 
     const proxyTarget = req.headers.get('x-proxy-target');
     let targetHost: string;
@@ -130,7 +220,97 @@ async function handleNode(req: any, res: any): Promise<void> {
       '/';
 
     const isSaavn = rawSubpath.startsWith('/saavn');
+    const isDownload = rawSubpath.startsWith('/download');
     const actualSubpath = isSaavn ? rawSubpath.replace(/^\/saavn/, '') : rawSubpath;
+
+    if (isDownload) {
+      let targetStreamUrl = url.searchParams.get('url');
+      const videoId = url.searchParams.get('id');
+      const songTitle = url.searchParams.get('title') || 'Song';
+      const songArtist = url.searchParams.get('artist') || 'Unknown Artist';
+      const defaultFilename = `${songArtist} - ${songTitle}`.replace(/[\\/:*?"<>|]/g, '_');
+      const filename = url.searchParams.get('filename') || `${defaultFilename}.m4a`;
+
+      if (!targetStreamUrl && videoId) {
+        try {
+          const ytPlayerRes = await fetch('https://music.youtube.com/youtubei/v1/player', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14; en_US) gzip',
+              'X-YouTube-Client-Name': '21',
+              'X-YouTube-Client-Version': '6.42.52',
+            },
+            body: JSON.stringify({
+              videoId,
+              context: {
+                client: {
+                  clientName: 'ANDROID_MUSIC',
+                  clientVersion: '6.42.52',
+                  androidSdkVersion: 34,
+                  hl: 'en',
+                  gl: 'US',
+                },
+              },
+            }),
+          });
+          if (ytPlayerRes.ok) {
+            const ytData = (await ytPlayerRes.json()) as any;
+            const formats = (ytData?.streamingData?.adaptiveFormats || []).filter(
+              (f: any) => f.mimeType && f.mimeType.startsWith('audio/') && f.url,
+            );
+            formats.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+            if (formats[0]?.url) {
+              targetStreamUrl = formats[0].url;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to resolve YouTube audio stream for download:', e);
+        }
+      }
+
+      if (!targetStreamUrl) {
+        return new Response(JSON.stringify({ error: 'Could not resolve audio stream for download' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const streamHeaders = new Headers();
+      streamHeaders.set(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      );
+      if (targetStreamUrl.includes('googlevideo.com') || targetStreamUrl.includes('youtube.com')) {
+        streamHeaders.set('Origin', 'https://www.youtube.com');
+        streamHeaders.set('Referer', 'https://www.youtube.com/');
+      } else if (targetStreamUrl.includes('jiosaavn.com')) {
+        streamHeaders.set('Origin', 'https://www.jiosaavn.com');
+        streamHeaders.set('Referer', 'https://www.jiosaavn.com/');
+      }
+
+      const upstream = await fetch(targetStreamUrl, {
+        method: 'GET',
+        headers: streamHeaders,
+      });
+
+      if (!upstream.ok) {
+        return new Response(`Upstream error: ${upstream.status} ${upstream.statusText}`, { status: upstream.status });
+      }
+
+      const respHeaders = new Headers();
+      respHeaders.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      respHeaders.set('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
+      const contentLength = upstream.headers.get('content-length');
+      if (contentLength) respHeaders.set('Content-Length', contentLength);
+      respHeaders.set('Access-Control-Allow-Origin', '*');
+      respHeaders.set('Cache-Control', 'public, max-age=86400');
+
+      return new Response(upstream.body, {
+        status: 200,
+        headers: respHeaders,
+      });
+    }
 
     const proxyTarget = req.headers['x-proxy-target'] as string | undefined;
     let targetHost: string;

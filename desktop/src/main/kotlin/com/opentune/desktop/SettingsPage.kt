@@ -175,6 +175,7 @@ internal fun SettingsPage() {
                                 Group.ABOUT -> Section("About") {
                                     Text("OpenBlast ${BuildConfig.VERSION_NAME} for computers", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                                     Text("Created by Masthan Valli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                                    Text("Testers & Promoters: Akshay, Akhil, Ganesh", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
                                         "Settings and playlists are kept in ${appContext.getFilesDir().parentFile.absolutePath}.",
                                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,

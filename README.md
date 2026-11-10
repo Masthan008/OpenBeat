@@ -745,6 +745,11 @@ The README's screenshots are drawn from the app's own screens by
 `ReadmeScreenshotTest`, which runs when `OPENTUNE_SHOT_ART` points at a
 folder of cover images (they aren't kept in the repository).
 
+## Team & Contributors
+
+- **Creator & Lead Developer**: Masthan Valli
+- **Testers & Promoters**: Akshay, Akhil, Ganesh
+
 ## Disclaimer
 
 The screenshots and video show real albums, artists and songs to show the

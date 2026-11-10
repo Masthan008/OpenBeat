@@ -36,6 +36,8 @@ interface YTPlayer {
   getPlayerState(): number;
   getCurrentTime(): number;
   getDuration(): number;
+  setPlaybackRate?(rate: number): void;
+  getPlaybackRate?(): number;
   destroy(): void;
 }
 
@@ -299,6 +301,21 @@ export const iframeDeck = {
       if (boundAudio) {
         Object.defineProperty(boundAudio, 'currentTime', { value: seconds, configurable: true });
         boundAudio.dispatchEvent(new Event('seeked'));
+      }
+    } catch {
+      // Ignored
+    }
+  },
+
+  setPlaybackRate(rate: number): void {
+    if (!playerInstance) return;
+    try {
+      if (typeof playerInstance.setPlaybackRate === 'function') {
+        playerInstance.setPlaybackRate(rate);
+      }
+      if (boundAudio) {
+        Object.defineProperty(boundAudio, 'playbackRate', { value: rate, configurable: true });
+        boundAudio.dispatchEvent(new Event('ratechange'));
       }
     } catch {
       // Ignored

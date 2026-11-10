@@ -85,6 +85,13 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "2.0.0" to listOf(
+            Note(Icons.Rounded.Group, "Contributors & Team Attribution", "Created by Masthan Valli. Added Akshay, Akhil, and Ganesh as official Testers & Promoters."),
+            Note(Icons.Rounded.Sync, "Listen Together Audio Synchronization", "Engineered millisecond-accurate sync across devices, eliminating 1-5 second drift between host and guests."),
+            Note(Icons.Rounded.Mic, "High-Sensitivity Voice Calls & Talk", "Re-tuned SpeechGate voice detection with adaptive noise cancellation sensitivity so calls and hold-to-talk transmit clearly."),
+            Note(Icons.Rounded.Sort, "Persistent Playlist Sorting", "Custom sort orders (A-Z, Z-A) are now remembered across app restarts, with a new option to permanently apply sort order to the playlist."),
+            Note(Icons.Rounded.Download, "Web Player Song Downloads", "High-speed audio downloads directly from the browser via serverless audio proxy."),
+        ),
         "1.0.9" to listOf(
             Note(Icons.Rounded.Waves, "Vivo Origin Player & Audio Source Registration", "Registered OpenBlast under Vivo audio categories, intent filters, and media button receivers for Origin Player and Jovi widgets."),
             Note(Icons.Rounded.Download, "Direct Wi-Fi Only Toggle Switch", "Direct on/off switch in Settings › Downloads. Default is OFF so downloads start immediately on mobile data or Wi-Fi."),

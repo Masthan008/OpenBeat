@@ -976,7 +976,11 @@ fun LocalPlaylistScreen(id: String, contentPadding: PaddingValues, actions: Song
     val search = remember(id) { com.opentune.ui.browse.PlaylistSearch() }
     val query = search.query
     val searching = search.open
-    var order by remember(id) { mutableStateOf(com.opentune.ui.browse.ListOrder.DEFAULT) }
+    var order by remember(id) {
+        val saved = com.opentune.data.settings.AppSettings.getPlaylistSort(id)
+        val initial = com.opentune.ui.browse.ListOrder.entries.find { it.name == saved } ?: com.opentune.ui.browse.ListOrder.DEFAULT
+        mutableStateOf(initial)
+    }
     var sortOpen by remember { mutableStateOf(false) }
     var moreOpen by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -1064,6 +1068,10 @@ fun LocalPlaylistScreen(id: String, contentPadding: PaddingValues, actions: Song
             else if (signedIn && remoteId != null) PlaylistSync.refresh(id)
         },
         onAddSongs = { adding = true }, onRename = { renaming = true }, onDelete = { deleting = true },
+        onApplySort = if (playlist.spotifyId == null && shown.isNotEmpty()) ({
+            LibraryStore.reorderPlaylist(id, shown.map { com.opentune.data.library.SongRef.of(it) })
+            com.opentune.data.Pills.done("Applied sort order to playlist", context)
+        }) else null,
         onShare = share, onDismiss = { moreOpen = false })
     // Where the playlist stands with YouTube Music, under its cover.
     val status: (@Composable () -> Unit)? = when {
@@ -1111,7 +1119,14 @@ fun LocalPlaylistScreen(id: String, contentPadding: PaddingValues, actions: Song
                     IconButton(onClick = { sortOpen = true }) { Icon(Icons.AutoMirrored.Filled.Sort, "Sort") }
                     androidx.compose.material3.DropdownMenu(sortOpen, { sortOpen = false }) {
                         com.opentune.ui.browse.ListOrder.entries.forEach { value ->
-                            androidx.compose.material3.DropdownMenuItem(text = { Text(value.label) }, onClick = { order = value; sortOpen = false })
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(value.label) },
+                                onClick = {
+                                    order = value
+                                    com.opentune.data.settings.AppSettings.setPlaylistSort(id, value.name)
+                                    sortOpen = false
+                                }
+                            )
                         }
                     }
                 }
@@ -1187,6 +1202,7 @@ private fun LocalListMoreSheet(
     onAddSongs: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onApplySort: (() -> Unit)? = null,
     onShare: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1225,6 +1241,9 @@ private fun LocalListMoreSheet(
             if (!spotify) {
                 com.opentune.ui.components.MenuRow(Icons.Rounded.Add, "Add songs") { close(); onAddSongs() }
                 com.opentune.ui.components.MenuRow(Icons.Rounded.Edit, "Rename") { close(); onRename() }
+                if (onApplySort != null) {
+                    com.opentune.ui.components.MenuRow(Icons.AutoMirrored.Filled.Sort, "Apply sort order to playlist") { close(); onApplySort() }
+                }
             }
             com.opentune.ui.components.MenuRow(Icons.Rounded.Share, "Share") { close(); onShare() }
             com.opentune.ui.components.MenuRow(Icons.Rounded.PushPin, if (pinned) "Unpin from Library" else "Pin to the top of Library") { close(); LibraryPins.toggle(playlist.id) }

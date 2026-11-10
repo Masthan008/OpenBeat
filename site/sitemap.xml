@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://openbeat-site.vercel.app/</loc></url>
-  <url><loc>https://openbeat-site.vercel.app/privacy/</loc></url>
-  <url><loc>https://openbeat-site.vercel.app/addons/</loc></url>
+  <url>
+    <loc>https://openbeat-site.vercel.app/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://openbeat-site.vercel.app/privacy/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://openbeat-site.vercel.app/addons/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

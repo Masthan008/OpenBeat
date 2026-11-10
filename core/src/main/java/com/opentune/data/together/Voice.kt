@@ -67,7 +67,7 @@ internal fun framesMs(frames: Int): Long = frames * FRAME_SAMPLES * 1000L / RATE
  * traffic doesn't hold it open.
  */
 internal class SpeechGate(private val hangFrames: Int = 10) {
-    private var floor = 200.0
+    private var floor = 120.0
     private var loudRun = 0
     private var hang = 0
     var open = false
@@ -75,13 +75,14 @@ internal class SpeechGate(private val hangFrames: Int = 10) {
 
     /** The next frame's loudness, as RMS of 16-bit samples; whether the gate is open after it. */
     fun next(rms: Double): Boolean {
-        val loud = rms > maxOf(floor * 3.0, 350.0)
+        // Sensitive to normal speech even under hardware AGC/AEC while rejecting ambient noise
+        val loud = rms > maxOf(floor * 2.2, 260.0)
         // Down quickly, up slowly, and slower still while someone talks.
         floor = when {
             rms < floor -> floor * 0.8 + rms * 0.2
-            open -> floor * 0.998 + rms * 0.002
+            open -> floor * 0.995 + rms * 0.005
             else -> floor * 0.98 + rms * 0.02
-        }.coerceIn(30.0, 6_000.0)
+        }.coerceIn(25.0, 6_000.0)
         if (loud) {
             loudRun++
             if (loudRun >= 2) { open = true; hang = hangFrames }

@@ -6,8 +6,29 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1f1f" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-    <title>OpenBlast · Web player</title>
-    <meta name="description" content="Listen with OpenBlast in your browser. Your music library, lyrics and audio add-ons." />
+    <title>OpenBlast · Free Web Music Player | Stream Songs, Synced Lyrics & Listen Together</title>
+    <meta name="description" content="Stream music freely in your browser with OpenBlast Web Player. High-fidelity audio streaming, time-synced lyrics, playlists, offline caching, and real-time Listen Together rooms with zero ads." />
+    <meta name="keywords" content="openblast, openbeat, openblast web, openblast web player, free music streaming, music player, ad-free music, listen together, synced lyrics, youtube music web player" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="https://openblast.vercel.app/" />
+    
+    <!-- OpenGraph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OpenBlast" />
+    <meta property="og:title" content="OpenBlast · Free Web Music Player" />
+    <meta property="og:description" content="Every song. No ads. High-fidelity audio streaming, synced lyrics, and real-time Listen Together rooms in your browser." />
+    <meta property="og:url" content="https://openblast.vercel.app/" />
+    <meta property="og:image" content="https://openbeat-site.vercel.app/img/share-card-v3.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenBlast · Free Web Music Player" />
+    <meta name="twitter:description" content="Stream music freely with OpenBlast Web Player. High-fidelity audio, synced lyrics, and real-time Listen Together rooms." />
+    <meta name="twitter:image" content="https://openbeat-site.vercel.app/img/share-card-v3.jpg" />
+
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <!-- DM Sans is the app's typeface (web/docs/apple-music-dom.md, "Font"). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,6 +37,32 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&display=swap"
     />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "@id": "https://openblast.vercel.app/#app",
+      "name": "OpenBlast Web Player",
+      "url": "https://openblast.vercel.app/",
+      "description": "Stream music freely in your browser with OpenBlast Web Player. High-fidelity audio streaming, time-synced lyrics, playlists, offline caching, and real-time Listen Together rooms with zero ads.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "All modern web browsers",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Masthan Valli"
+      },
+      "contributor": [
+        { "@type": "Person", "name": "Akshay", "jobTitle": "Tester & Promoter" },
+        { "@type": "Person", "name": "Akhil", "jobTitle": "Tester & Promoter" },
+        { "@type": "Person", "name": "Ganesh", "jobTitle": "Tester & Promoter" }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

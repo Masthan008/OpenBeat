@@ -1,0 +1,6 @@
+- [Listen Together] Perfect multi-device audio synchronization: eliminated 1-5s playback drift between host and guests
+- [Listen Together] Re-engineered Voice Calls & hold-to-talk with high-sensitivity adaptive SpeechGate and mic feedback
+- [Library] Persistent playlist sorting: A-Z and custom order preferences remembered across app restarts, with "Apply sort order"
+- [Contributors] Added Akshay, Akhil, and Ganesh as official Testers & Promoters alongside Creator & Developer Masthan Valli
+- [Web Player] Native high-speed song downloads via serverless audio proxy with toast status notifications
+- [SEO & Discovery] Overhauled search engine indexing, canonical domain routing, and structured metadata for Google and Edge

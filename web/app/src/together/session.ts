@@ -124,7 +124,7 @@ const HERE_MS = 10_000;
 const MEMBER_TIMEOUT_MS = 45_000;
 const HOST_TIMEOUT_MS = 25_000;
 const MAX_CHAT = 100;
-const DRIFT_MS = 400;
+const DRIFT_MS = 250;
 const IN_STEP_MS = 25;
 const MAX_NUDGE = 0.05;
 const NUDGE_FULL_MS = 120;
@@ -465,7 +465,11 @@ export class RoomSession {
         this.addChat({ name: member?.name ?? 'Someone', text: String(msg.text).slice(0, 300) });
         break;
       case 'voice':
-        if (msg.last && !msg.live) this.addChat({ name: member?.name ?? 'Someone', text: 'sent a voice note (it plays in the Android app)' });
+        if (msg.live) {
+          this.notice(`${member?.name ?? 'Someone'} is speaking in the call`);
+        } else if (msg.last) {
+          this.addChat({ name: member?.name ?? 'Someone', text: 'sent a voice note (plays on Android)' });
+        }
         break;
     }
   }
@@ -571,7 +575,11 @@ export class RoomSession {
         this.addChat({ name: this.nameOf(from), text: String(msg.text).slice(0, 300) });
         break;
       case 'voice':
-        if (msg.last && !msg.live) this.addChat({ name: this.nameOf(from), text: 'sent a voice note (it plays in the Android app)' });
+        if (msg.live) {
+          this.notice(`${this.nameOf(from)} is speaking in the call`);
+        } else if (msg.last) {
+          this.addChat({ name: this.nameOf(from), text: 'sent a voice note (plays on Android)' });
+        }
         break;
     }
   }

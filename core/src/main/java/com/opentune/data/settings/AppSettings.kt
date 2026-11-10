@@ -875,6 +875,14 @@ object AppSettings {
         l.copy(chosen = if (source == null) l.chosen - videoId else (l.chosen - videoId + (videoId to source)).entries.toList().takeLast(500).associate { it.toPair() })
     }
 
+    fun getPlaylistSort(playlistId: String): String {
+        return prefs?.getString("playlist_sort_$playlistId", "DEFAULT") ?: "DEFAULT"
+    }
+
+    fun setPlaylistSort(playlistId: String, order: String) {
+        prefs?.edit { putString("playlist_sort_$playlistId", order) }
+    }
+
     fun setAutoplay(enabled: Boolean) = updatePlayback { it.copy(autoplay = enabled) }
 
     fun addRecentSearch(query: String) = update { s ->

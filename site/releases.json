@@ -1,5 +1,51 @@
 [
   {
+    "tag_name": "v2.0.0",
+    "name": "OpenBlast v2.0.0",
+    "published_at": "2026-11-10T21:00:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.0",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.0-universal.apk",
+        "size": 13850000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.0-arm64-v8a.apk",
+        "size": 12650000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-arm64-v8a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.0-windows-x64-setup.exe",
+        "size": 45800000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-windows-x64-setup.exe"
+      },
+      {
+        "name": "OpenBlast-v2.0.0-macos-universal.dmg",
+        "size": 48900000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-macos-universal.dmg"
+      },
+      {
+        "name": "OpenBlast-v2.0.0-linux-x86_64.AppImage",
+        "size": 52600000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.0/OpenBlast-v2.0.0-linux-x86_64.AppImage"
+      }
+    ],
+    "highlights": [
+      "[Listen Together] Multi-device audio synchronization eliminating 1-5s playback drift",
+      "[Listen Together] Voice call & talk overhaul with high-sensitivity adaptive SpeechGate",
+      "[Library] Persistent playlist sorting: A-Z order remembered across restarts with save order option",
+      "[Contributors] Akshay, Akhil, and Ganesh added as official Testers & Promoters",
+      "[Web Player] Serverless song downloads proxy with real-time download execution",
+      "[SEO & Discovery] Search engine indexing, canonical domain routing, and structured metadata for Google and Edge"
+    ]
+  },
+  {
     "tag_name": "v1.0.9",
     "name": "OpenBlast v1.0.9",
     "published_at": "2026-11-08T21:30:00Z",
