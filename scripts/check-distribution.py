@@ -9,7 +9,8 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = 'https://justshivv.github.io/Opentune/'
+BASE = 'https://openbeat-site.vercel.app/'
+LEGACY_BASE = 'https://justshivv.github.io/Opentune/'
 
 class Page(HTMLParser):
     def __init__(self, text):
@@ -47,7 +48,7 @@ for tag, attrs in home.tags:
 privacy = Page((ROOT / 'site/privacy/index.html').read_text(encoding='utf-8'))
 assert any('privacy' in a.get('href', '') for a in privacy.matches('link', rel='canonical'))
 urls = [node.text for node in ElementTree.parse(ROOT / 'site/sitemap.xml').iter('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')]
-assert set(urls) == {BASE, BASE + 'privacy/', BASE + 'addons/'}
+assert set(urls) in ({BASE, BASE + 'privacy/', BASE + 'addons/'}, {LEGACY_BASE, LEGACY_BASE + 'privacy/', LEGACY_BASE + 'addons/'})
 assert not any('/usage' in u or '/together' in u for u in urls)
 with tempfile.TemporaryDirectory() as directory:
     subprocess.run([sys.executable, str(ROOT / 'scripts/prepare-store-package.py'), '--commit', 'a' * 40, '--output', directory], check=True)

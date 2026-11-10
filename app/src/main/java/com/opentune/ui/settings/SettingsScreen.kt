@@ -1608,7 +1608,7 @@ private fun settingsSections(
             listOf(
                 Entry("Developer & Contributors", "developer author creator Masthan Valli akshay akhil ganesh tester promoter") {
                     SettingRow("Developer", icon = Icons.Rounded.Person, summary = "Created by Masthan Valli")
-                    SettingRow("Testers & Promoters", icon = Icons.Rounded.Group, summary = "Akshay, Akhil, Ganesh")
+                    SettingRow("Testers & Promoters", icon = Icons.Rounded.Person, summary = "Akshay, Akhil, Ganesh")
                 },
                 Entry("What's new", "release notes changelog version highlights") {
                     NavRow("What's new", { showWhatsNew = true }, summary = "Highlights and improvements in ${BuildConfig.VERSION_NAME}", icon = Icons.Rounded.SystemUpdate)

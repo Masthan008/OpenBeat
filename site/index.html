@@ -47,7 +47,7 @@
   "operatingSystem": "Android 8.0 or later, Windows, macOS, Linux, Web",
   "isAccessibleForFree": true,
   "license": "GPL-3.0",
-  "downloadUrl": "https://openbeat-site.vercel.app/#releases",
+  "downloadUrl": "https://github.com/Masthan008/OpenBeat/releases/latest",
   "image": "https://openbeat-site.vercel.app/img/openblast-logo.png",
   "screenshot": [
     "https://openbeat-site.vercel.app/img/01-player.jpg",
@@ -1406,8 +1406,9 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   }
 
   function notesOf(rel) {
-    if (rel.highlights) return rel.highlights;
+    if (rel.highlights && rel.highlights.length) return rel.highlights;
     const known = FALLBACK.find((f) => f.tag_name === rel.tag_name);
+    if (known && known.highlights && known.highlights.length) return known.highlights;
     const lines = (rel.body || "").split("\n").map((l) => l.trim()).filter((l) => /^[-*] /.test(l)).map((l) => l.replace(/^[-*] /, "").replace(/\*\*/g, "").replace(/\(?https?:\/\/\S+\)?/g, "").trim()).filter(Boolean);
     return lines.length ? lines.slice(0, 7) : (known ? known.highlights : []);
   }
@@ -1465,18 +1466,51 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
     if ($("rel-source")) $("rel-source").textContent = live ? "Live from GitHub Releases." : "Official release builds and updates.";
   }
 
+  function mergeReleases(baseList, liveList) {
+    if (!liveList || !liveList.length) return baseList;
+    const liveMap = new Map(liveList.map((r) => [r.tag_name, r]));
+    const merged = baseList.map((baseRel) => {
+      const live = liveMap.get(baseRel.tag_name);
+      if (!live) return baseRel;
+      const assets = (baseRel.assets || []).map((baseAsset) => {
+        const liveAsset = (live.assets || []).find((la) => la.name === baseAsset.name);
+        return liveAsset ? { ...baseAsset, download_count: liveAsset.download_count, browser_download_url: liveAsset.browser_download_url } : baseAsset;
+      });
+      return { ...baseRel, assets, html_url: live.html_url || baseRel.html_url };
+    });
+    const baseTags = new Set(baseList.map((r) => r.tag_name));
+    for (const liveRel of liveList) {
+      if (!baseTags.has(liveRel.tag_name)) {
+        merged.push(liveRel);
+      }
+    }
+    return merged;
+  }
+
+  let activeReleases = FALLBACK;
+
   // 1. Immediately render packaged fallback release so the section is NEVER empty
   renderReleases(FALLBACK, false);
 
-  // 2. Fetch releases.json or GitHub API in background to enrich with live counts if available
+  // 2. Fetch releases.json and merge with live counts from GitHub in background
   const published = (list) => Array.isArray(list) ? list.filter((r) => !r.draft && !r.prerelease) : [];
   const getJson = (url, opts) => fetch(url, opts).then((r) => r.ok ? r.json() : Promise.reject(r.status));
   getJson("releases.json", { cache: "no-cache" }).then(published)
-    .then((list) => { if (list.length) renderReleases(list, false); })
+    .then((list) => {
+      if (list.length) {
+        activeReleases = list;
+        renderReleases(activeReleases, false);
+      }
+    })
     .catch(() => {})
     .then(() => getJson("https://api.github.com/repos/Masthan008/OpenBeat/releases?per_page=10"))
     .then(published)
-    .then((list) => { if (list.length) renderReleases(list, true); })
+    .then((liveList) => {
+      if (liveList.length) {
+        const merged = mergeReleases(activeReleases, liveList);
+        renderReleases(merged, true);
+      }
+    })
     .catch(() => {});
 
   // ios/source.json is loaded for build badge
