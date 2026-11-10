@@ -85,6 +85,10 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "2.0.1" to listOf(
+            Note(Icons.Rounded.Lock, "Unified Release Keystore & Multi-Scheme Signing", "Signed with permanent canonical certificate ensuring seamless updates and full compatibility on Vivo OriginOS and modern 64-bit devices."),
+            Note(Icons.Rounded.Download, "In-App Updater Hardening", "Pre-install ZIP integrity checks prevent incomplete or corrupted downloads from failing installation."),
+        ),
         "2.0.0" to listOf(
             Note(Icons.Rounded.Groups, "Contributors & Team Attribution", "Created by Masthan Valli. Added Akshay, Akhil, and Ganesh as official Testers & Promoters."),
             Note(Icons.Rounded.GraphicEq, "Listen Together Audio Synchronization", "Engineered millisecond-accurate sync across devices, eliminating 1-5 second drift between host and guests."),

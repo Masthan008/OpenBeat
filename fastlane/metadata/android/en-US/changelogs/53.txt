@@ -1,0 +1,6 @@
+- [Signing & Updates] Canonical permanent release keystore ensuring seamless in-app updates without signature mismatch
+- [Vivo & OEM Compatibility] Enabled v1, v2, and v3 multi-scheme APK signing to eliminate package parsing errors on Vivo OriginOS/FuntouchOS
+- [In-App Updater] Hardened APK integrity validation with ZIP structure checks before installation
+- [Listen Together] Perfect multi-device audio synchronization and high-sensitivity voice calls
+- [Library] Persistent playlist sorting: A-Z order remembered across restarts with save order option
+- [Contributors] Added Akshay, Akhil, and Ganesh as official Testers & Promoters
