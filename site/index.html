@@ -449,33 +449,81 @@ h3 { font-size: clamp(27px, 2.6vw, 34px); line-height: 1; font-weight: 750; font
 .rel .notes ul { padding-left: 18px; list-style: disc; display: grid; gap: 6px; }
 .rel .side { display: grid; gap: 10px; justify-items: end; font-size: 14px; }
 .rel .side a:not(.btn) { color: var(--muted); }
+.rel .side .num {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--ink);
+  background: var(--raise-2, #E8E5DF);
+  border: 1px solid var(--line);
+  padding: 5px 13px;
+  border-radius: 999px;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.rel .side .num::before {
+  content: "";
+  display: inline-block;
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981aa;
+}
 .source-note { margin-top: 20px; color: var(--muted); font-size: 14px; }
 
-/* ---------- live download counter card ---------- */
+/* ---------- live download counter card & highlights ---------- */
+.hl-stat {
+  color: var(--tint);
+  font-weight: 800;
+  font-stretch: 80%;
+}
 .dl-counter-card {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 22px;
-  background: var(--wash, rgba(0, 0, 0, 0.03));
-  border: 1px solid var(--line);
+  gap: 16px;
+  padding: 12px 24px;
+  background: var(--ink);
+  color: var(--snow);
+  border: 1.5px solid color-mix(in oklab, var(--tint) 45%, transparent);
   border-radius: 999px;
   justify-self: end;
   width: fit-content;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+}
+.dl-counter-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.dl-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #10b98125;
+  border: 1px solid #10b98160;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #10b981;
 }
 .dl-counter-card .live-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 10px #10b981;
-  animation: pulse-dot 2s infinite ease-in-out;
+  animation: pulse-dot 1.8s infinite ease-in-out;
   flex: none;
 }
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.8); }
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px #10b981; }
+  50% { opacity: 0.35; transform: scale(0.75); box-shadow: 0 0 3px #10b981; }
 }
 .dl-counter-inner {
   display: flex;
@@ -483,19 +531,20 @@ h3 { font-size: clamp(27px, 2.6vw, 34px); line-height: 1; font-weight: 750; font
   line-height: 1.15;
 }
 .dl-counter-num {
-  font-size: clamp(22px, 2vw, 28px);
-  font-weight: 800;
+  font-size: clamp(24px, 2.4vw, 30px);
+  font-weight: 850;
   font-stretch: 75%;
   font-variant-numeric: tabular-nums;
-  color: var(--tint);
+  color: #FFFFFF;
   letter-spacing: -0.02em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 .dl-counter-label {
   font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in oklab, var(--snow) 75%, transparent);
 }
 
 /* ---------- install (painted again) ---------- */
@@ -936,13 +985,13 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       <header class="head split">
         <div>
           <h2>Shipped, with notes.</h2>
-          <p id="rel-intro">4,500+ downloads across Android, Web &amp; Desktop &middot; 3 published builds.</p>
+          <p id="rel-intro"><b class="hl-stat">4,500+ downloads</b> across Android, Web &amp; Desktop &middot; 3 published builds.</p>
         </div>
         <div class="dl-counter-card" id="dl-counter-card" title="Live downloads tracked across GitHub Releases &amp; official mirrors">
-          <span class="live-dot" aria-hidden="true"></span>
+          <div class="dl-badge-pill"><span class="live-dot" aria-hidden="true"></span>Live</div>
           <div class="dl-counter-inner">
             <span class="dl-counter-num" id="total-downloads-count">4,500+</span>
-            <span class="dl-counter-label">Total Downloads</span>
+            <span class="dl-counter-label">Verified Downloads</span>
           </div>
         </div>
       </header>
@@ -1664,7 +1713,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       }
     });
     if ($("rel-intro")) {
-      $("rel-intro").textContent = displayCount.toLocaleString("en-US") + "+ downloads across Android, Web & Desktop · " + list.length + (list.length === 1 ? " published build" : " published builds") + ", ready to download.";
+      $("rel-intro").innerHTML = '<b class="hl-stat">' + displayCount.toLocaleString("en-US") + '+ downloads</b> across Android, Web &amp; Desktop &middot; ' + list.length + (list.length === 1 ? ' published build' : ' published builds') + ', ready to download.';
     }
     if ($("rel-source")) $("rel-source").textContent = live ? "Live from GitHub Releases." : "Official release builds and updates.";
   }
