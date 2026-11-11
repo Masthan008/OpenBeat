@@ -120,10 +120,10 @@ function startTicker() {
       const duration = playerInstance.getDuration() || 0;
       if (duration > 0 && Math.abs(boundAudio.duration - duration) > 1) {
         // Update synthetic duration property if possible
-        Object.defineProperty(boundAudio, 'duration', { value: duration, configurable: true });
+        Object.defineProperty(boundAudio, 'duration', { value: duration, configurable: true, writable: true });
         boundAudio.dispatchEvent(new Event('durationchange'));
       }
-      Object.defineProperty(boundAudio, 'currentTime', { value: current, configurable: true });
+      Object.defineProperty(boundAudio, 'currentTime', { value: current, configurable: true, writable: true });
       boundAudio.dispatchEvent(new Event('timeupdate'));
     } catch {
       // Ignored during iframe transitions
@@ -205,13 +205,18 @@ export const iframeDeck = {
             start: Math.floor(startSeconds),
           },
           events: {
-            onReady: () => {
+            onReady: (event: any) => {
               clearTimeout(timeout);
               try {
                 if (playerInstance && typeof playerInstance.setPlaybackRate === 'function') {
                   playerInstance.setPlaybackRate(currentPlaybackRate);
                 }
               } catch {}
+              if (autoplay && event?.target && typeof event.target.playVideo === 'function') {
+                try {
+                  event.target.playVideo();
+                } catch {}
+              }
               resolve();
             },
             onStateChange: (event: { data: number }) => {
@@ -225,12 +230,16 @@ export const iframeDeck = {
                   }
                 } catch {}
                 if (boundAudio) {
-                  Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true });
+                  try {
+                    Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true, writable: true });
+                  } catch {}
                   boundAudio.dispatchEvent(new Event('playing'));
                 }
               } else if (state === YT.PlayerState.PAUSED) {
                 if (boundAudio) {
-                  Object.defineProperty(boundAudio, 'paused', { value: true, configurable: true });
+                  try {
+                    Object.defineProperty(boundAudio, 'paused', { value: true, configurable: true, writable: true });
+                  } catch {}
                   boundAudio.dispatchEvent(new Event('pause'));
                 }
               } else if (state === YT.PlayerState.BUFFERING) {
@@ -239,7 +248,9 @@ export const iframeDeck = {
                 }
               } else if (state === YT.PlayerState.ENDED) {
                 if (boundAudio) {
-                  Object.defineProperty(boundAudio, 'ended', { value: true, configurable: true });
+                  try {
+                    Object.defineProperty(boundAudio, 'ended', { value: true, configurable: true, writable: true });
+                  } catch {}
                   boundAudio.dispatchEvent(new Event('ended'));
                 }
                 if (onEndedCallback) onEndedCallback();
@@ -280,8 +291,10 @@ export const iframeDeck = {
     }
 
     if (boundAudio) {
-      Object.defineProperty(boundAudio, 'duration', { value: duration, configurable: true });
-      Object.defineProperty(boundAudio, 'paused', { value: !autoplay, configurable: true });
+      try {
+        Object.defineProperty(boundAudio, 'duration', { value: duration, configurable: true, writable: true });
+        Object.defineProperty(boundAudio, 'paused', { value: !autoplay, configurable: true, writable: true });
+      } catch {}
       boundAudio.dispatchEvent(new Event('durationchange'));
     }
 
@@ -293,7 +306,9 @@ export const iframeDeck = {
     try {
       playerInstance.playVideo();
       if (boundAudio) {
-        Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true });
+        try {
+          Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true, writable: true });
+        } catch {}
         boundAudio.dispatchEvent(new Event('play'));
       }
     } catch {
@@ -306,7 +321,9 @@ export const iframeDeck = {
     try {
       playerInstance.pauseVideo();
       if (boundAudio) {
-        Object.defineProperty(boundAudio, 'paused', { value: true, configurable: true });
+        try {
+          Object.defineProperty(boundAudio, 'paused', { value: true, configurable: true, writable: true });
+        } catch {}
         boundAudio.dispatchEvent(new Event('pause'));
       }
     } catch {
@@ -319,7 +336,9 @@ export const iframeDeck = {
     try {
       playerInstance.seekTo(seconds, true);
       if (boundAudio) {
-        Object.defineProperty(boundAudio, 'currentTime', { value: seconds, configurable: true });
+        try {
+          Object.defineProperty(boundAudio, 'currentTime', { value: seconds, configurable: true, writable: true });
+        } catch {}
         boundAudio.dispatchEvent(new Event('seeked'));
       }
     } catch {
@@ -331,9 +350,13 @@ export const iframeDeck = {
     currentPlaybackRate = rate;
     if (boundAudio) {
       try {
-        Object.defineProperty(boundAudio, 'playbackRate', { value: rate, configurable: true });
-        boundAudio.dispatchEvent(new Event('ratechange'));
-      } catch {}
+        boundAudio.playbackRate = rate;
+      } catch {
+        try {
+          Object.defineProperty(boundAudio, 'playbackRate', { value: rate, configurable: true, writable: true });
+        } catch {}
+      }
+      boundAudio.dispatchEvent(new Event('ratechange'));
     }
     if (!playerInstance) return;
     try {

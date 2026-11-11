@@ -503,7 +503,9 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
 
       const eqState = useEqualizerStore.getState();
       iframeDeck.setPlaybackRate(eqState.speed);
-      deck.audio.playbackRate = eqState.speed;
+      try {
+        if (deck.audio) deck.audio.playbackRate = eqState.speed;
+      } catch {}
 
       // Tier 1: Try JioSaavn 320 kbps first for native HTML5 audio with 10-band Web Audio Equalizer
       const addons = useAddons.getState();

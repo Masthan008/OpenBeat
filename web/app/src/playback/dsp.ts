@@ -121,12 +121,16 @@ function syncDspChain(chain: AudioDspChain, state: { enabled: boolean; preampDb:
     filter.gain.setTargetAtTime(gain, chain.source.context.currentTime, 0.05);
   });
 
-  if (Math.abs(audio.playbackRate - state.speed) > 0.01) {
-    audio.playbackRate = state.speed;
-  }
-  if (audio.preservesPitch !== state.pitchPreserved) {
-    audio.preservesPitch = state.pitchPreserved;
-  }
+  try {
+    if (Math.abs(audio.playbackRate - state.speed) > 0.01) {
+      audio.playbackRate = state.speed;
+    }
+  } catch {}
+  try {
+    if (audio.preservesPitch !== state.pitchPreserved) {
+      audio.preservesPitch = state.pitchPreserved;
+    }
+  } catch {}
 }
 
 function syncAllChains() {
@@ -167,7 +171,9 @@ export function initAudioDsp(audio: HTMLAudioElement): void {
     connectedChains.set(audio, chain);
 
     const initialSpeed = useEqualizerStore.getState().speed;
-    audio.playbackRate = initialSpeed;
+    try {
+      audio.playbackRate = initialSpeed;
+    } catch {}
     syncDspChain(chain, useEqualizerStore.getState());
 
     const resumeContext = () => {
