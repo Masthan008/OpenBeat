@@ -200,12 +200,24 @@ async function handleEdge(req: Request): Promise<Response> {
       targetHost = 'https://www.youtube.com';
     }
 
-    const cloneParams = new URLSearchParams(url.searchParams);
-    cloneParams.delete('__subpath');
-    cloneParams.delete('path');
-    const queryString = cloneParams.toString();
-    const search = queryString ? `?${queryString}` : '';
-    const targetUrl = new URL(actualSubpath + search, targetHost);
+    // Separate pathname and any existing query string from actualSubpath
+    let [subPathOnly, subSearch] = actualSubpath.split('?');
+    if (!subPathOnly.startsWith('/')) {
+      subPathOnly = `/${subPathOnly}`;
+    }
+
+    // Merge query parameters without duplication
+    const finalParams = new URLSearchParams(subSearch || '');
+    for (const [key, val] of url.searchParams.entries()) {
+      if (key !== '__subpath' && key !== 'path') {
+        if (!finalParams.has(key)) {
+          finalParams.set(key, val);
+        }
+      }
+    }
+
+    const search = finalParams.toString() ? `?${finalParams.toString()}` : '';
+    const targetUrl = new URL(subPathOnly + search, targetHost);
     const forwardHeaders = new Headers();
 
     if (targetHost.includes('jiosaavn.com')) {
@@ -431,12 +443,24 @@ async function handleNode(req: any, res: any): Promise<void> {
       targetHost = 'https://www.youtube.com';
     }
 
-    const cloneParams = new URLSearchParams(parsedUrl.searchParams);
-    cloneParams.delete('__subpath');
-    cloneParams.delete('path');
-    const queryString = cloneParams.toString();
-    const search = queryString ? `?${queryString}` : '';
-    const targetUrl = new URL(actualSubpath + search, targetHost);
+    // Separate pathname and any existing query string from actualSubpath
+    let [subPathOnly, subSearch] = actualSubpath.split('?');
+    if (!subPathOnly.startsWith('/')) {
+      subPathOnly = `/${subPathOnly}`;
+    }
+
+    // Merge query parameters without duplication
+    const finalParams = new URLSearchParams(subSearch || '');
+    for (const [key, val] of parsedUrl.searchParams.entries()) {
+      if (key !== '__subpath' && key !== 'path') {
+        if (!finalParams.has(key)) {
+          finalParams.set(key, val);
+        }
+      }
+    }
+
+    const search = finalParams.toString() ? `?${finalParams.toString()}` : '';
+    const targetUrl = new URL(subPathOnly + search, targetHost);
 
     const forwardHeaders: Record<string, string> = {
       'User-Agent':
