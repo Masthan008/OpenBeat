@@ -2,6 +2,46 @@
  * Universal Serverless Proxy for YouTube Music, YouTube, and JioSaavn APIs.
  * Supports both Vercel Node runtime (req, res) and Edge runtime (Request -> Response).
  */
+import { Readable } from 'node:stream';
+
+async function resolveAudioStream(videoId: string): Promise<string | null> {
+  try {
+    const ytPlayerRes = await fetch('https://music.youtube.com/youtubei/v1/player', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14; en_US) gzip',
+        'X-YouTube-Client-Name': '21',
+        'X-YouTube-Client-Version': '6.42.52',
+      },
+      body: JSON.stringify({
+        videoId,
+        context: {
+          client: {
+            clientName: 'ANDROID_MUSIC',
+            clientVersion: '6.42.52',
+            androidSdkVersion: 34,
+            hl: 'en',
+            gl: 'US',
+          },
+        },
+      }),
+    });
+    if (ytPlayerRes.ok) {
+      const ytData = (await ytPlayerRes.json()) as any;
+      const formats = (ytData?.streamingData?.adaptiveFormats || []).filter(
+        (f: any) => f.mimeType && f.mimeType.startsWith('audio/') && f.url,
+      );
+      formats.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+      if (formats[0]?.url) {
+        return formats[0].url;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to resolve YouTube audio stream:', e);
+  }
+  return null;
+}
 
 async function handleEdge(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
@@ -28,7 +68,70 @@ async function handleEdge(req: Request): Promise<Response> {
 
     const isSaavn = rawSubpath.startsWith('/saavn');
     const isDownload = rawSubpath.startsWith('/download');
+    const isStream = rawSubpath.startsWith('/stream');
     const actualSubpath = isSaavn ? rawSubpath.replace(/^\/saavn/, '') : rawSubpath;
+
+    if (isStream) {
+      let targetStreamUrl = url.searchParams.get('url');
+      const videoId = url.searchParams.get('id') || url.searchParams.get('videoId');
+
+      if (!targetStreamUrl && videoId) {
+        targetStreamUrl = await resolveAudioStream(videoId);
+      }
+
+      if (!targetStreamUrl) {
+        return new Response(JSON.stringify({ error: 'Could not resolve audio stream' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const streamHeaders = new Headers();
+      streamHeaders.set(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      );
+      if (targetStreamUrl.includes('googlevideo.com') || targetStreamUrl.includes('youtube.com')) {
+        streamHeaders.set('Origin', 'https://www.youtube.com');
+        streamHeaders.set('Referer', 'https://www.youtube.com/');
+      } else if (targetStreamUrl.includes('jiosaavn.com')) {
+        streamHeaders.set('Origin', 'https://www.jiosaavn.com');
+        streamHeaders.set('Referer', 'https://www.jiosaavn.com/');
+      }
+
+      const range = req.headers.get('range');
+      if (range) {
+        streamHeaders.set('Range', range);
+      }
+
+      const upstream = await fetch(targetStreamUrl, {
+        method: 'GET',
+        headers: streamHeaders,
+      });
+
+      if (!upstream.ok && upstream.status !== 206) {
+        return new Response(`Upstream error: ${upstream.status} ${upstream.statusText}`, { status: upstream.status });
+      }
+
+      const respHeaders = new Headers();
+      respHeaders.set('Content-Disposition', 'inline');
+      respHeaders.set('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
+      const contentLength = upstream.headers.get('content-length');
+      if (contentLength) respHeaders.set('Content-Length', contentLength);
+      const contentRange = upstream.headers.get('content-range');
+      if (contentRange) respHeaders.set('Content-Range', contentRange);
+      respHeaders.set('Accept-Ranges', 'bytes');
+      respHeaders.set('Access-Control-Allow-Origin', '*');
+      respHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      respHeaders.set('Access-Control-Allow-Headers', '*');
+      respHeaders.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
+      respHeaders.set('Cache-Control', 'public, max-age=3600');
+
+      return new Response(upstream.body, {
+        status: upstream.status,
+        headers: respHeaders,
+      });
+    }
 
     if (isDownload) {
       let targetStreamUrl = url.searchParams.get('url');
@@ -39,41 +142,7 @@ async function handleEdge(req: Request): Promise<Response> {
       const filename = url.searchParams.get('filename') || `${defaultFilename}.m4a`;
 
       if (!targetStreamUrl && videoId) {
-        try {
-          const ytPlayerRes = await fetch('https://music.youtube.com/youtubei/v1/player', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14; en_US) gzip',
-              'X-YouTube-Client-Name': '21',
-              'X-YouTube-Client-Version': '6.42.52',
-            },
-            body: JSON.stringify({
-              videoId,
-              context: {
-                client: {
-                  clientName: 'ANDROID_MUSIC',
-                  clientVersion: '6.42.52',
-                  androidSdkVersion: 34,
-                  hl: 'en',
-                  gl: 'US',
-                },
-              },
-            }),
-          });
-          if (ytPlayerRes.ok) {
-            const ytData = (await ytPlayerRes.json()) as any;
-            const formats = (ytData?.streamingData?.adaptiveFormats || []).filter(
-              (f: any) => f.mimeType && f.mimeType.startsWith('audio/') && f.url,
-            );
-            formats.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
-            if (formats[0]?.url) {
-              targetStreamUrl = formats[0].url;
-            }
-          }
-        } catch (e) {
-          console.error('Failed to resolve YouTube audio stream for download:', e);
-        }
+        targetStreamUrl = await resolveAudioStream(videoId);
       }
 
       if (!targetStreamUrl) {
@@ -221,72 +290,102 @@ async function handleNode(req: any, res: any): Promise<void> {
 
     const isSaavn = rawSubpath.startsWith('/saavn');
     const isDownload = rawSubpath.startsWith('/download');
+    const isStream = rawSubpath.startsWith('/stream');
     const actualSubpath = isSaavn ? rawSubpath.replace(/^\/saavn/, '') : rawSubpath;
 
-    if (isDownload) {
-      let targetStreamUrl = url.searchParams.get('url');
-      const videoId = url.searchParams.get('id');
-      const songTitle = url.searchParams.get('title') || 'Song';
-      const songArtist = url.searchParams.get('artist') || 'Unknown Artist';
-      const defaultFilename = `${songArtist} - ${songTitle}`.replace(/[\\/:*?"<>|]/g, '_');
-      const filename = url.searchParams.get('filename') || `${defaultFilename}.m4a`;
+    if (isStream) {
+      let targetStreamUrl = parsedUrl.searchParams.get('url');
+      const videoId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('videoId');
 
       if (!targetStreamUrl && videoId) {
-        try {
-          const ytPlayerRes = await fetch('https://music.youtube.com/youtubei/v1/player', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14; en_US) gzip',
-              'X-YouTube-Client-Name': '21',
-              'X-YouTube-Client-Version': '6.42.52',
-            },
-            body: JSON.stringify({
-              videoId,
-              context: {
-                client: {
-                  clientName: 'ANDROID_MUSIC',
-                  clientVersion: '6.42.52',
-                  androidSdkVersion: 34,
-                  hl: 'en',
-                  gl: 'US',
-                },
-              },
-            }),
-          });
-          if (ytPlayerRes.ok) {
-            const ytData = (await ytPlayerRes.json()) as any;
-            const formats = (ytData?.streamingData?.adaptiveFormats || []).filter(
-              (f: any) => f.mimeType && f.mimeType.startsWith('audio/') && f.url,
-            );
-            formats.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
-            if (formats[0]?.url) {
-              targetStreamUrl = formats[0].url;
-            }
-          }
-        } catch (e) {
-          console.error('Failed to resolve YouTube audio stream for download:', e);
-        }
+        targetStreamUrl = await resolveAudioStream(videoId);
       }
 
       if (!targetStreamUrl) {
-        return new Response(JSON.stringify({ error: 'Could not resolve audio stream for download' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.end(JSON.stringify({ error: 'Could not resolve audio stream' }));
       }
 
-      const streamHeaders = new Headers();
-      streamHeaders.set(
-        'User-Agent',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-      );
+      const streamHeaders: Record<string, string> = {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      };
       if (targetStreamUrl.includes('googlevideo.com') || targetStreamUrl.includes('youtube.com')) {
-        streamHeaders.set('Origin', 'https://www.youtube.com');
-        streamHeaders.set('Referer', 'https://www.youtube.com/');
+        streamHeaders['Origin'] = 'https://www.youtube.com';
+        streamHeaders['Referer'] = 'https://www.youtube.com/';
       } else if (targetStreamUrl.includes('jiosaavn.com')) {
-        streamHeaders.set('Origin', 'https://www.jiosaavn.com');
-        streamHeaders.set('Referer', 'https://www.jiosaavn.com/');
+        streamHeaders['Origin'] = 'https://www.jiosaavn.com';
+        streamHeaders['Referer'] = 'https://www.jiosaavn.com/';
+      }
+
+      if (req.headers['range']) {
+        streamHeaders['Range'] = req.headers['range'] as string;
+      }
+
+      const upstream = await fetch(targetStreamUrl, {
+        method: 'GET',
+        headers: streamHeaders,
+      });
+
+      if (!upstream.ok && upstream.status !== 206) {
+        res.statusCode = upstream.status;
+        return res.end(`Upstream audio error: ${upstream.status} ${upstream.statusText}`);
+      }
+
+      res.statusCode = upstream.status;
+      res.setHeader('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
+      const contentLength = upstream.headers.get('content-length');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      const contentRange = upstream.headers.get('content-range');
+      if (contentRange) res.setHeader('Content-Range', contentRange);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      if (typeof (Readable as any)?.fromWeb === 'function' && upstream.body) {
+        return (Readable as any).fromWeb(upstream.body).pipe(res);
+      }
+
+      const data = await upstream.arrayBuffer();
+      const buffer = Buffer.from(data);
+      return res.end(buffer);
+    }
+
+    if (isDownload) {
+      let targetStreamUrl = parsedUrl.searchParams.get('url');
+      const videoId = parsedUrl.searchParams.get('id');
+      const songTitle = parsedUrl.searchParams.get('title') || 'Song';
+      const songArtist = parsedUrl.searchParams.get('artist') || 'Unknown Artist';
+      const defaultFilename = `${songArtist} - ${songTitle}`.replace(/[\\/:*?"<>|]/g, '_');
+      const filename = parsedUrl.searchParams.get('filename') || `${defaultFilename}.m4a`;
+
+      if (!targetStreamUrl && videoId) {
+        targetStreamUrl = await resolveAudioStream(videoId);
+      }
+
+      if (!targetStreamUrl) {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.end(JSON.stringify({ error: 'Could not resolve audio stream for download' }));
+      }
+
+      const streamHeaders: Record<string, string> = {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      };
+      if (targetStreamUrl.includes('googlevideo.com') || targetStreamUrl.includes('youtube.com')) {
+        streamHeaders['Origin'] = 'https://www.youtube.com';
+        streamHeaders['Referer'] = 'https://www.youtube.com/';
+      } else if (targetStreamUrl.includes('jiosaavn.com')) {
+        streamHeaders['Origin'] = 'https://www.jiosaavn.com';
+        streamHeaders['Referer'] = 'https://www.jiosaavn.com/';
       }
 
       const upstream = await fetch(targetStreamUrl, {
@@ -295,21 +394,25 @@ async function handleNode(req: any, res: any): Promise<void> {
       });
 
       if (!upstream.ok) {
-        return new Response(`Upstream error: ${upstream.status} ${upstream.statusText}`, { status: upstream.status });
+        res.statusCode = upstream.status;
+        return res.end(`Upstream error: ${upstream.status} ${upstream.statusText}`);
       }
 
-      const respHeaders = new Headers();
-      respHeaders.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-      respHeaders.set('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
+      res.statusCode = 200;
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
       const contentLength = upstream.headers.get('content-length');
-      if (contentLength) respHeaders.set('Content-Length', contentLength);
-      respHeaders.set('Access-Control-Allow-Origin', '*');
-      respHeaders.set('Cache-Control', 'public, max-age=86400');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
 
-      return new Response(upstream.body, {
-        status: 200,
-        headers: respHeaders,
-      });
+      if (typeof (Readable as any)?.fromWeb === 'function' && upstream.body) {
+        return (Readable as any).fromWeb(upstream.body).pipe(res);
+      }
+
+      const data = await upstream.arrayBuffer();
+      const buffer = Buffer.from(data);
+      return res.end(buffer);
     }
 
     const proxyTarget = req.headers['x-proxy-target'] as string | undefined;

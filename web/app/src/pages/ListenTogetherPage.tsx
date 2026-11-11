@@ -92,7 +92,7 @@ function Room({ view }: { view: RoomView }) {
   const autoplay = usePlayer((s) => s.autoplay);
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const copy = (what: 'code' | 'link') => {
-    const text = what === 'code' ? pretty(view.code) : `${typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://openblast.vercel.app"}/together/#code=${view.code}`;
+    const text = what === 'code' ? pretty(view.code) : `${typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://openblast.vercel.app"}/#/together/${view.code}`;
     void navigator.clipboard.writeText(text).then(() => { setCopied(what); setTimeout(() => setCopied(null), 1500); }, () => undefined);
   };
   const ended = view.phase === 'ended';

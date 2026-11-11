@@ -10,7 +10,7 @@ if (/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{12}$/.test(code)) {
   link.hidden = false;
   // The web player joins the same rooms, from a computer or a phone's browser.
   const web = document.getElementById('web');
-  web.href = `https://openblast.vercel.app/#/invite/${code}`;
+  web.href = `https://openblast.vercel.app/#/together/${code}`;
   web.hidden = false;
   document.getElementById('help').hidden = false;
   document.getElementById('code').textContent = code.match(/.{4}/g).join('–');

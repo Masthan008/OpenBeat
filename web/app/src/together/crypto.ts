@@ -65,7 +65,7 @@ export class RoomCode {
   }
   /** The website's invite page, which opens the room in the app or here. */
   get link(): string {
-    return `https://masthan008.github.io/OpenBeat/together/#code=${this.raw}`;
+    return `https://openblast.vercel.app/#/together/${this.raw}`;
   }
 
   seal(plain: string) {

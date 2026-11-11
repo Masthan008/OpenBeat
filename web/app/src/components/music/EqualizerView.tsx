@@ -3,6 +3,7 @@ import {
   EQ_FREQUENCIES,
   EQ_PRESETS,
   useEqualizerStore,
+  ensureAudioContextRunning,
 } from '@/playback/dsp';
 
 export function EqualizerView({ compact = false }: { compact?: boolean }) {
@@ -31,7 +32,10 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
             <input
               type="checkbox"
               checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
+              onChange={(e) => {
+                void ensureAudioContextRunning();
+                setEnabled(e.target.checked);
+              }}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-quaternary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-key-bg"></div>
@@ -39,12 +43,20 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
               {enabled ? 'Equalizer On' : 'Equalizer Off'}
             </span>
           </label>
+          {enabled && (
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+              10-Band DSP Active
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <select
             value={preset}
-            onChange={(e) => setPreset(e.target.value)}
+            onChange={(e) => {
+              void ensureAudioContextRunning();
+              setPreset(e.target.value);
+            }}
             disabled={!enabled}
             className="rounded-lg bg-quinary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-quaternary transition-colors cursor-pointer disabled:opacity-50"
           >
@@ -57,7 +69,10 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
           </select>
 
           <button
-            onClick={reset}
+            onClick={() => {
+              void ensureAudioContextRunning();
+              reset();
+            }}
             title="Reset Equalizer"
             className="p-1.5 rounded-lg bg-quinary hover:bg-quaternary text-secondary hover:text-primary transition-colors cursor-pointer"
           >
@@ -76,7 +91,10 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
           step="0.5"
           value={preampDb}
           disabled={!enabled}
-          onChange={(e) => setPreamp(parseFloat(e.target.value))}
+          onChange={(e) => {
+            void ensureAudioContextRunning();
+            setPreamp(parseFloat(e.target.value));
+          }}
           className="flex-1 h-1.5 bg-quaternary rounded-lg appearance-none cursor-pointer accent-key disabled:opacity-50"
         />
         <span className="text-xs font-mono text-secondary w-12 text-right">
@@ -104,7 +122,10 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
                   max="12"
                   step="0.5"
                   value={gain}
-                  onChange={(e) => setBandGain(i, parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    void ensureAudioContextRunning();
+                    setBandGain(i, parseFloat(e.target.value));
+                  }}
                   style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
                   className="h-28 w-2 bg-quaternary rounded-lg appearance-none cursor-pointer accent-key"
                 />
@@ -124,7 +145,10 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
           {[0.75, 1.0, 1.25, 1.5, 2.0].map((s) => (
             <button
               key={s}
-              onClick={() => setSpeed(s)}
+              onClick={() => {
+                void ensureAudioContextRunning();
+                setSpeed(s);
+              }}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 Math.abs(speed - s) < 0.01
                   ? 'bg-key-bg text-white'

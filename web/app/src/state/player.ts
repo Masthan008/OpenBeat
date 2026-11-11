@@ -22,6 +22,7 @@ import {
 } from '@/playback/queue/timeline';
 import { trackLog } from '@/playback/trackLog';
 import { iframeDeck } from '@/playback/youtube/iframeDeck';
+import { useEqualizerStore } from '@/playback/dsp';
 import { findJioSaavn } from '@/addons/jiosaavn';
 import { fetchJson, useAddons } from '@/addons/client';
 import type { LoadedTrack, YouTubeEngine } from '@/playback/youtube/engine';
@@ -488,6 +489,10 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
         void advance(true).then(intent);
       });
 
+      const eqState = useEqualizerStore.getState();
+      iframeDeck.setPlaybackRate(eqState.speed);
+      deck.audio.playbackRate = eqState.speed;
+
       // Tier 1: Try JioSaavn 320 kbps first for native HTML5 audio with 10-band Web Audio Equalizer
       const addons = useAddons.getState();
       let playedDirect = false;
@@ -501,6 +506,7 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
             iframeDeck.setActive(false);
             deck.audio.src = saavn.stream.url;
             deck.audio.crossOrigin = 'anonymous';
+            deck.audio.playbackRate = eqState.speed;
             if (startSec > 0) deck.audio.currentTime = startSec;
             if (autoplay) await deck.audio.play();
             applyTrack(
@@ -519,12 +525,41 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
             playedDirect = true;
           }
         } catch {
-          // Fall through to YouTube IFrame player
+          // Fall through to YouTube stream or IFrame player
+        }
+      }
+
+      // Tier 2: Try Direct Stream Proxy when Equalizer is enabled for full 10-band Web Audio DSP
+      if (!playedDirect && token === loadToken && eqState.enabled) {
+        try {
+          const streamUrl = `/api/yt/stream?id=${encodeURIComponent(entry.track.videoId)}`;
+          iframeDeck.setActive(false);
+          deck.audio.src = streamUrl;
+          deck.audio.crossOrigin = 'anonymous';
+          deck.audio.playbackRate = eqState.speed;
+          if (startSec > 0) deck.audio.currentTime = startSec;
+          if (autoplay) await deck.audio.play();
+          applyTrack(
+            {
+              videoId: entry.track.videoId,
+              title: entry.track.title,
+              author: artistNames(entry.track),
+              durationSec: entry.track.durationSec ?? 0,
+              thumbnails: [{ url: entry.track.thumbnail ?? '', width: 500, height: 500 }],
+              client: 'WEB' as any,
+              format: 'YouTube Direct DSP Stream',
+              loudnessDb: null,
+            },
+            entry.track,
+          );
+          playedDirect = true;
+        } catch {
+          // Fall through to YouTube IFrame player fallback
         }
       }
 
       if (!playedDirect && token === loadToken) {
-        // Tier 2: Universal YouTube IFrame Player fallback (zero extension, zero CORS issues worldwide)
+        // Tier 3: Universal YouTube IFrame Player fallback (zero extension, zero CORS issues worldwide)
         await iframeDeck.load(entry.track.videoId, { startSec, autoplay });
         if (token !== loadToken) return;
         applyTrack(
@@ -542,7 +577,7 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
         );
       }
     } else {
-      // Tier 3: Extension installed, use high-bitrate Opus MSE player
+      // Tier 4: Extension installed, use high-bitrate Opus MSE player
       iframeDeck.setActive(false);
       const track = await deck.engine.load(entry.track.videoId, { startSec, autoplay, hint: searchHintOf(entry.track) });
       if (token !== loadToken) return;
@@ -831,10 +866,42 @@ function bindElement(deck: Deck, n: number) {
     });
   }
   element.addEventListener('play', () => {
+    const desiredRate = useEqualizerStore.getState().speed;
+    if (Math.abs(element.playbackRate - desiredRate) > 0.01) {
+      element.playbackRate = desiredRate;
+    }
     if (inFront() && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   });
   element.addEventListener('pause', () => {
     if (inFront() && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  });
+}
+
+if (typeof window !== 'undefined') {
+  useEqualizerStore.subscribe((state, prevState) => {
+    if (state.enabled && !prevState.enabled && iframeDeck.isActive()) {
+      const { nowPlaying, status } = usePlayer.getState();
+      if (!nowPlaying?.videoId) return;
+      const audio = getAudio();
+      if (!audio) return;
+      const curTime = iframeDeck.getCurrentTime();
+      const isPlaying = status === 'playing';
+      const streamUrl = `/api/yt/stream?id=${encodeURIComponent(nowPlaying.videoId)}`;
+
+      iframeDeck.pause();
+      iframeDeck.setActive(false);
+      audio.src = streamUrl;
+      audio.crossOrigin = 'anonymous';
+      audio.currentTime = curTime;
+      audio.playbackRate = state.speed;
+      if (isPlaying) {
+        void audio.play().catch(() => {
+          // If direct stream fails, revert cleanly back to iframeDeck
+          iframeDeck.setActive(true);
+          iframeDeck.play();
+        });
+      }
+    }
   });
 }
 

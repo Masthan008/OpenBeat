@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { iframeDeck } from '@/playback/youtube/iframeDeck';
 
 export const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const;
 
@@ -89,12 +90,25 @@ interface AudioDspChain {
 let audioContext: AudioContext | null = null;
 const connectedChains = new Map<HTMLAudioElement, AudioDspChain>();
 
-function getAudioContext(): AudioContext | null {
+export function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   if (!AudioCtx) return null;
   audioContext ??= new AudioCtx();
   return audioContext;
+}
+
+export async function ensureAudioContextRunning(): Promise<boolean> {
+  const ctx = getAudioContext();
+  if (!ctx) return false;
+  if (ctx.state === 'suspended') {
+    try {
+      await ctx.resume();
+    } catch (err) {
+      console.warn('[OpenBlast DSP] Could not resume AudioContext:', err);
+    }
+  }
+  return ctx.state === 'running';
 }
 
 function syncDspChain(chain: AudioDspChain, state: { enabled: boolean; preampDb: number; bands: number[]; speed: number; pitchPreserved: boolean }) {
@@ -152,6 +166,8 @@ export function initAudioDsp(audio: HTMLAudioElement): void {
     const chain: AudioDspChain = { audio, source, preamp, filters };
     connectedChains.set(audio, chain);
 
+    const initialSpeed = useEqualizerStore.getState().speed;
+    audio.playbackRate = initialSpeed;
     syncDspChain(chain, useEqualizerStore.getState());
 
     const resumeContext = () => {
@@ -204,9 +220,13 @@ export const useEqualizerStore = create<EqualizerState>()((set, get) => {
     },
 
     setSpeed(speed) {
-      set({ speed: Math.max(0.5, Math.min(2.0, speed)) });
+      const clamped = Math.max(0.5, Math.min(2.0, speed));
+      set({ speed: clamped });
       persistEq(get());
       syncAllChains();
+      try {
+        iframeDeck.setPlaybackRate(clamped);
+      } catch {}
     },
 
     setPitchPreserved(pitchPreserved) {

@@ -63,6 +63,50 @@
       ]
     }
     </script>
+    <script>
+      (function() {
+        try {
+          var p = window.location.pathname;
+          var h = window.location.hash || '';
+          var s = window.location.search || '';
+
+          var codeInHash = h.match(/^#(?:code=)?([A-Za-z0-9-]{12,14})$/i);
+          if (codeInHash && codeInHash[1]) {
+            var c1 = codeInHash[1].replace(/-/g, '').toUpperCase();
+            window.location.replace(window.location.origin + '/#/together/' + c1);
+            return;
+          }
+
+          var qMatch = s.match(/[?&]code=([A-Za-z0-9-]{12,14})/i);
+          if (qMatch && qMatch[1]) {
+            var c2 = qMatch[1].replace(/-/g, '').toUpperCase();
+            window.location.replace(window.location.origin + '/#/together/' + c2);
+            return;
+          }
+
+          var pathMatch = p.match(/^\/(?:together|invite)\/([A-Za-z0-9-]{12,14})/i);
+          if (pathMatch && pathMatch[1]) {
+            var c3 = pathMatch[1].replace(/-/g, '').toUpperCase();
+            window.location.replace(window.location.origin + '/#/together/' + c3);
+            return;
+          }
+
+          if ((p.indexOf('/together') !== -1 || p.indexOf('/invite') !== -1) && h.indexOf('code=') !== -1) {
+            var c4Match = h.match(/code=([A-Za-z0-9-]+)/i);
+            if (c4Match && c4Match[1]) {
+              var c4 = c4Match[1].replace(/-/g, '').toUpperCase();
+              window.location.replace(window.location.origin + '/#/together/' + c4);
+              return;
+            }
+          }
+
+          if (p === '/together' || p === '/together/' || p === '/invite' || p === '/invite/') {
+            window.location.replace(window.location.origin + '/#/together' + (h || s));
+            return;
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

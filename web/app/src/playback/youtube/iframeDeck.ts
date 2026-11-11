@@ -49,6 +49,7 @@ let boundAudio: HTMLAudioElement | null = null;
 let tickInterval: number | null = null;
 let onEndedCallback: (() => void) | null = null;
 let onErrorCallback: ((err: unknown) => void) | null = null;
+let currentPlaybackRate = 1.0;
 
 function loadIframeApi(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
@@ -202,6 +203,11 @@ export const iframeDeck = {
           events: {
             onReady: () => {
               clearTimeout(timeout);
+              try {
+                if (playerInstance && typeof playerInstance.setPlaybackRate === 'function') {
+                  playerInstance.setPlaybackRate(currentPlaybackRate);
+                }
+              } catch {}
               resolve();
             },
             onStateChange: (event: { data: number }) => {
@@ -209,6 +215,11 @@ export const iframeDeck = {
               const YT = window.YT;
               if (!YT) return;
               if (state === YT.PlayerState.PLAYING) {
+                try {
+                  if (playerInstance && typeof playerInstance.setPlaybackRate === 'function') {
+                    playerInstance.setPlaybackRate(currentPlaybackRate);
+                  }
+                } catch {}
                 if (boundAudio) {
                   Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true });
                   boundAudio.dispatchEvent(new Event('playing'));
@@ -243,6 +254,11 @@ export const iframeDeck = {
       } else {
         playerInstance.cueVideoById({ videoId, startSeconds });
       }
+      try {
+        if (typeof playerInstance.setPlaybackRate === 'function') {
+          playerInstance.setPlaybackRate(currentPlaybackRate);
+        }
+      } catch {}
     }
 
     active = true;
@@ -308,18 +324,25 @@ export const iframeDeck = {
   },
 
   setPlaybackRate(rate: number): void {
+    currentPlaybackRate = rate;
+    if (boundAudio) {
+      try {
+        Object.defineProperty(boundAudio, 'playbackRate', { value: rate, configurable: true });
+        boundAudio.dispatchEvent(new Event('ratechange'));
+      } catch {}
+    }
     if (!playerInstance) return;
     try {
       if (typeof playerInstance.setPlaybackRate === 'function') {
         playerInstance.setPlaybackRate(rate);
       }
-      if (boundAudio) {
-        Object.defineProperty(boundAudio, 'playbackRate', { value: rate, configurable: true });
-        boundAudio.dispatchEvent(new Event('ratechange'));
-      }
     } catch {
       // Ignored
     }
+  },
+
+  getPlaybackRate(): number {
+    return currentPlaybackRate;
   },
 
   setVolume(volume0to1: number): void {
