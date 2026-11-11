@@ -97,9 +97,10 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
+          base_version=$(echo "${TAG#v}" | sed -e 's/-android-tv$//' -e 's/-tv$//')
           for apk in app/build/outputs/apk/release/*.apk; do
-                        "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | sed -n '1p' > "$RUNNER_TEMP/apk-version.txt"
-            grep -F "versionName='${TAG#v}'" "$RUNNER_TEMP/apk-version.txt"
+            "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | sed -n '1p' > "$RUNNER_TEMP/apk-version.txt"
+            grep -F "versionName='$base_version'" "$RUNNER_TEMP/apk-version.txt"
           done
 
       - name: Name the APKs
@@ -121,10 +122,15 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         # From main this also creates the tag, on the commit that was built.
         run: |
+          release_title="OpenBlast $TAG"
+          if [[ "$TAG" == *"-android-tv" ]] || [[ "$TAG" == *"-tv" ]]; then
+            base_v=$(echo "${TAG#v}" | sed -e 's/-android-tv$//' -e 's/-tv$//')
+            release_title="OpenBlast v${base_v} (Android TV Edition)"
+          fi
           if [ -f "docs/releases/${TAG#v}.md" ]; then
-            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "OpenBlast $TAG" --notes-file "docs/releases/${TAG#v}.md"
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$release_title" --notes-file "docs/releases/${TAG#v}.md"
           else
-            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "OpenBlast $TAG" --generate-notes
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$release_title" --generate-notes
           fi
 
       - name: Remove signing material
