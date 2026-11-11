@@ -1,3 +1,5 @@
+import { cleanVideoId } from '@/data/music/mappers';
+
 /**
  * Background YouTube IFrame Audio Deck.
  * Uses the official Google YouTube IFrame Player API (window.YT.Player)
@@ -197,9 +199,10 @@ export const iframeDeck = {
   },
 
   async load(
-    videoId: string,
+    rawVideoId: string,
     options: { startSec?: number; autoplay?: boolean } = {},
   ): Promise<{ duration: number }> {
+    const videoId = cleanVideoId(rawVideoId) || rawVideoId;
     await loadIframeApi();
     const container = ensureContainer();
     const startSeconds = options.startSec ?? 0;

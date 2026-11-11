@@ -1,5 +1,59 @@
 [
   {
+    "tag_name": "v2.0.1-android-tv",
+    "name": "OpenBlast v2.0.1 (Android TV Edition)",
+    "published_at": "2026-11-11T19:15:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.1-android-tv",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.1-android-tv-universal.apk",
+        "size": 14070547,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1-android-tv/OpenBlast-v2.0.1-android-tv-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.1-android-tv-arm64-v8a.apk",
+        "size": 11381487,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.1-android-tv/OpenBlast-v2.0.1-android-tv-arm64-v8a.apk"
+      }
+    ],
+    "highlights": [
+      "[Android TV & Google TV] Dedicated 10-foot Leanback interface optimized for TV remotes and D-pad navigation",
+      "[Remote Seeking & Control] Precision directional navigation with instant play, pause, and track hopping",
+      "[QR Code Sign-In] Pair instantly with phone without on-screen TV keyboard typing",
+      "[High-Fidelity Audio] 48 kHz Opus direct DAC playback for home theaters and soundbars",
+      "[Downloader Sideload] Fully compatible with Downloader app and USB sideloading on all Android TV boxes"
+    ]
+  },
+  {
+    "tag_name": "v1.0.5-ios",
+    "name": "OpenBlast v1.0.5 (iOS Edition)",
+    "published_at": "2026-11-11T20:00:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v1.0.5-ios",
+    "assets": [
+      {
+        "name": "OpenBlast-v1.0.5-ios.ipa",
+        "size": 18500000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.5-ios/OpenBlast-v1.0.5-ios.ipa"
+      },
+      {
+        "name": "OpenBlast-iOS.ipa",
+        "size": 18500000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.5-ios/OpenBlast-iOS.ipa"
+      }
+    ],
+    "highlights": [
+      "[AltStore & SideStore] On-device sideloading with automated certificate renewal and zero revokes",
+      "[SwiftUI Native Player] Fluid gesture-driven interface designed specifically for iOS 16 and iOS 17/18",
+      "[Word-Synced Lyrics] Swift-rendered real-time lyrics synchronization matching YouTube Music",
+      "[AirPlay & Lock Screen] Integrated Now Playing info center, Control Center scrubbing, and AirPlay 2 streaming",
+      "[Source Catalog] Direct SideStore repository URL: https://openblast.vercel.app/ios/source.json"
+    ]
+  },
+  {
     "tag_name": "v2.0.1",
     "name": "OpenBlast v2.0.1",
     "published_at": "2026-11-10T23:30:00Z",

@@ -1,12 +1,18 @@
 import type { ArtistRef, MusicItem, Track } from '@/data/music/types';
 import type { QueueSource } from '@/playback/queue/timeline';
 import { usePlayer } from '@/state/player';
+import { cleanVideoId } from '@/data/music/mappers';
 
 /** A shelf or search item as a queue track. */
 export function toTrack(item: Track | MusicItem, fallbackArtwork?: string | null): Track {
-  if ('videoId' in item) return item.thumbnail || !fallbackArtwork ? item : { ...item, thumbnail: fallbackArtwork };
+  const rawId = 'videoId' in item ? item.videoId : item.id;
+  const videoId = cleanVideoId(rawId) || rawId;
+  if ('videoId' in item) {
+    const base = item.thumbnail || !fallbackArtwork ? item : { ...item, thumbnail: fallbackArtwork };
+    return base.videoId === videoId ? base : { ...base, videoId };
+  }
   return {
-    videoId: item.id,
+    videoId,
     title: item.title,
     artists: item.artists,
     album: item.album,

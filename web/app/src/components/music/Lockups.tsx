@@ -5,8 +5,10 @@ import { Artwork } from './Artwork';
 import { ExplicitBadge } from './ExplicitBadge';
 import { artistHref, hrefFor } from './links';
 import { playTrack } from './play';
+import { cleanVideoId } from '@/data/music/mappers';
 
-const isPlayable = (item: MusicItem) => item.kind === 'song' || item.kind === 'video';
+const isPlayable = (item: MusicItem) =>
+  item.kind === 'song' || item.kind === 'video' || !!cleanVideoId(item.id);
 
 /* Lockups (report §2). */
 const lockup = 'flex min-w-0 flex-col';
@@ -89,7 +91,13 @@ export function SquareLockup({ item, width = 220 }: { item: MusicItem; width?: n
               {item.title}
             </PrefetchLink>
           ) : (
-            <span>{item.title}</span>
+            <button
+              className="min-w-0 truncate text-left hover:underline cursor-pointer"
+              onClick={() => playTrack(item)}
+              aria-label={`Play ${item.title}`}
+            >
+              {item.title}
+            </button>
           )}
           {item.explicit && <ExplicitBadge />}
         </div>
@@ -108,7 +116,13 @@ export function VideoLockup({ item, width = 300 }: { item: MusicItem; width?: nu
       <LockupArtwork item={item} width={width} aspect={16 / 9} />
       <div className={caption}>
         <div className={title}>
-          <span>{item.title}</span>
+          <button
+            className="min-w-0 truncate text-left hover:underline cursor-pointer"
+            onClick={() => playTrack(item)}
+            aria-label={`Play ${item.title}`}
+          >
+            {item.title}
+          </button>
           {item.explicit && <ExplicitBadge />}
         </div>
         <div className={subtitle}>{item.subtitle}</div>

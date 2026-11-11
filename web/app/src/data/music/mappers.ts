@@ -30,6 +30,41 @@ type TextLike = { text?: string; runs?: { text: string; bold?: boolean }[] } | u
 const text = (value: TextLike | string | undefined): string =>
   typeof value === 'string' ? value : (value?.text ?? '').trim();
 
+/** Strips MPED prefixes, URLs, and query parameters to return a clean 11-char YouTube video ID. */
+export function cleanVideoId(rawId: string | null | undefined): string | null {
+  if (!rawId || typeof rawId !== 'string') return null;
+  const trimmed = rawId.trim();
+  if (!trimmed) return null;
+
+  // Reject browse prefixes: albums (MPRE), playlists (VL, PL), channels (UC), radio/mixes (RD), releases (OLAK)
+  if (/^(MPRE|VL|PL|UC|RD|OLAK)/i.test(trimmed)) {
+    return null;
+  }
+
+  // 1. If it has a watch URL or v= parameter
+  const vMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (vMatch) return vMatch[1]!;
+
+  // 2. youtu.be/xxx
+  const shortMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch) return shortMatch[1]!;
+
+  // 3. YouTube Music MPED prefix (e.g. MPEDhVXAEHETMbI)
+  if (/^MPED/i.test(trimmed) && trimmed.length >= 15) {
+    const candidate = trimmed.replace(/^MPED/i, '');
+    if (/^[a-zA-Z0-9_-]{11}$/.test(candidate.slice(0, 11))) {
+      return candidate.slice(0, 11);
+    }
+  }
+
+  // 4. Exact standard 11-character video ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
+
 function largest(thumbs: Thumb[] | undefined | null): string | null {
   if (!thumbs?.length) return null;
   return [...thumbs].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? null;
@@ -99,10 +134,13 @@ function subtitleFor(kind: ItemKind, artists: ArtistRef[], album: AlbumRef | nul
 export function mapResponsiveItem(node: YTNodes.MusicResponsiveListItem): MusicItem | null {
   // Library artist rows have no id of their own in YouTube.js, only a link to
   // MPLAUC…, the library's view of the UC… channel; they open as the artist.
+  const payload = node.endpoint?.payload as { videoId?: string; browseId?: string } | undefined;
+  const endpointVideoId = payload?.videoId ?? (node.endpoint as any)?.watchEndpoint?.videoId;
+  const cleanId = cleanVideoId(endpointVideoId) ?? cleanVideoId((node as any).videoId) ?? cleanVideoId(node.id);
   const linked = linkOf(node.endpoint)?.browseId;
-  const id = node.id ?? (linked?.startsWith('MPLAUC') ? linked.slice(4) : linked);
+  const id = cleanId ?? node.id ?? (linked?.startsWith('MPLAUC') ? linked.slice(4) : linked);
   if (!id) return null;
-  const kind = kindOf(node.item_type, id);
+  const kind = cleanId ? ((node.item_type === 'video' || isWide(node)) ? 'video' : 'song') : kindOf(node.item_type, id);
   const artists = artistsOf(node.artists ?? node.authors ?? (node.author ? [node.author] : undefined));
   const album: AlbumRef | null = node.album ? { name: node.album.name, id: node.album.id ?? null } : null;
   const title = (kind === 'artist' ? node.name : undefined) ?? node.title ?? node.name ?? '';
@@ -121,9 +159,13 @@ export function mapResponsiveItem(node: YTNodes.MusicResponsiveListItem): MusicI
 }
 
 export function mapTwoRowItem(node: YTNodes.MusicTwoRowItem): MusicItem | null {
-  const id = node.id ?? linkOf(node.endpoint)?.browseId ?? (node.endpoint?.payload as { videoId?: string })?.videoId;
+  const payload = node.endpoint?.payload as { videoId?: string; browseId?: string } | undefined;
+  const endpointVideoId = payload?.videoId ?? (node.endpoint as any)?.watchEndpoint?.videoId;
+  const cleanId = cleanVideoId(endpointVideoId) ?? cleanVideoId((node as any).videoId) ?? cleanVideoId(node.id);
+  const browseId = linkOf(node.endpoint)?.browseId ?? payload?.browseId;
+  const id = cleanId ?? (node.id && !node.id.startsWith('MPED') ? node.id : browseId) ?? node.id;
   if (!id) return null;
-  const kind = kindOf(node.item_type, id);
+  const kind = cleanId ? ((node.item_type === 'video' || isWide(node)) ? 'video' : 'song') : kindOf(node.item_type, id);
   const artists = artistsOf(node.artists ?? (node.author ? [node.author] : undefined));
   return {
     kind,
@@ -148,14 +190,18 @@ export function mapItem(node: unknown): MusicItem | null {
 
 export function mapTrack(node: unknown): Track | null {
   const n = node as YTNodes.MusicResponsiveListItem;
-  if ((n as unknown as AnyNode)?.type !== 'MusicResponsiveListItem' || !n.id) return null;
+  if ((n as unknown as AnyNode)?.type !== 'MusicResponsiveListItem') return null;
+  const payload = n.endpoint?.payload as { videoId?: string } | undefined;
+  const endpointVideoId = payload?.videoId ?? (n.endpoint as any)?.watchEndpoint?.videoId;
+  const cleanId = cleanVideoId(endpointVideoId) ?? cleanVideoId((n as any).videoId) ?? cleanVideoId(n.id) ?? n.id;
+  if (!cleanId) return null;
   if (n.item_type && n.item_type !== 'song' && n.item_type !== 'video') return null;
   const index = Number.parseInt(text(n.index), 10);
   const plays = n.flex_columns
     ?.map((c) => text(c.title))
     .find((t) => /\b(plays|views)$/i.test(t));
   return {
-    videoId: n.id,
+    videoId: cleanId,
     title: n.title ?? '',
     artists: artistsOf(n.artists ?? n.authors),
     album: n.album ? { name: n.album.name, id: n.album.id ?? null } : null,

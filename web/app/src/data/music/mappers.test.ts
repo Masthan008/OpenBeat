@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { YTMusic } from 'youtubei.js';
-import { mapAlbum, mapArtist, mapCategories, mapHome, mapPlaylist, mapSearch, mapShelves, mapSuggestions } from './mappers';
+import { cleanVideoId, mapAlbum, mapArtist, mapCategories, mapHome, mapPlaylist, mapSearch, mapShelves, mapSuggestions } from './mappers';
 
 // Real responses captured by web/scripts/capture-fixtures.mjs (prompt §0:
 // parsers are tested against what YouTube actually sends). YouTube.js parses
@@ -128,5 +128,28 @@ describe('categories', () => {
     expect(tile.title).not.toBe('');
     expect(tile.color).toMatch(/^rgb\(/);
     expect(tile.link.browseId).toBe('FEmusic_moods_and_genres_category');
+  });
+});
+
+describe('cleanVideoId', () => {
+  it('strips MPED prefix from 15-character video IDs', () => {
+    expect(cleanVideoId('MPEDhVXAEHETMbI')).toBe('hVXAEHETMbI');
+    expect(cleanVideoId('mped9bZkp7q19f0')).toBe('9bZkp7q19f0');
+  });
+
+  it('preserves clean 11-character video IDs', () => {
+    expect(cleanVideoId('dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    expect(cleanVideoId('9bZkp7q19f0')).toBe('9bZkp7q19f0');
+  });
+
+  it('extracts videoId from watch and youtu.be URLs', () => {
+    expect(cleanVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42')).toBe('dQw4w9WgXcQ');
+    expect(cleanVideoId('https://youtu.be/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+  });
+
+  it('returns null for empty or non-video IDs', () => {
+    expect(cleanVideoId(null)).toBeNull();
+    expect(cleanVideoId('')).toBeNull();
+    expect(cleanVideoId('MPREb_12345')).toBeNull();
   });
 });

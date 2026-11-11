@@ -8,7 +8,8 @@ name: iOS
 
 on:
   push:
-    branches: ["**"]
+    tags: ["v*-ios"]
+    branches: ["main"]
     paths: ["ios/**", ".github/workflows/ios.yml"]
   pull_request:
     paths: ["ios/**", ".github/workflows/ios.yml"]
@@ -41,10 +42,18 @@ jobs:
       - name: Version
         id: version
         run: |
-          name="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
-          code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            raw_tag="$GITHUB_REF_NAME"
+            name=$(echo "${raw_tag#v}" | sed 's/-ios$//')
+            tag="$raw_tag"
+          else
+            name="1.0.5"
+            tag="v1.0.5-ios"
+          fi
+          code="5"
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Generate the Xcode project
         working-directory: ios
@@ -76,29 +85,41 @@ jobs:
         id: ipa
         working-directory: ios
         run: |
-          file="OpenTune-iOS-v${{ steps.version.outputs.name }}-unsigned.ipa"
+          file="OpenBlast-v${{ steps.version.outputs.name }}-ios.ipa"
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/OpenTune.app Payload/
           zip -qry "$file" Payload
-          ls -la "$file"
+          cp "$file" OpenBlast-iOS.ipa
+          ls -la "$file" OpenBlast-iOS.ipa
           echo "file=ios/$file" >> "$GITHUB_OUTPUT"
+          echo "alias=ios/OpenBlast-iOS.ipa" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenTune-iOS-unsigned
-          path: ${{ steps.ipa.outputs.file }}
+          name: OpenBlast-iOS-v${{ steps.version.outputs.name }}
+          path: |
+            ${{ steps.ipa.outputs.file }}
+            ${{ steps.ipa.outputs.alias }}
 
       - name: Publish for sideloading
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !contains(github.event.head_commit.message, '[skip deploy]')
+        if: (github.ref_type == 'tag' || github.ref == 'refs/heads/main') && github.event_name != 'pull_request' && !contains(github.event.head_commit.message, '[skip deploy]')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp "${{ steps.ipa.outputs.file }}" OpenTune-iOS.ipa
-          title="OpenTune for iPhone v${{ steps.version.outputs.name }}"
-          notes="Unsigned build for SideStore, AltStore or Sideloadly, built from ${GITHUB_SHA::7}. In SideStore or AltStore, add the source https://justshivv.github.io/Opentune/ios/source.json to install OpenTune and get its updates on the phone."
+          tag="${{ steps.version.outputs.tag }}"
+          title="OpenBlast v${{ steps.version.outputs.name }} (iOS Edition)"
+          notes="Unsigned iOS IPA build for SideStore, AltStore, TrollStore or Sideloadly, built from ${GITHUB_SHA::7}. In SideStore or AltStore, add the source https://openblast.vercel.app/ios/source.json to install OpenBlast and get its updates on iPhone and iPad."
+          if [ -f "docs/releases/${tag#v}.md" ]; then
+            gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" "${{ steps.ipa.outputs.file }}" "${{ steps.ipa.outputs.alias }}" --target "$GITHUB_SHA" --title "$title" --notes-file "docs/releases/${tag#v}.md" --prerelease
+            gh release upload "$tag" "${{ steps.ipa.outputs.file }}" "${{ steps.ipa.outputs.alias }}" --clobber
+          else
+            gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" "${{ steps.ipa.outputs.file }}" "${{ steps.ipa.outputs.alias }}" --target "$GITHUB_SHA" --title "$title" --notes "$notes" --prerelease
+            gh release upload "$tag" "${{ steps.ipa.outputs.file }}" "${{ steps.ipa.outputs.alias }}" --clobber
+          fi
+          # Also maintain the rolling 'ios' tag for permanent mirror compatibility
           if gh release view ios > /dev/null 2>&1; then
             gh release edit ios --title "$title" --notes "$notes" --prerelease
           else
             gh release create ios --target "$GITHUB_SHA" --prerelease --title "$title" --notes "$notes"
           fi
-          gh release upload ios OpenTune-iOS.ipa --clobber
+          gh release upload ios "${{ steps.ipa.outputs.alias }}" --clobber

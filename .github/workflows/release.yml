@@ -40,7 +40,10 @@ jobs:
             tag="v$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          if gh release view "$tag" > /dev/null 2>&1; then
+          if [[ "$tag" == *"-ios" ]]; then
+            echo "$tag is an iOS release. Skipping Android release workflow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$tag" > /dev/null 2>&1; then
             echo "$tag is already released."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi

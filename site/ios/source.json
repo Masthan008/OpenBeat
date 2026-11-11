@@ -18,10 +18,10 @@
       "category": "entertainment",
       "versions": [
         {
-          "version": "1.0.9",
-          "date": "2026-11-08T21:30:00Z",
-          "localizedDescription": "Early SwiftUI preview build with AltStore/SideStore sideload support and OpenBlast branding",
-          "downloadURL": "https://github.com/Masthan008/OpenBeat/releases/download/ios/OpenBlast-iOS.ipa",
+          "version": "1.0.5",
+          "date": "2026-11-11T20:00:00Z",
+          "localizedDescription": "OpenBlast iOS v1.0.5 preview with AltStore & SideStore sideloading support",
+          "downloadURL": "https://github.com/Masthan008/OpenBeat/releases/download/v1.0.5-ios/OpenBlast-v1.0.5-ios.ipa",
           "size": 18500000,
           "minOSVersion": "16.0"
         }
