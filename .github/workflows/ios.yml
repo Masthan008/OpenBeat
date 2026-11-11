@@ -65,9 +65,20 @@ jobs:
         working-directory: ios
         run: |
           xcodebuild -version
+          proj=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
+          if [ -z "$proj" ]; then
+            echo "Error: No .xcodeproj found"
+            exit 1
+          fi
+          echo "Found project: $proj"
+          scheme=$(xcodebuild -list -project "$proj" | awk '/Schemes:/{flag=1;next} flag && NF {print $1; exit}')
+          if [ -z "$scheme" ]; then
+            scheme="OpenTune"
+          fi
+          echo "Using scheme: $scheme"
           xcodebuild \
-            -project OpenTune.xcodeproj \
-            -scheme OpenTune \
+            -project "$proj" \
+            -scheme "$scheme" \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
@@ -79,7 +90,12 @@ jobs:
           grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log || true
           # A failed build still leaves a partial .app behind, so the result is what counts.
           if [ "$status" -ne 0 ] || ! grep -q "BUILD SUCCEEDED" build.log; then tail -n 80 build.log; exit 1; fi
-          test -x build/Build/Products/Release-iphoneos/OpenTune.app/OpenTune
+          app_path=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          if [ -z "$app_path" ]; then
+            echo "Error: No .app found in build output"
+            exit 1
+          fi
+          echo "Built app bundle at: $app_path"
 
       - name: Package .ipa
         id: ipa
@@ -87,7 +103,8 @@ jobs:
         run: |
           file="OpenBlast-v${{ steps.version.outputs.name }}-ios.ipa"
           mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/OpenTune.app Payload/
+          app_path=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          cp -R "$app_path" Payload/
           zip -qry "$file" Payload
           cp "$file" OpenBlast-iOS.ipa
           ls -la "$file" OpenBlast-iOS.ipa
