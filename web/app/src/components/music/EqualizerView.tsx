@@ -5,6 +5,7 @@ import {
   useEqualizerStore,
   ensureAudioContextRunning,
 } from '@/playback/dsp';
+import { iframeDeck } from '@/playback/youtube/iframeDeck';
 
 export function EqualizerView({ compact = false }: { compact?: boolean }) {
   const {
@@ -20,6 +21,8 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
     setSpeed,
     reset,
   } = useEqualizerStore();
+
+  const isIframe = iframeDeck.isActive();
 
   const formatFreq = (hz: number) => (hz >= 1000 ? `${hz / 1000}k` : `${hz}`);
 
@@ -44,8 +47,14 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
             </span>
           </label>
           {enabled && (
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-              10-Band DSP Active
+            <span
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                isIframe
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/20'
+                  : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
+              }`}
+            >
+              {isIframe ? 'YouTube Web Deck' : '10-Band DSP Active'}
             </span>
           )}
         </div>
@@ -138,11 +147,17 @@ export function EqualizerView({ compact = false }: { compact?: boolean }) {
         })}
       </div>
 
+      {isIframe && enabled && (
+        <p className="text-[11px] text-tertiary px-1 -mt-2">
+          Playback speed (0.5x–2.0x) applies to all tracks. 10-band hardware DSP applies to native audio streams (JioSaavn & extension).
+        </p>
+      )}
+
       {/* Playback Speed Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
         <span className="text-xs font-medium text-secondary">Playback Speed</span>
-        <div className="flex items-center gap-1.5">
-          {[0.75, 1.0, 1.25, 1.5, 2.0].map((s) => (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((s) => (
             <button
               key={s}
               onClick={() => {

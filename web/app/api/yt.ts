@@ -200,7 +200,11 @@ async function handleEdge(req: Request): Promise<Response> {
       targetHost = 'https://www.youtube.com';
     }
 
-    const search = url.search ? (queryPath ? '' : url.search) : '';
+    const cloneParams = new URLSearchParams(url.searchParams);
+    cloneParams.delete('__subpath');
+    cloneParams.delete('path');
+    const queryString = cloneParams.toString();
+    const search = queryString ? `?${queryString}` : '';
     const targetUrl = new URL(actualSubpath + search, targetHost);
     const forwardHeaders = new Headers();
 
@@ -427,7 +431,11 @@ async function handleNode(req: any, res: any): Promise<void> {
       targetHost = 'https://www.youtube.com';
     }
 
-    const search = parsedUrl.search ? (queryPath ? '' : parsedUrl.search) : '';
+    const cloneParams = new URLSearchParams(parsedUrl.searchParams);
+    cloneParams.delete('__subpath');
+    cloneParams.delete('path');
+    const queryString = cloneParams.toString();
+    const search = queryString ? `?${queryString}` : '';
     const targetUrl = new URL(actualSubpath + search, targetHost);
 
     const forwardHeaders: Record<string, string> = {

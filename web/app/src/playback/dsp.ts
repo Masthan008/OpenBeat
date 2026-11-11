@@ -226,13 +226,20 @@ export const useEqualizerStore = create<EqualizerState>()((set, get) => {
     },
 
     setSpeed(speed) {
-      const clamped = Math.max(0.5, Math.min(2.0, speed));
+      const clamped = Math.max(0.25, Math.min(2.0, speed));
       set({ speed: clamped });
       persistEq(get());
       syncAllChains();
       try {
         iframeDeck.setPlaybackRate(clamped);
       } catch {}
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('audio').forEach((el) => {
+          try {
+            el.playbackRate = clamped;
+          } catch {}
+        });
+      }
     },
 
     setPitchPreserved(pitchPreserved) {

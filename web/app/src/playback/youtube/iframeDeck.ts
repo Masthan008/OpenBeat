@@ -51,6 +51,27 @@ let onEndedCallback: (() => void) | null = null;
 let onErrorCallback: ((err: unknown) => void) | null = null;
 let currentPlaybackRate = 1.0;
 
+function getPlayerIframe(): HTMLIFrameElement | null {
+  if (typeof document === 'undefined') return null;
+  const el = document.getElementById('openblast-iframe-player');
+  if (el instanceof HTMLIFrameElement) return el;
+  const nested = el?.querySelector('iframe');
+  if (nested) return nested;
+  return document.querySelector<HTMLIFrameElement>('iframe[src*="youtube.com"]');
+}
+
+function sendIframeCommand(func: string, args: unknown[] = []): void {
+  try {
+    const iframe = getPlayerIframe();
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func, args }),
+        '*',
+      );
+    }
+  } catch {}
+}
+
 function loadIframeApi(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
   if (window.YT && window.YT.Player) return Promise.resolve();
@@ -192,7 +213,7 @@ export const iframeDeck = {
           height: '200',
           width: '200',
           videoId,
-          host: 'https://www.youtube-nocookie.com',
+          host: 'https://www.youtube.com',
           playerVars: {
             autoplay: autoplay ? 1 : 0,
             controls: 0,
@@ -202,16 +223,21 @@ export const iframeDeck = {
             rel: 0,
             origin,
             enablejsapi: 1,
+            widget_referrer: origin,
             start: Math.floor(startSeconds),
           },
           events: {
             onReady: (event: any) => {
               clearTimeout(timeout);
+              if (event?.target) {
+                playerInstance = event.target;
+              }
               try {
                 if (playerInstance && typeof playerInstance.setPlaybackRate === 'function') {
                   playerInstance.setPlaybackRate(currentPlaybackRate);
                 }
               } catch {}
+              sendIframeCommand('setPlaybackRate', [currentPlaybackRate]);
               if (autoplay && event?.target && typeof event.target.playVideo === 'function') {
                 try {
                   event.target.playVideo();
@@ -229,6 +255,7 @@ export const iframeDeck = {
                     playerInstance.setPlaybackRate(currentPlaybackRate);
                   }
                 } catch {}
+                sendIframeCommand('setPlaybackRate', [currentPlaybackRate]);
                 if (boundAudio) {
                   try {
                     Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true, writable: true });
@@ -243,6 +270,12 @@ export const iframeDeck = {
                   boundAudio.dispatchEvent(new Event('pause'));
                 }
               } else if (state === YT.PlayerState.BUFFERING) {
+                try {
+                  if (playerInstance && typeof playerInstance.setPlaybackRate === 'function') {
+                    playerInstance.setPlaybackRate(currentPlaybackRate);
+                  }
+                } catch {}
+                sendIframeCommand('setPlaybackRate', [currentPlaybackRate]);
                 if (boundAudio) {
                   boundAudio.dispatchEvent(new Event('waiting'));
                 }
@@ -274,6 +307,7 @@ export const iframeDeck = {
           playerInstance.setPlaybackRate(currentPlaybackRate);
         }
       } catch {}
+      sendIframeCommand('setPlaybackRate', [currentPlaybackRate]);
     }
 
     active = true;
@@ -302,47 +336,47 @@ export const iframeDeck = {
   },
 
   play(): void {
-    if (!playerInstance) return;
-    try {
-      playerInstance.playVideo();
-      if (boundAudio) {
-        try {
-          Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true, writable: true });
-        } catch {}
-        boundAudio.dispatchEvent(new Event('play'));
-      }
-    } catch {
-      // Ignored
+    if (playerInstance) {
+      try {
+        playerInstance.playVideo();
+      } catch {}
+    }
+    sendIframeCommand('playVideo');
+    if (boundAudio) {
+      try {
+        Object.defineProperty(boundAudio, 'paused', { value: false, configurable: true, writable: true });
+      } catch {}
+      boundAudio.dispatchEvent(new Event('play'));
     }
   },
 
   pause(): void {
-    if (!playerInstance) return;
-    try {
-      playerInstance.pauseVideo();
-      if (boundAudio) {
-        try {
-          Object.defineProperty(boundAudio, 'paused', { value: true, configurable: true, writable: true });
-        } catch {}
-        boundAudio.dispatchEvent(new Event('pause'));
-      }
-    } catch {
-      // Ignored
+    if (playerInstance) {
+      try {
+        playerInstance.pauseVideo();
+      } catch {}
+    }
+    sendIframeCommand('pauseVideo');
+    if (boundAudio) {
+      try {
+        Object.defineProperty(boundAudio, 'paused', { value: true, configurable: true, writable: true });
+      } catch {}
+      boundAudio.dispatchEvent(new Event('pause'));
     }
   },
 
   seekTo(seconds: number): void {
-    if (!playerInstance) return;
-    try {
-      playerInstance.seekTo(seconds, true);
-      if (boundAudio) {
-        try {
-          Object.defineProperty(boundAudio, 'currentTime', { value: seconds, configurable: true, writable: true });
-        } catch {}
-        boundAudio.dispatchEvent(new Event('seeked'));
-      }
-    } catch {
-      // Ignored
+    if (playerInstance) {
+      try {
+        playerInstance.seekTo(seconds, true);
+      } catch {}
+    }
+    sendIframeCommand('seekTo', [seconds, true]);
+    if (boundAudio) {
+      try {
+        Object.defineProperty(boundAudio, 'currentTime', { value: seconds, configurable: true, writable: true });
+      } catch {}
+      boundAudio.dispatchEvent(new Event('seeked'));
     }
   },
 
@@ -358,14 +392,14 @@ export const iframeDeck = {
       }
       boundAudio.dispatchEvent(new Event('ratechange'));
     }
-    if (!playerInstance) return;
-    try {
-      if (typeof playerInstance.setPlaybackRate === 'function') {
-        playerInstance.setPlaybackRate(rate);
-      }
-    } catch {
-      // Ignored
+    if (playerInstance) {
+      try {
+        if (typeof playerInstance.setPlaybackRate === 'function') {
+          playerInstance.setPlaybackRate(rate);
+        }
+      } catch {}
     }
+    sendIframeCommand('setPlaybackRate', [rate]);
   },
 
   getPlaybackRate(): number {
@@ -373,22 +407,23 @@ export const iframeDeck = {
   },
 
   setVolume(volume0to1: number): void {
-    if (!playerInstance) return;
-    try {
-      playerInstance.setVolume(Math.round(Math.min(1, Math.max(0, volume0to1)) * 100));
-    } catch {
-      // Ignored
+    const vol = Math.round(Math.min(1, Math.max(0, volume0to1)) * 100);
+    if (playerInstance) {
+      try {
+        playerInstance.setVolume(vol);
+      } catch {}
     }
+    sendIframeCommand('setVolume', [vol]);
   },
 
   setMuted(muted: boolean): void {
-    if (!playerInstance) return;
-    try {
-      if (muted) playerInstance.mute();
-      else playerInstance.unMute();
-    } catch {
-      // Ignored
+    if (playerInstance) {
+      try {
+        if (muted) playerInstance.mute();
+        else playerInstance.unMute();
+      } catch {}
     }
+    sendIframeCommand(muted ? 'mute' : 'unMute');
   },
 
   stop(): void {
@@ -397,10 +432,9 @@ export const iframeDeck = {
     if (playerInstance) {
       try {
         playerInstance.stopVideo();
-      } catch {
-        // Ignored
-      }
+      } catch {}
     }
+    sendIframeCommand('stopVideo');
   },
 
   getCurrentTime(): number {

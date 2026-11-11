@@ -851,10 +851,13 @@ function bindElement(deck: Deck, n: number) {
     });
   }
   element.addEventListener('play', () => {
+    void import('@/playback/dsp').then((m) => m.ensureAudioContextRunning());
     const desiredRate = useEqualizerStore.getState().speed;
-    if (Math.abs(element.playbackRate - desiredRate) > 0.01) {
-      element.playbackRate = desiredRate;
-    }
+    try {
+      if (Math.abs(element.playbackRate - desiredRate) > 0.01) {
+        element.playbackRate = desiredRate;
+      }
+    } catch {}
     if (inFront() && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   });
   element.addEventListener('pause', () => {
@@ -867,9 +870,12 @@ if (typeof window !== 'undefined') {
     if (iframeDeck.isActive()) {
       iframeDeck.setPlaybackRate(state.speed);
     }
-    const audio = getAudio();
-    if (audio && Math.abs(audio.playbackRate - state.speed) > 0.01) {
-      audio.playbackRate = state.speed;
+    for (const d of decks ?? []) {
+      if (d.audio && Math.abs(d.audio.playbackRate - state.speed) > 0.01) {
+        try {
+          d.audio.playbackRate = state.speed;
+        } catch {}
+      }
     }
   });
 }
