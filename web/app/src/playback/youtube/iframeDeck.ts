@@ -97,13 +97,13 @@ function ensureContainer(): HTMLDivElement {
     el = document.createElement('div');
     el.id = 'openblast-iframe-player';
     el.style.position = 'fixed';
-    el.style.top = '-9999px';
-    el.style.left = '-9999px';
-    el.style.width = '240px';
-    el.style.height = '240px';
-    el.style.opacity = '0.001';
+    el.style.bottom = '0px';
+    el.style.right = '0px';
+    el.style.width = '200px';
+    el.style.height = '200px';
+    el.style.opacity = '0.005';
     el.style.pointerEvents = 'none';
-    el.style.zIndex = '-9999';
+    el.style.zIndex = '-10';
     document.body.appendChild(el);
   }
   containerElement = el;
@@ -187,10 +187,12 @@ export const iframeDeck = {
     if (!playerInstance) {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('YouTube IFrame player timed out loading')), 12000);
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
         playerInstance = new window.YT!.Player(container.id, {
-          height: '240',
-          width: '240',
+          height: '200',
+          width: '200',
           videoId,
+          host: 'https://www.youtube-nocookie.com',
           playerVars: {
             autoplay: autoplay ? 1 : 0,
             controls: 0,
@@ -198,6 +200,8 @@ export const iframeDeck = {
             fs: 0,
             playsinline: 1,
             rel: 0,
+            origin,
+            enablejsapi: 1,
             start: Math.floor(startSeconds),
           },
           events: {

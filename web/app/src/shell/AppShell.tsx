@@ -19,6 +19,7 @@ import { Appearance } from './Appearance';
 import { MobileDock } from './MobileDock';
 import { RoomNotice } from './RoomNotice';
 import { Sidebar } from './Sidebar';
+import { OpeningAnimation } from '@/components/OpeningAnimation';
 
 const mobile = isMobileBrowser();
 
@@ -167,6 +168,7 @@ export function AppShell() {
 
   return (
     <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
+      <OpeningAnimation />
       {/* The side panel slides in from beyond the right edge; never let it scroll the page. */}
       <div className="relative min-h-0 overflow-hidden">
         <Appearance />

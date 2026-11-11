@@ -488,6 +488,18 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
       iframeDeck.setOnEnded(() => {
         void advance(true).then(intent);
       });
+      iframeDeck.setOnError((err: unknown) => {
+        const code = (err as any)?.data ?? err;
+        trackLog.w(`YouTube IFrame deck error code: ${code}`);
+        if (code === 150 || code === 101) {
+          usePlayer.setState({
+            status: 'error',
+            error: 'Playback restricted on external sites by copyright owner. Try an alternate version or add-on.',
+          });
+        } else if (code === 100 || code === 2) {
+          usePlayer.setState({ status: 'error', error: 'Video unavailable or removed on YouTube.' });
+        }
+      });
 
       const eqState = useEqualizerStore.getState();
       iframeDeck.setPlaybackRate(eqState.speed);
@@ -525,41 +537,12 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
             playedDirect = true;
           }
         } catch {
-          // Fall through to YouTube stream or IFrame player
-        }
-      }
-
-      // Tier 2: Try Direct Stream Proxy when Equalizer is enabled for full 10-band Web Audio DSP
-      if (!playedDirect && token === loadToken && eqState.enabled) {
-        try {
-          const streamUrl = `/api/yt/stream?id=${encodeURIComponent(entry.track.videoId)}`;
-          iframeDeck.setActive(false);
-          deck.audio.src = streamUrl;
-          deck.audio.crossOrigin = 'anonymous';
-          deck.audio.playbackRate = eqState.speed;
-          if (startSec > 0) deck.audio.currentTime = startSec;
-          if (autoplay) await deck.audio.play();
-          applyTrack(
-            {
-              videoId: entry.track.videoId,
-              title: entry.track.title,
-              author: artistNames(entry.track),
-              durationSec: entry.track.durationSec ?? 0,
-              thumbnails: [{ url: entry.track.thumbnail ?? '', width: 500, height: 500 }],
-              client: 'WEB' as any,
-              format: 'YouTube Direct DSP Stream',
-              loudnessDb: null,
-            },
-            entry.track,
-          );
-          playedDirect = true;
-        } catch {
           // Fall through to YouTube IFrame player fallback
         }
       }
 
       if (!playedDirect && token === loadToken) {
-        // Tier 3: Universal YouTube IFrame Player fallback (zero extension, zero CORS issues worldwide)
+        // Tier 2: Universal YouTube IFrame Player (zero-install, zero-CORS worldwide playback)
         await iframeDeck.load(entry.track.videoId, { startSec, autoplay });
         if (token !== loadToken) return;
         applyTrack(
@@ -577,7 +560,7 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
         );
       }
     } else {
-      // Tier 4: Extension installed, use high-bitrate Opus MSE player
+      // Tier 3: Extension installed, use high-bitrate Opus MSE player
       iframeDeck.setActive(false);
       const track = await deck.engine.load(entry.track.videoId, { startSec, autoplay, hint: searchHintOf(entry.track) });
       if (token !== loadToken) return;
@@ -878,29 +861,13 @@ function bindElement(deck: Deck, n: number) {
 }
 
 if (typeof window !== 'undefined') {
-  useEqualizerStore.subscribe((state, prevState) => {
-    if (state.enabled && !prevState.enabled && iframeDeck.isActive()) {
-      const { nowPlaying, status } = usePlayer.getState();
-      if (!nowPlaying?.videoId) return;
-      const audio = getAudio();
-      if (!audio) return;
-      const curTime = iframeDeck.getCurrentTime();
-      const isPlaying = status === 'playing';
-      const streamUrl = `/api/yt/stream?id=${encodeURIComponent(nowPlaying.videoId)}`;
-
-      iframeDeck.pause();
-      iframeDeck.setActive(false);
-      audio.src = streamUrl;
-      audio.crossOrigin = 'anonymous';
-      audio.currentTime = curTime;
+  useEqualizerStore.subscribe((state) => {
+    if (iframeDeck.isActive()) {
+      iframeDeck.setPlaybackRate(state.speed);
+    }
+    const audio = getAudio();
+    if (audio && Math.abs(audio.playbackRate - state.speed) > 0.01) {
       audio.playbackRate = state.speed;
-      if (isPlaying) {
-        void audio.play().catch(() => {
-          // If direct stream fails, revert cleanly back to iframeDeck
-          iframeDeck.setActive(true);
-          iframeDeck.play();
-        });
-      }
     }
   });
 }
