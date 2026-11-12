@@ -30,6 +30,8 @@ private const val EXTRA_EXPLICIT = "explicit"
 private const val EXTRA_ARTIST_ID = "artistId"
 private const val EXTRA_SMART_SHUFFLE = "smartShuffle"
 private const val EXTRA_TIER = "tier"
+private const val EXTRA_SUGGESTED_BY = "suggested_by"
+private const val EXTRA_SUGGESTED_FOR = "suggested_for"
 
 /**
  * Local files play straight from MediaStore and downloads from their file;
@@ -99,6 +101,8 @@ fun Song.toMediaItem(): MediaItem =
                         artistId?.let { putString(EXTRA_ARTIST_ID, it) }
                         if (smartShuffle) putBoolean(EXTRA_SMART_SHUFFLE, true)
                         if (queueTier != QueueTier.CONTEXT) putString(EXTRA_TIER, queueTier.name)
+                        suggestedBy?.let { putString(EXTRA_SUGGESTED_BY, it) }
+                        suggestedFor?.let { putString(EXTRA_SUGGESTED_FOR, it) }
                     },
                 )
                 .build(),
@@ -117,6 +121,8 @@ fun MediaItem.toSong(): Song =
         artistId = mediaMetadata.extras?.getString(EXTRA_ARTIST_ID),
         smartShuffle = mediaMetadata.extras?.getBoolean(EXTRA_SMART_SHUFFLE) == true,
         queueTier = mediaMetadata.extras?.getString(EXTRA_TIER)?.let { t -> QueueTier.entries.firstOrNull { it.name == t } } ?: QueueTier.CONTEXT,
+        suggestedBy = mediaMetadata.extras?.getString(EXTRA_SUGGESTED_BY),
+        suggestedFor = mediaMetadata.extras?.getString(EXTRA_SUGGESTED_FOR),
     )
 
 /** Update credits for this exact recording without touching its selected audio or queue extras. */

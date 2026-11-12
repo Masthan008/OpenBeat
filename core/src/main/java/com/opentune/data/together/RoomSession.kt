@@ -430,18 +430,28 @@ internal class RoomSession(
                 val who = members[from]?.name ?: "Someone"
                 members[from]?.lastSeen = now
                 if (msg.action == "add" || (msg.action == "now" && !open)) {
-                    val t = msg.track ?: return
+                    val rawTrack = msg.track ?: return
+                    val t = rawTrack.copy(
+                        suggestedBy = rawTrack.suggestedBy ?: who,
+                        suggestedFor = rawTrack.suggestedFor ?: msg.forMember,
+                    )
                     t.station?.let(Radio::played)
                     p.addToQueue(t.toSong())
-                    addChat(ChatLine("", "$who added ${t.title}", system = true))
+                    val forText = if (t.suggestedFor != null) " (for ${t.suggestedFor})" else ""
+                    addChat(ChatLine("", "$who suggested ${t.title}$forText", system = true))
                     return
                 }
                 if (msg.action == "now") {
                     // Guests may control playback: their pick starts for everyone.
-                    val t = msg.track ?: return
+                    val rawTrack = msg.track ?: return
+                    val t = rawTrack.copy(
+                        suggestedBy = rawTrack.suggestedBy ?: who,
+                        suggestedFor = rawTrack.suggestedFor ?: msg.forMember,
+                    )
                     t.station?.let(Radio::played)
                     p.playNow(t.toSong())
-                    addChat(ChatLine("", "$who played ${t.title}", system = true))
+                    val forText = if (t.suggestedFor != null) " (for ${t.suggestedFor})" else ""
+                    addChat(ChatLine("", "$who played ${t.title}$forText", system = true))
                     return
                 }
                 if (!open) return
@@ -698,30 +708,34 @@ internal class RoomSession(
      * with [now] and the host letting guests control playback, starts for
      * everyone.
      */
-    fun suggest(song: Song, now: Boolean = false): Boolean {
-        val t = Track.of(song)
+    fun suggest(song: Song, now: Boolean = false, forMember: String? = null): Boolean {
+        val t = Track.of(song)?.copy(
+            suggestedBy = song.suggestedBy ?: myName,
+            suggestedFor = song.suggestedFor ?: forMember,
+        )
         if (t == null) {
             notice("Songs from your phone can't be shared to the room")
             return true
         }
         if (hosting) {
-            player.addToQueue(song)
+            player.addToQueue(t.toSong())
             return true
         }
         val r = state.value ?: return false
         if (r.phase != Phase.Live) return false
+        val forSuffix = if (forMember != null) " for $forMember" else ""
         when {
             now && r.open -> {
-                send(Msg.Ask("now", track = t))
-                notice("Playing \"${song.title}\" for everyone")
+                send(Msg.Ask("now", track = t, forMember = forMember))
+                notice("Playing \"${song.title}\"$forSuffix for everyone")
             }
             now -> {
-                send(Msg.Ask("add", track = t))
-                notice("Added \"${song.title}\" to the queue. ${r.hostName ?: "The host"} hasn't let guests control playback")
+                send(Msg.Ask("add", track = t, forMember = forMember))
+                notice("Added \"${song.title}\"$forSuffix to the queue. ${r.hostName ?: "The host"} hasn't let guests control playback")
             }
             else -> {
-                send(Msg.Ask("add", track = t))
-                notice("Sent \"${song.title}\" to the room")
+                send(Msg.Ask("add", track = t, forMember = forMember))
+                notice("Sent \"${song.title}\"$forSuffix to the room")
             }
         }
         return true

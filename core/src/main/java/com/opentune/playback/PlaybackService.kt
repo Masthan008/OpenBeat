@@ -315,7 +315,7 @@ class PlaybackService : MediaLibraryService() {
                 if (bp is BitPerfectUsb.Status.Active) {
                     DspParams(outputGainDb = audioManager?.let(BitPerfectUsb::softwareGainDb) ?: 0f)
                 } else {
-                    DspParams(eq, sound.bassBoost, pb.spatialAudio, pb.clarity, eightDPeriod = sound.eightD.periodSeconds, spacePeriod = sound.space.periodSeconds, mono = pb.monoAudio)
+                    DspParams(eq, sound.bassBoost, pb.spatialAudio, pb.clarity, eightDPeriod = sound.eightD.periodSeconds, spacePeriod = sound.space.periodSeconds, mono = pb.monoAudio, volumeBoostPercent = sound.volumeBoostPercent)
                 }
             }.distinctUntilChanged().collect { dsp.params = it; bridgeDsp.params = it }
         }
@@ -657,6 +657,18 @@ class PlaybackService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
         mediaSession
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val player = mediaSession?.player
+        if (player != null && player.mediaItemCount > 0 && player.playbackState == Player.STATE_IDLE) {
+            val isMediaButton = intent?.action == Intent.ACTION_MEDIA_BUTTON
+            if (isMediaButton) {
+                Log.i(TAG, "onStartCommand ACTION_MEDIA_BUTTON received while player idle; preparing")
+                player.prepare()
+            }
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player ?: return
         if (AppSettings.playback.value.stopOnTaskRemoved) {
@@ -757,9 +769,34 @@ class PlaybackService : MediaLibraryService() {
                 ?: return Futures.immediateFailedFuture(UnsupportedOperationException("Nothing to resume"))
             val items = saved.songs.map { it.toSong().toMediaItem() }
             if (items.isEmpty()) return Futures.immediateFailedFuture(UnsupportedOperationException("Nothing to resume"))
+            if (isForPlayback) {
+                scope.launch(Dispatchers.Main.immediate) {
+                    delay(50)
+                    val p = mediaSession.player
+                    if (p.playbackState == Player.STATE_IDLE && p.mediaItemCount > 0) {
+                        p.prepare()
+                        p.play()
+                    }
+                }
+            }
             return Futures.immediateFuture(
                 MediaSession.MediaItemsWithStartPosition(items, saved.index.coerceIn(items.indices), saved.positionMs.coerceAtLeast(0)),
             )
+        }
+
+        override fun onPlayerCommandRequest(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            playerCommand: Int,
+        ): Int {
+            if (playerCommand == Player.COMMAND_PLAY_PAUSE) {
+                val p = session.player
+                if (p.playbackState == Player.STATE_IDLE && p.mediaItemCount > 0) {
+                    Log.i(TAG, "COMMAND_PLAY_PAUSE requested while player idle; preparing")
+                    p.prepare()
+                }
+            }
+            return super.onPlayerCommandRequest(session, controller, playerCommand)
         }
 
         override fun onAddMediaItems(
@@ -952,6 +989,14 @@ class PlaybackService : MediaLibraryService() {
                 if (listenSince < 0) listenSince = SystemClock.elapsedRealtime()
             } else {
                 pauseListen()
+            }
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            val p = mediaSession?.player ?: return
+            if (playWhenReady && p.playbackState == Player.STATE_IDLE && p.mediaItemCount > 0) {
+                Log.i(TAG, "Play requested while player idle; preparing player to resume")
+                p.prepare()
             }
         }
 

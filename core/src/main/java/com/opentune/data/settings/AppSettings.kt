@@ -128,6 +128,8 @@ data class SoundSettings(
     val eightD: EightD = EightD.OFF,
     /** The sound travelling all round the listener, above and below too; takes over from [eightD]. */
     val space: Space3DSpeed = Space3DSpeed.OFF,
+    /** Volume boost: 100% to 200% (VLC-style), default 100% (normal). */
+    val volumeBoostPercent: Int = 100,
 ) {
     val isDefault: Boolean get() = this == SoundSettings()
 }

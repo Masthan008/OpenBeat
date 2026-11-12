@@ -228,6 +228,19 @@ fun EqualizerScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
                 LabeledSlider("Balance", eq.balance, -1f..1f, eq.enabled, format = ::formatBalance) { v ->
                     AppSettings.updateEqualizer { it.copy(balance = if (abs(v) < 0.04f) 0f else v) }
                 }
+                val sound by AppSettings.sound.collectAsState()
+                LabeledSlider(
+                    "Volume boost",
+                    (sound.volumeBoostPercent - 100) / 100f,
+                    0f..1f,
+                    enabled = true,
+                    format = {
+                        val pct = 100 + (it * 100).roundToInt()
+                        if (pct <= 100) "100% (Normal)" else "$pct% (+${String.format(java.util.Locale.US, "%.1f", 20 * kotlin.math.log10(pct / 100.0))} dB)"
+                    }
+                ) { v ->
+                    AppSettings.updateSound { it.copy(volumeBoostPercent = 100 + (v * 100).roundToInt()) }
+                }
             }
         }
     }

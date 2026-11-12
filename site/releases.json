@@ -1,5 +1,43 @@
 [
   {
+    "tag_name": "v2.0.2",
+    "name": "OpenBlast v2.0.2",
+    "published_at": "2026-11-12T02:50:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.2",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.2-universal.apk",
+        "size": 13677371,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2/OpenBlast-v2.0.2-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2-arm64-v8a.apk",
+        "size": 11250456,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2/OpenBlast-v2.0.2-arm64-v8a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2-armeabi-v7a.apk",
+        "size": 10986928,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2/OpenBlast-v2.0.2-armeabi-v7a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2-x86_64.apk",
+        "size": 11299687,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2/OpenBlast-v2.0.2-x86_64.apk"
+      }
+    ],
+    "highlights": [
+      "[Persistent Playlist Backup] Playlists, stars, and library saved to Documents/OpenBlast/backups; automatically survives uninstalls and restores on reinstall",
+      "[Notification Bar Playback Fix] Instant playback start/resume directly from the pinned media notification even after clearing app from recent apps",
+      "[200% VLC Volume Boost] Smooth audio boost up to 200% (+6 dB) with built-in soft limiting in Remix sheet and Equalizer settings",
+      "[Listen Together Jam & Blends] Instagram Blends-style song attribution badges ('✨ Suggested for' / '🎧 Picked by') in real-time rooms and queues"
+    ]
+  },
+  {
     "tag_name": "v2.0.1-android-tv",
     "name": "OpenBlast v2.0.1 (Android TV Edition)",
     "published_at": "2026-11-11T19:15:00Z",

@@ -18,14 +18,27 @@ data class Track(
     val album: String? = null,
     /** For a radio station, the station itself, since its stream isn't looked up by id. */
     val station: Radio.Station? = null,
+    /** In Jam / Blend mode: member who suggested this track. */
+    val suggestedBy: String? = null,
+    /** In Jam / Blend mode: target member this track was suggested for. */
+    val suggestedFor: String? = null,
 ) {
-    fun toSong() = Song(videoId = id, title = title, artist = artist, thumbnailUrl = thumb, durationText = length, albumName = album)
+    fun toSong() = Song(
+        videoId = id,
+        title = title,
+        artist = artist,
+        thumbnailUrl = thumb,
+        durationText = length,
+        albumName = album,
+        suggestedBy = suggestedBy,
+        suggestedFor = suggestedFor,
+    )
 
     companion object {
         /** The track for [song], or null for one only this phone can play (its own files, a private server). */
         fun of(song: Song): Track? = when {
-            isYouTubeId(song.videoId) -> Track(song.videoId, song.title, song.artist, song.thumbnailUrl, song.durationText, song.albumName)
-            Radio.isRadio(song.videoId) -> Radio.station(song.videoId)?.let { Track(song.videoId, song.title, song.artist, song.thumbnailUrl, station = it) }
+            isYouTubeId(song.videoId) -> Track(song.videoId, song.title, song.artist, song.thumbnailUrl, song.durationText, song.albumName, suggestedBy = song.suggestedBy, suggestedFor = song.suggestedFor)
+            Radio.isRadio(song.videoId) -> Radio.station(song.videoId)?.let { Track(song.videoId, song.title, song.artist, song.thumbnailUrl, station = it, suggestedBy = song.suggestedBy, suggestedFor = song.suggestedFor) }
             else -> null
         }
     }
@@ -73,7 +86,7 @@ sealed interface Msg {
     @Serializable @SerialName("pong") data class Pong(val c: Long, val h: Long, val to: String) : Msg
 
     /** A guest asking the host to do something: play, pause, seek, next, previous or add. */
-    @Serializable @SerialName("ask") data class Ask(val action: String, val pos: Long = 0, val track: Track? = null) : Msg
+    @Serializable @SerialName("ask") data class Ask(val action: String, val pos: Long = 0, val track: Track? = null, val forMember: String? = null) : Msg
 
     @Serializable @SerialName("chat") data class Chat(val text: String) : Msg
 

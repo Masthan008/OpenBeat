@@ -92,6 +92,10 @@ data class Song(
     val smartShuffle: Boolean = false,
     /** Which part of the queue this entry is in; see [com.opentune.playback.QueueTimeline]. */
     val queueTier: QueueTier = QueueTier.CONTEXT,
+    /** In Together Jam / Blend mode: member who suggested or queued this song. */
+    val suggestedBy: String? = null,
+    /** In Together Jam / Blend mode: member this song was blended / suggested for. */
+    val suggestedFor: String? = null,
 )
 
 /**

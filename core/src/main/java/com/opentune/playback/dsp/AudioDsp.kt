@@ -125,6 +125,8 @@ data class DspParams(
     /** Seconds for one turn of 3D sound ([Space3D]), which takes over from 8D; 0 is off. */
     val spacePeriod: Float = 0f,
     val mono: Boolean = false,
+    /** Volume boost: 100% to 200% (VLC-style) */
+    val volumeBoostPercent: Int = 100,
 ) {
     private val eqActive: Boolean
         get() = equalizer.enabled && (
@@ -135,7 +137,7 @@ data class DspParams(
     /** The headphone correction from AutoEq, when one is chosen; independent of [eqActive]. */
     private val headphone get() = equalizer.headphone?.takeIf { it.filters.isNotEmpty() }
 
-    val isNeutral: Boolean get() = !eqActive && headphone == null && bassBoost == 0 && !spatial && !clarity && outputGainDb == 0f && eightDPeriod <= 0f && spacePeriod <= 0f && !mono
+    val isNeutral: Boolean get() = !eqActive && headphone == null && bassBoost == 0 && !spatial && !clarity && outputGainDb == 0f && eightDPeriod <= 0f && spacePeriod <= 0f && !mono && volumeBoostPercent <= 100
 
     /**
      * Whether anything in the chain can push a sample past full scale. Only
@@ -143,7 +145,7 @@ data class DspParams(
      * mastered.
      */
     val canBoost: Boolean
-        get() = spatial || clarity || bassBoost > 0 || eightDPeriod > 0f || spacePeriod > 0f || headphone?.filters?.any { it.gainDb > 0 } == true || (eqActive && (
+        get() = spatial || clarity || bassBoost > 0 || eightDPeriod > 0f || spacePeriod > 0f || volumeBoostPercent > 100 || headphone?.filters?.any { it.gainDb > 0 } == true || (eqActive && (
             equalizer.preampDb > 0 || equalizer.bassDb > 0 || equalizer.trebleDb > 0 || equalizer.bands.any { it > 0 }
             ))
 
@@ -375,10 +377,11 @@ class DspAudioProcessor : BaseAudioProcessor() {
     }
 
     private fun processFrame(p: DspParams, pre: Float, leftGain: Float, rightGain: Float, limit: Boolean) {
+        val boost = if (p.volumeBoostPercent > 100) (p.volumeBoostPercent / 100f) else 1f
         for (c in 0 until channels) {
             var x = (frame[c] * pre).toDouble()
             for (f in filters[c]) x = f.process(x)
-            frame[c] = x.toFloat()
+            frame[c] = (x.toFloat() * boost)
         }
         if (channels == 2) {
             if (p.mono) {

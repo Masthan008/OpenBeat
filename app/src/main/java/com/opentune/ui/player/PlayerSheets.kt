@@ -108,6 +108,18 @@ fun RemixSheet(onDismiss: () -> Unit) {
                 AppSettings.updateSound { it.copy(bassBoost = (v * 1000).roundToInt()) }
             }
 
+            ValueSlider(
+                "Volume boost",
+                (sound.volumeBoostPercent - 100) / 100f,
+                0f..1f,
+                format = {
+                    val pct = 100 + (it * 100).roundToInt()
+                    if (pct <= 100) "100% (Normal)" else "$pct% (+${String.format(java.util.Locale.US, "%.1f", 20 * kotlin.math.log10(pct / 100.0))} dB)"
+                }
+            ) { v ->
+                AppSettings.updateSound { it.copy(volumeBoostPercent = 100 + (v * 100).roundToInt()) }
+            }
+
             Text("8D audio", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
             Text("The sound circles slowly around your head. Best on headphones.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -172,13 +172,46 @@ object LibraryStore {
     fun init(context: Context) {
         val f = com.opentune.data.SavedFile(File(context.filesDir, "library.json"), "LibraryStore").also { saved = it }
         // A library that won't read is kept aside, never saved over with an empty one.
-        publish(f.read(LibraryDocument()) { json.decodeFromString(LibraryDocument.serializer(), it) })
+        val loaded = f.read(LibraryDocument()) { json.decodeFromString(LibraryDocument.serializer(), it) }
+        val effective = if (loaded.playlists.isEmpty() && loaded.liked.isEmpty()) {
+            val backup = PlaylistBackupManager.findLatestBackup()?.second
+            if (backup != null && (backup.playlists.isNotEmpty() || backup.liked.isNotEmpty())) {
+                Log.i("LibraryStore", "Auto-restored ${backup.playlists.size} playlists and ${backup.liked.size} likes from persistent backup")
+                loaded.copy(playlists = backup.playlists, liked = backup.liked, savedLists = backup.savedLists)
+            } else loaded
+        } else loaded
+        publish(effective)
         scope.launch {
             doc.drop(1).onEach { f.dirty = true }.debounce(800).collect { d ->
                 runCatching { f.write(json.encodeToString(LibraryDocument.serializer(), d)) }
                     .onFailure { Log.w("LibraryStore", "Couldn't save the library", it) }
+                PlaylistBackupManager.autoBackup(d.playlists, d.liked, d.savedLists)
             }
         }
+    }
+
+    /** Manually triggers backup to public persistent storage surviving uninstallation. */
+    fun backupToPersistentStorage(): Boolean {
+        return PlaylistBackupManager.autoBackup(doc.value.playlists, doc.value.liked, doc.value.savedLists)
+    }
+
+    /** Restores playlists and likes from persistent backup surviving uninstallation. */
+    fun restoreFromPersistentBackup(): Boolean {
+        val backup = PlaylistBackupManager.findLatestBackup()?.second ?: return false
+        if (backup.playlists.isEmpty() && backup.liked.isEmpty()) return false
+        update { d ->
+            val existingIds = d.playlists.map { it.id }.toSet()
+            val newPlaylists = backup.playlists.filterNot { it.id in existingIds }
+            val existingLikedIds = d.liked.map { it.videoId }.toSet()
+            val newLiked = backup.liked.filterNot { it.videoId in existingLikedIds }
+            d.copy(
+                playlists = d.playlists + newPlaylists,
+                liked = d.liked + newLiked,
+                savedLists = (d.savedLists + backup.savedLists).distinctBy { it.browseId }
+            )
+        }
+        flush()
+        return true
     }
 
     /** Saves at once a change still waiting for its save: the app is leaving the screen or closing. */

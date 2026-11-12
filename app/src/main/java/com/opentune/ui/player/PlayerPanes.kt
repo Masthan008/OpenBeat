@@ -270,7 +270,23 @@ private fun QueueRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, handle:
                 }
                 Text(song.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                val blendTag = song.suggestedFor?.let { "Suggested for $it" } ?: song.suggestedBy?.let { "By $it" }
+                if (blendTag != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "✨ $blendTag",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
         if (isCurrent) NowPlayingBars(isPlaying, MaterialTheme.colorScheme.onSurface, Modifier.padding(horizontal = 12.dp))
         if (onRemove != null) {

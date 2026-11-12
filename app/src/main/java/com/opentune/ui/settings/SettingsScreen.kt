@@ -1500,6 +1500,18 @@ private fun settingsSections(
                 Entry("Wrapped", "wrapped story year review stats recap top artists") {
                     NavRow("Wrapped", onOpenWrapped, summary = "Your listening as an animated story", icon = Icons.Rounded.Equalizer)
                 },
+                Entry("Backup playlists (survives uninstall)", "backup playlists uninstall storage documents") {
+                    NavRow("Backup playlists", {
+                        val ok = LibraryStore.backupToPersistentStorage()
+                        message = if (ok) "Playlists backed up to Documents/OpenBlast (survives app uninstall)." else "Could not save playlist backup."
+                    }, summary = "Saves playlists & likes to Documents/OpenBlast to survive app uninstall", icon = Icons.Rounded.Storage)
+                },
+                Entry("Restore playlists from backup", "restore playlists backup uninstall documents") {
+                    NavRow("Restore playlists", {
+                        val ok = LibraryStore.restoreFromPersistentBackup()
+                        message = if (ok) "Playlists & likes restored from backup!" else "No persistent backup found in Documents/OpenBlast."
+                    }, summary = "Restores playlists & likes found in Documents/OpenBlast", icon = Icons.Rounded.Download)
+                },
                 Entry("Export data", "backup json") {
                     NavRow("Export data", { exporter.launchSafely(context, "openblast-backup.json") }, summary = "Settings, history, likes and playlists, as one JSON file", icon = Icons.Rounded.Upload)
                 },

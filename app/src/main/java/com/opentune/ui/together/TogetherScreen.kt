@@ -1035,7 +1035,13 @@ private fun NowInRoom(r: Together.Room) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (t != null) Text(t.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (t != null) {
+                    Text(t.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val blendText = t.suggestedFor?.let { "✨ Suggested for $it" } ?: t.suggestedBy?.let { "🎧 Picked by $it" }
+                    if (blendText != null) {
+                        Text(blendText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                    }
+                }
             }
         }
         AnimatedVisibility(r.hosting && t == null && !r.hostPrivate) {

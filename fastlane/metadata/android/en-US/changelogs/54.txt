@@ -1,0 +1,5 @@
+- [Playlist Backup] Automated persistent backup to Documents/OpenBlast ensuring playlists & likes survive app uninstallation and restore seamlessly upon reinstall
+- [Notification Playback] Fixed notification bar playback resumption when cleared from recent apps
+- [Listen Together Jam & Blends] Group Jam mode with friend recommendations and Instagram Blends-style "Suggested for [Person]" tags in queue and Now Playing
+- [Volume Boost] VLC-style volume boost up to 200% (+6.0 dB) with smooth hyperbolic tangent limiter preventing digital clipping
+- [Playback & Audio DSP] Enhanced idle player preparation and cross-device audio session control

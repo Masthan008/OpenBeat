@@ -312,8 +312,10 @@ object Together {
     /**
      * Adds [song] to the room's queue: straight in for the host, as a request
      * for a guest; or, for a guest who chose [picksPlayNow], plays it for everyone.
+     * In Jam / Blend mode, [forMember] tags the track as suggested for that group member.
      */
-    fun suggest(song: Song): Boolean = session?.suggest(song, now = _picksPlayNow.value) ?: false
+    fun suggest(song: Song, forMember: String? = null): Boolean =
+        session?.suggest(song, now = _picksPlayNow.value, forMember = forMember) ?: false
 
     /**
      * For a guest following a room, sends [control] to the host instead of
