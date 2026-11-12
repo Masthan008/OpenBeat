@@ -142,14 +142,17 @@ fun UpdateDialog(found: UpdateCheck.Release, onDismiss: () -> Unit, onNotNow: (U
                         },
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(if (progress != null) "Cancel" else "Remind in 3 days")
+                        Text(if (progress != null) "Cancel" else "Not now")
                     }
                     if (progress == null) {
                         TextButton(
-                            onClick = { onNotNow(release) },
+                            onClick = {
+                                UpdateCheck.remindLater(context, release.version, days = 3)
+                                onDismiss()
+                            },
                             modifier = Modifier.weight(1f),
                         ) {
-                            Text("Skip version")
+                            Text("Remind in 3 days")
                         }
                     }
                 }
