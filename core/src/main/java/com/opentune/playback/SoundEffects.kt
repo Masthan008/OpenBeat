@@ -1,8 +1,10 @@
 package com.opentune.playback
 
+import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.PresetReverb
 import androidx.annotation.OptIn
 import androidx.media3.common.AuxEffectInfo
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -11,18 +13,13 @@ import com.opentune.data.settings.ReverbLevel
 import com.opentune.data.settings.SoundSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.log10
 
 /**
  * Applies the Remix settings that aren't done in [dsp.DspAudioProcessor]:
- * speed and pitch through ExoPlayer's time-stretching, and reverb through
- * Android's PresetReverb. Reverb is device-dependent; when it can't be created
- * [reverbAvailable] goes false so the UI can say so. Bass boost is a filter in
- * the app's own DSP, so it works on every phone.
- */
-/**
- * Whether a song is stretched in time: speed or pitch off normal, silence
- * skipped, or a listening room nudging its speed to keep in sync. Media3 does
- * all of that only on 16-bit output, so float output is set aside while it is.
+ * speed and pitch through ExoPlayer's time-stretching, reverb through
+ * Android's PresetReverb, and VLC-style volume boost via Android's LoudnessEnhancer.
+ * Bass boost is a filter in the app's own DSP, so it works on every phone.
  */
 fun isStretched(sound: SoundSettings, skipSilence: Boolean, inRoom: Boolean): Boolean =
     kotlin.math.abs(sound.speed - 1f) > 0.001f || kotlin.math.abs(sound.pitch - 1f) > 0.001f || skipSilence || inRoom
@@ -31,15 +28,46 @@ fun isStretched(sound: SoundSettings, skipSilence: Boolean, inRoom: Boolean): Bo
 class SoundEffects(private val player: ExoPlayer) {
 
     private var reverb: PresetReverb? = null
+    private var loudnessEnhancer: LoudnessEnhancer? = null
+    private var lastBoostPercent: Int = 100
+    private var currentSessionId: Int = C.AUDIO_SESSION_ID_UNSET
 
     fun apply(settings: SoundSettings) {
         player.playbackParameters = PlaybackParameters(settings.speed, settings.pitch)
         applyReverb(settings.reverb)
+        applyVolumeBoost(settings.volumeBoostPercent)
+    }
+
+    fun applyVolumeBoost(boostPercent: Int) {
+        lastBoostPercent = boostPercent
+        try {
+            loudnessEnhancer?.enabled = false
+            loudnessEnhancer?.release()
+        } catch (_: Exception) {}
+        loudnessEnhancer = null
+    }
+
+    fun onAudioSessionIdChanged(sessionId: Int) {
+        if (sessionId != C.AUDIO_SESSION_ID_UNSET && sessionId != 0 && sessionId != currentSessionId) {
+            try {
+                loudnessEnhancer?.release()
+            } catch (_: Exception) {}
+            loudnessEnhancer = null
+            currentSessionId = sessionId
+            applyVolumeBoost(lastBoostPercent)
+        }
     }
 
     fun release() {
-        reverb?.release()
+        try {
+            reverb?.release()
+        } catch (_: Exception) {}
         reverb = null
+        try {
+            loudnessEnhancer?.release()
+        } catch (_: Exception) {}
+        loudnessEnhancer = null
+        currentSessionId = C.AUDIO_SESSION_ID_UNSET
     }
 
     private fun applyReverb(level: ReverbLevel) {

@@ -130,9 +130,29 @@ fun UpdateDialog(found: UpdateCheck.Release, onDismiss: () -> Unit, onNotNow: (U
                 }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
                     Text(if (progress != null) "Downloading…" else if (apk == null) "Open release page" else "Update OpenBlast")
                 }
-                TextButton(onClick = {
-                    if (progress != null) install.cancel() else onNotNow(release)
-                }, modifier = Modifier.fillMaxWidth()) { Text(if (progress != null) "Cancel download" else "Not now") }
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            if (progress != null) install.cancel()
+                            else {
+                                UpdateCheck.remindLater(context, release.version, days = 3)
+                                onDismiss()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(if (progress != null) "Cancel" else "Remind in 3 days")
+                    }
+                    if (progress == null) {
+                        TextButton(
+                            onClick = { onNotNow(release) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Skip version")
+                        }
+                    }
+                }
             }
         },
     ) {

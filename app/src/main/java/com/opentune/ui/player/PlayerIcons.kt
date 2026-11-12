@@ -180,4 +180,17 @@ internal object PlayerIcons {
         close()
     }
 
+    /** A 4-point star sparkle for blend / suggestion recommendations. */
+    val Sparkle: ImageVector by lazy {
+        ImageVector.Builder("Sparkle", 24.dp, 24.dp, 24f, 24f).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(12f, 2f)
+                quadTo(12f, 9f, 5f, 12f)
+                quadTo(12f, 15f, 12f, 22f)
+                quadTo(12f, 15f, 19f, 12f)
+                quadTo(12f, 9f, 12f, 2f)
+                close()
+            }
+        }.build()
+    }
 }

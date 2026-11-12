@@ -71,6 +71,7 @@ import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Button
@@ -225,9 +226,27 @@ internal fun StartRoom(
     var typed by rememberSaveable(code) { mutableStateOf(invite?.raw ?: "") }
     var shake by remember { mutableIntStateOf(0) }
     var turnedAway by remember { mutableStateOf(false) }
+    var scanningQr by rememberSaveable { mutableStateOf(false) }
     val parsed = if (invite != null) invite else CodeEntry.code(typed)
     val canJoin = parsed != null && name.isNotBlank() && !opening
     val join = { parsed?.let { Together.join(it, name) } }
+
+    if (scanningQr) {
+        com.opentune.ui.account.QrScannerDialog(
+            onDismiss = { scanningQr = false },
+            onCode = { scanned ->
+                scanningQr = false
+                val found = RoomCode.find(scanned) ?: RoomCode.parse(scanned)
+                if (found != null) {
+                    typed = found.raw
+                    turnedAway = false
+                    if (name.isNotBlank() && !opening) {
+                        Together.join(found, name)
+                    }
+                }
+            },
+        )
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item { PageHeader(if (invite != null) "You’re invited" else "Listen together", onBack = onBack) }
         item {
@@ -298,7 +317,18 @@ internal fun StartRoom(
                         },
                     )
                     Spacer(Modifier.height(16.dp))
-                    FilledTonalButton(onClick = { join() }, enabled = canJoin, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text("Join") }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilledTonalButton(onClick = { join() }, enabled = canJoin, modifier = Modifier.weight(1f).height(54.dp)) { Text("Join") }
+                        OutlinedButton(
+                            onClick = { scanningQr = true },
+                            enabled = !opening,
+                            modifier = Modifier.height(54.dp),
+                        ) {
+                            Icon(Icons.Rounded.QrCode2, null, Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Scan QR")
+                        }
+                    }
                 }
                 Spacer(Modifier.height(28.dp))
                 PrivacyNote()
@@ -489,6 +519,8 @@ internal fun RoomView(r: Together.Room, onBack: () -> Unit, contentPadding: Padd
     var message by rememberSaveable { mutableStateOf("") }
     var inviting by rememberSaveable(r.code.raw) { mutableStateOf(openInvite) }
     var open by rememberSaveable(r.code.raw) { mutableStateOf(false) }
+    var pickingForMember by remember { mutableStateOf<Member?>(null) }
+    var pickingGeneral by remember { mutableStateOf(false) }
     val typing = remember { FocusRequester() }
     val list = rememberLazyListState()
     // The island sits on the dock, and on the keyboard while it's up.
@@ -523,6 +555,29 @@ internal fun RoomView(r: Together.Room, onBack: () -> Unit, contentPadding: Padd
     val shown = remember(r.code) { Animatable(if (still) 1f else 0f) }
     LaunchedEffect(r.code) { if (!still) shown.animateTo(1f, spring(dampingRatio = 0.9f, stiffness = 240f)) }
     if (inviting) InviteSheet(r.code, r.hosting, onDismiss = { inviting = false })
+
+    pickingForMember?.let { member ->
+        TogetherSongPickerSheet(
+            targetMember = member,
+            onDismiss = { pickingForMember = null },
+            onPick = { song ->
+                Together.suggest(song, forMember = member.name)
+                pickingForMember = null
+            },
+        )
+    }
+
+    if (pickingGeneral) {
+        TogetherSongPickerSheet(
+            targetMember = Member(id = "all", name = "the room", host = false),
+            onDismiss = { pickingGeneral = false },
+            onPick = { song ->
+                Together.suggest(song, forMember = null)
+                pickingGeneral = false
+            },
+        )
+    }
+
     val meSpeaking by Together.speaking.collectAsState()
     val speaking = r.talking.toSet() + listOfNotNull(r.myId.takeIf { meSpeaking })
     GlassPage(
@@ -557,6 +612,13 @@ internal fun RoomView(r: Together.Room, onBack: () -> Unit, contentPadding: Padd
             item { PageHeader(if (r.hosting) "Your room" else "${r.hostName ?: "Friend"}'s room", onBack = onBack) }
             item { CodeCard(r, onInvite = { inviting = true }, onCopy = { copyCode(context, r.code) }) }
             item { NowInRoom(r) }
+            item {
+                JamBlendCard(
+                    room = r,
+                    onSuggestGeneral = { pickingGeneral = true },
+                    onSuggestFor = { member -> pickingForMember = member },
+                )
+            }
             if (r.holding) {
                 item {
                     Row(
@@ -574,7 +636,15 @@ internal fun RoomView(r: Together.Room, onBack: () -> Unit, contentPadding: Padd
                 items(r.requests.size, key = { "req:" + r.requests[it].id }) { i -> RequestRow(r.requests[i]) }
             }
             item { SectionHeader("Listening", subtitle = "${r.members.size} in the room") }
-            item { Members(r.members, r.myId, canRemove = r.hosting, speaking = speaking) }
+            item {
+                Members(
+                    r.members,
+                    r.myId,
+                    canRemove = r.hosting,
+                    speaking = speaking,
+                    onSuggestFor = { member -> pickingForMember = member },
+                )
+            }
             item { SectionHeader("Settings") }
             item { RoomSettings(r) }
             // The chat comes last, just above the island where you write.
@@ -1037,9 +1107,8 @@ private fun NowInRoom(r: Together.Room) {
                 )
                 if (t != null) {
                     Text(t.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val blendText = t.suggestedFor?.let { "✨ Suggested for $it" } ?: t.suggestedBy?.let { "🎧 Picked by $it" }
-                    if (blendText != null) {
-                        Text(blendText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                    if (t.suggestedFor != null || t.suggestedBy != null) {
+                        com.opentune.ui.player.BlendBadge(t.suggestedFor, t.suggestedBy, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
             }
@@ -1095,8 +1164,15 @@ private fun RoomSettings(r: Together.Room) {
 }
 
 @Composable
-private fun Members(members: List<Member>, myId: String?, canRemove: Boolean, speaking: Set<String> = emptySet()) {
+private fun Members(
+    members: List<Member>,
+    myId: String?,
+    canRemove: Boolean,
+    speaking: Set<String> = emptySet(),
+    onSuggestFor: ((Member) -> Unit)? = null,
+) {
     var removing by remember { mutableStateOf<Member?>(null) }
+    var memberAction by remember { mutableStateOf<Member?>(null) }
     val still = AppSettings.ui.collectAsState().value.reduceAnimation
     // Room around each avatar for its speaking ring.
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1114,9 +1190,10 @@ private fun Members(members: List<Member>, myId: String?, canRemove: Boolean, sp
                         scaleY = s
                         alpha = shown.value.coerceIn(0f, 1f)
                     }
-                    .widthIn(max = 76.dp).then(
-                        if (canRemove && !m.host) Modifier.clickable { removing = m } else Modifier,
-                    ),
+                    .widthIn(max = 76.dp)
+                    .clickable {
+                        if (m.id != myId) memberAction = m
+                    },
             ) {
                 Avatar(m.name, 56.dp, speaking = m.id in speaking)
                 Spacer(Modifier.height(8.dp))
@@ -1129,6 +1206,38 @@ private fun Members(members: List<Member>, myId: String?, canRemove: Boolean, sp
             }
         }
     }
+    memberAction?.let { m ->
+        com.opentune.ui.components.FloatingDialog(
+            onDismissRequest = { memberAction = null },
+            title = { Text(m.name) },
+            text = { Text("Suggest a song specifically blended for ${m.name}, or manage room membership.") },
+            confirmButton = {
+                com.opentune.ui.components.SheetButton(
+                    "Suggest for ${m.name}",
+                    onClick = {
+                        val target = memberAction
+                        memberAction = null
+                        if (target != null) onSuggestFor?.invoke(target)
+                    },
+                )
+            },
+            dismissButton = {
+                if (canRemove && !m.host) {
+                    com.opentune.ui.components.SheetButton(
+                        "Remove",
+                        tone = com.opentune.ui.components.SheetTone.Danger,
+                        onClick = {
+                            val target = memberAction
+                            memberAction = null
+                            removing = target
+                        },
+                    )
+                } else {
+                    com.opentune.ui.components.SheetButton("Cancel", onClick = { memberAction = null }, closes = true)
+                }
+            },
+        )
+    }
     removing?.let { m ->
         com.opentune.ui.components.FloatingDialog(
             onDismissRequest = { removing = null },
@@ -1137,6 +1246,99 @@ private fun Members(members: List<Member>, myId: String?, canRemove: Boolean, sp
             confirmButton = { com.opentune.ui.components.SheetButton("Remove", tone = com.opentune.ui.components.SheetTone.Danger, onClick = { Together.remove(m.id); removing = null }) },
             dismissButton = { com.opentune.ui.components.SheetButton("Cancel", onClick = { removing = null }, closes = true) },
         )
+    }
+}
+
+@Composable
+private fun JamBlendCard(
+    room: Together.Room,
+    onSuggestGeneral: () -> Unit,
+    onSuggestFor: (Member) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val otherMembers = remember(room.members, room.myId) {
+        room.members.filter { it.id != room.myId }
+    }
+    Column(
+        Modifier.padding(vertical = GAP).roomCard().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(36.dp).background(scheme.secondaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.PlaylistPlay,
+                        null,
+                        Modifier.size(20.dp),
+                        tint = scheme.onSecondaryContainer,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        "Jam & Blends",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        "Add songs to the room with attribution",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilledTonalButton(
+                onClick = onSuggestGeneral,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Icon(Icons.Rounded.PlayArrow, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Suggest a song for everyone", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+
+        if (otherMembers.isNotEmpty()) {
+            Text(
+                "Suggest for a friend:",
+                style = MaterialTheme.typography.labelMedium,
+                color = scheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 2.dp),
+            ) {
+                items(otherMembers, key = { it.id }) { member ->
+                    OutlinedButton(
+                        onClick = { onSuggestFor(member) },
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
+                        Avatar(member.name, 20.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "For ${member.name}",
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

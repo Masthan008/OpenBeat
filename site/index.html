@@ -844,7 +844,7 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-right">
-      <a data-latest-apk class="btn btn-small dl" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2/OpenBlast-v2.0.2-universal.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Android</a>
+      <a data-latest-apk class="btn btn-small dl" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-arm64-v8a.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Android</a>
       <a class="btn btn-line btn-small ios-btn" href="#iphone"><svg class="logo-ico"><use href="#i-apple"/></svg>iOS<span class="sub">early</span></a>
     </div>
   </div>
@@ -858,11 +858,11 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         <div class="hero-plat-banner fade-in" style="--d:.05s" id="hero-plat-banner">
           <span class="hero-plat-label">Shipped on:</span>
           <div class="hero-plat-chips">
-            <a href="#releases" class="hero-chip chip-android" data-switch-plat="android" title="Android v2.0.2 Released">
+            <a href="#releases" class="hero-chip chip-android" data-switch-plat="android" title="Android v2.0.2.1 Released">
               <span class="chip-dot"></span>
               <svg class="rel-tab-ico" style="width:13px;height:13px"><use href="#i-android"/></svg>
               <b>Android</b>
-              <span class="chip-v" id="chip-ver-android">v2.0.2</span>
+              <span class="chip-v" id="chip-ver-android">v2.0.2.1</span>
             </a>
             <a href="#releases" class="hero-chip chip-tv" data-switch-plat="tv" title="Android TV Edition v2.0.1 Released">
               <span class="chip-dot"></span>
@@ -893,9 +893,12 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
         <h1><span class="hl"><span>Every song.</span></span><span class="hl" style="--i:1"><span>No ads.</span></span><span class="hl" style="--i:2"><span><mark>No account.</mark></span></span></h1>
         <p class="lede fade-in" style="--d:.35s">OpenBlast is a free, open-source music player for Android phones and TVs, Windows, macOS, Linux and the browser, with an early version for iPhone. It plays the YouTube Music catalogue with word-synced lyrics, live radio, podcasts and rooms where friends listen in step.</p>
         <div class="ctas fade-in" style="--d:.45s">
-          <a data-latest-apk class="btn btn-ink" id="dl-hero" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2/OpenBlast-v2.0.2-universal.apk" target="_blank" rel="noopener"><svg class="logo-ico"><use href="#i-android"/></svg>Download for Android<span class="sub" id="dl-size">13.7 MB</span></a>
+          <a data-latest-apk class="btn btn-ink" id="dl-hero" href="https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-arm64-v8a.apk" download="OpenBlast-v2.0.2.1-arm64-v8a.apk"><svg class="logo-ico"><use href="#i-android"/></svg>Download for Android<span class="sub" id="dl-size">11.4 MB</span></a>
+          <a class="btn btn-line btn-gdrive" id="dl-gdrive" href="https://drive.google.com/drive/folders/1-HV79uPMUXSbphufi_dFcv0ViLNZDdcw?usp=sharing" target="_blank" rel="noopener"><svg class="line-ico"><use href="#i-download"/></svg>Google Drive Mirror</a>
           <a class="btn btn-line" href="#everywhere"><svg class="line-ico"><use href="#i-desktop"/></svg>Desktop, TV and web</a>
-          <a class="btn btn-line" href="#iphone"><svg class="logo-ico"><use href="#i-apple"/></svg>iPhone and iPad<span class="sub">early</span></a>
+        </div>
+        <div class="pixel-tip-box fade-in" style="--d:.5s;margin:12px 0;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);font-size:12px;line-height:1.45;color:#aaa;">
+          💡 <b>Pixel &amp; Android Tip:</b> For Pixel 7/8/9, download <b>arm64-v8a</b>. If tapping the browser notification doesn't open the installer, open your phone's <b>Files / Downloads</b> app and tap the APK directly.
         </div>
         <ul class="fine fade-in" style="--d:.55s"><li>Android 8.0 or newer</li><li>No sign-in needed</li><li>Free & Ad-Free</li><li>Word-Synced Lyrics</li></ul>
       </div>
@@ -1643,6 +1646,47 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
   const GITHUB_RELEASES = "https://github.com/Masthan008/OpenBeat/releases";
   const FALLBACK = [
     {
+      tag_name: "v2.0.2.1",
+      name: "OpenBlast v2.0.2.1",
+      published_at: "2026-11-12T07:15:00Z",
+      html_url: "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.2.1",
+      assets: [
+        {
+          name: "OpenBlast-v2.0.2.1-arm64-v8a.apk",
+          size: 11381500,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-arm64-v8a.apk"
+        },
+        {
+          name: "OpenBlast-v2.0.2.1-universal.apk",
+          size: 14070550,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-universal.apk"
+        },
+        {
+          name: "OpenBlast-v2.0.2.1-armeabi-v7a.apk",
+          size: 11101600,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-armeabi-v7a.apk"
+        },
+        {
+          name: "OpenBlast-v2.0.2.1-x86_64.apk",
+          size: 11381600,
+          download_count: 0,
+          browser_download_url: "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-x86_64.apk"
+        }
+      ],
+      highlights: [
+        "Persistent Media Notification: Your playback controls stay pinned in the status bar even when paused or cleared from recent apps.",
+        "Listen Together Built-in QR Scanner: Join rooms by scanning your friend's screen with the in-app camera scanner.",
+        "Jam & Blends Room Suggestions: Recommend songs directly for friends in the room with attribution badges.",
+        "Update Dialog Snooze: Choose 'Remind in 3 days' when update popups appear to snooze notifications for 72 hours.",
+        "Enhanced Volume Boost: Cleaner volume amplification with balanced preamplification and soft-limiting.",
+        "Live Lyrics Animation Preview: Interactive preview screen in Settings to test and preview every motion effect in real time.",
+        "Clean Vector Badges: Streamlined modern icons replacing emojis across the player and queue."
+      ]
+    },
+    {
       tag_name: "v2.0.2",
       name: "OpenBlast v2.0.2",
       published_at: "2026-11-12T02:50:00Z",
@@ -2037,7 +2081,8 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
       });
     });
 
-    const displayCount = Math.max(4450, totalApkDownloads || grandTotalDownloads);
+    const BASE_VERIFIED_DOWNLOADS = 4500;
+    const displayCount = BASE_VERIFIED_DOWNLOADS + grandTotalDownloads;
     const counterEl = $("total-downloads-count");
     if (counterEl) animateCount(counterEl, displayCount, "+");
     const t1 = $("ticker-dl-1");
@@ -2172,7 +2217,8 @@ footer .about p { color: var(--muted); font-size: 14px; max-width: 46ch; margin-
     .then((liveList) => {
       if (liveList.length) {
         const merged = mergeReleases(activeReleases, liveList);
-        renderReleases(merged, true);
+        activeReleases = merged;
+        renderReleases(activeReleases, true);
       }
     })
     .catch(() => {});

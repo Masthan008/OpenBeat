@@ -187,16 +187,34 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     /** In someone else's room, picking a song sends it to the room rather than playing it here. */
     private fun toRoom(song: Song?): Boolean = song != null && Together.room.value?.following == true && Together.suggest(song)
 
-    fun play(song: Song, source: String? = null) { if (!toRoom(song)) player.play(song, source) }
+    private fun withRoomAttribution(song: Song): Song {
+        val room = Together.room.value ?: return song
+        if (song.suggestedBy != null || song.suggestedFor != null) return song
+        val myName = Together.savedName.ifBlank { if (room.hosting) "Host" else "You" }
+        return song.copy(suggestedBy = myName)
+    }
+
+    fun play(song: Song, source: String? = null) {
+        val s = withRoomAttribution(song)
+        if (!toRoom(s)) player.play(s, source)
+    }
     fun playAll(songs: List<Song>, startIndex: Int = 0, shuffle: Boolean = false, source: String? = null, fromList: Boolean = true) {
-        if (!toRoom(songs.getOrNull(if (shuffle) 0 else startIndex))) player.playAll(songs, startIndex, shuffle, source, fromList = fromList)
+        val tagged = if (Together.room.value != null) songs.map(::withRoomAttribution) else songs
+        if (!toRoom(tagged.getOrNull(if (shuffle) 0 else startIndex))) player.playAll(tagged, startIndex, shuffle, source, fromList = fromList)
     }
     /** Shuffles [songs] with similar songs mixed in; in a room, the first song is only suggested, as with shuffle. */
     fun smartShuffle(songs: List<Song>, source: String? = null) {
-        if (!toRoom(songs.firstOrNull())) player.playAll(songs, 0, shuffle = true, source = source, smart = true)
+        val tagged = if (Together.room.value != null) songs.map(::withRoomAttribution) else songs
+        if (!toRoom(tagged.firstOrNull())) player.playAll(tagged, 0, shuffle = true, source = source, smart = true)
     }
-    fun playNext(song: Song) { if (!toRoom(song)) player.playNext(song) }
-    fun addToQueue(song: Song) { if (!toRoom(song)) player.addToQueue(song) }
+    fun playNext(song: Song) {
+        val s = withRoomAttribution(song)
+        if (!toRoom(s)) player.playNext(s)
+    }
+    fun addToQueue(song: Song) {
+        val s = withRoomAttribution(song)
+        if (!toRoom(s)) player.addToQueue(s)
+    }
     // In someone else's room these go to the host instead (see Together.intercept).
     fun togglePlayPause() { if (!Together.intercept(Together.Control.PlayPause)) player.togglePlayPause() }
     fun skipNext() { if (!Together.intercept(Together.Control.Next)) player.skipNext() }

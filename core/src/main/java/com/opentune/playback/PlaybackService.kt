@@ -107,7 +107,9 @@ import kotlinx.coroutines.withContext
  * Audio path: decoder → [DspAudioProcessor] (EQ, tone, balance, widening,
  * levelling, limiter) → ExoPlayer's silence skipping and speed/pitch → output.
  */
-private class OpenBlastMediaNotificationProvider(context: Context) : DefaultMediaNotificationProvider(context) {
+private const val PLAYBACK_CHANNEL_ID = "openblast_playback"
+
+private class OpenBlastDefaultNotificationProvider(context: Context) : DefaultMediaNotificationProvider(context) {
     override fun addNotificationActions(
         mediaSession: MediaSession,
         mediaButtons: ImmutableList<CommandButton>,
@@ -115,11 +117,80 @@ private class OpenBlastMediaNotificationProvider(context: Context) : DefaultMedi
         actionFactory: MediaNotification.ActionFactory,
     ): IntArray {
         val indices = super.addNotificationActions(mediaSession, mediaButtons, builder, actionFactory)
+        val p = mediaSession.player
+        val currentItem = p.currentMediaItem
+        val title = currentItem?.mediaMetadata?.title?.toString() ?: ""
+        val isPlaying = p.isPlaying
+
+        builder.setChannelId(PLAYBACK_CHANNEL_ID)
         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT)
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-        builder.setOngoing(mediaSession.player.isPlaying)
+        builder.setOngoing(p.mediaItemCount > 0)
+
+        // Vivo OriginOS / FuntouchOS Dynamic Capsule & Origin Island Extras
+        builder.getExtras().apply {
+            putBoolean("extra_notification_capsule", true)
+            putBoolean("vivo_music_play_status", isPlaying)
+            putString("vivo.summaryText", title)
+            putBoolean("android.media.session.SESSION_ACTIVE", true)
+            putBoolean("ox.dynamic.island", true)
+            putBoolean("op.media.capsule", true)
+            putBoolean("vivo_origin_island_status", true)
+            putInt("capsule_status", if (isPlaying) 1 else 2)
+        }
         return indices
     }
+}
+
+private class OpenBlastMediaNotificationProvider(
+    private val delegate: DefaultMediaNotificationProvider,
+) : MediaNotification.Provider {
+    constructor(context: Context) : this(OpenBlastDefaultNotificationProvider(context))
+
+    override fun createNotification(
+        mediaSession: MediaSession,
+        customLayout: ImmutableList<CommandButton>,
+        actionFactory: MediaNotification.ActionFactory,
+        onNotificationChangedCallback: MediaNotification.Provider.Callback,
+    ): MediaNotification {
+        val mediaNotification = delegate.createNotification(mediaSession, customLayout, actionFactory, onNotificationChangedCallback)
+        val p = mediaSession.player
+        val currentItem = p.currentMediaItem
+        val title = currentItem?.mediaMetadata?.title?.toString() ?: ""
+        val isPlaying = p.isPlaying
+
+        // Directly enforce ongoing and non-clearable flag on the final built notification
+        // so it cannot be dismissed while paused or swiped away
+        val notification = mediaNotification.notification
+        if (p.mediaItemCount > 0) {
+            notification.flags = notification.flags or
+                android.app.Notification.FLAG_ONGOING_EVENT or
+                android.app.Notification.FLAG_NO_CLEAR
+        }
+
+        // Vivo OriginOS / FuntouchOS Dynamic Capsule & Origin Island Extras
+        notification.extras.apply {
+            putBoolean("extra_notification_capsule", true)
+            putBoolean("vivo_music_play_status", isPlaying)
+            putString("vivo.summaryText", title)
+            putBoolean("android.media.session.SESSION_ACTIVE", true)
+            putBoolean("ox.dynamic.island", true)
+            putBoolean("op.media.capsule", true)
+            putBoolean("vivo_origin_island_status", true)
+            putInt("capsule_status", if (isPlaying) 1 else 2)
+        }
+
+        return mediaNotification
+    }
+
+    override fun handleCustomCommand(
+        session: MediaSession,
+        action: String,
+        extras: Bundle,
+    ): Boolean = delegate.handleCustomCommand(session, action, extras)
+
+    override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo =
+        delegate.getNotificationChannelInfo()
 }
 
 @OptIn(UnstableApi::class)
@@ -463,6 +534,16 @@ class PlaybackService : MediaLibraryService() {
         // gone; clear the channel so it doesn't linger in the phone's settings.
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             getSystemService(android.app.NotificationManager::class.java)?.run {
+                val channel = android.app.NotificationChannel(
+                    PLAYBACK_CHANNEL_ID,
+                    "Music Playback",
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    description = "OpenBlast persistent music playback controls"
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                    setShowBadge(false)
+                }
+                createNotificationChannel(channel)
                 cancel(7_160)
                 deleteNotificationChannel("live_update")
             }
@@ -509,6 +590,18 @@ class PlaybackService : MediaLibraryService() {
             }
             sendBroadcast(metaIntent)
 
+            val vivoMetaIntent = Intent("com.vivo.music.metachanged").apply {
+                putExtra("id", item.mediaId)
+                putExtra("artist", artist)
+                putExtra("track", title)
+                putExtra("album", album)
+                putExtra("playing", isPlaying)
+                putExtra("duration", duration)
+                putExtra("position", position)
+                putExtra("package", packageName)
+            }
+            sendBroadcast(vivoMetaIntent)
+
             val stateIntent = Intent(action).apply {
                 putExtra("id", item.mediaId)
                 putExtra("artist", artist)
@@ -520,6 +613,23 @@ class PlaybackService : MediaLibraryService() {
                 putExtra("package", packageName)
             }
             sendBroadcast(stateIntent)
+
+            val vivoStateAction = if (player.playbackState == Player.STATE_ENDED) {
+                "com.vivo.music.playbackcomplete"
+            } else {
+                "com.vivo.music.playstatechanged"
+            }
+            val vivoStateIntent = Intent(vivoStateAction).apply {
+                putExtra("id", item.mediaId)
+                putExtra("artist", artist)
+                putExtra("track", title)
+                putExtra("album", album)
+                putExtra("playing", isPlaying)
+                putExtra("duration", duration)
+                putExtra("position", position)
+                putExtra("package", packageName)
+            }
+            sendBroadcast(vivoStateIntent)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to broadcast system media event: ${e.message}")
         }
@@ -657,6 +767,13 @@ class PlaybackService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
         mediaSession
 
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        val hasQueue = session.player.mediaItemCount > 0
+        // While there is an active queue in the player, keep the foreground service attached
+        // so media controls stay pinned in the notification bar and Vivo/Oppo dynamic island capsules stay visible.
+        super.onUpdateNotification(session, startInForegroundRequired || hasQueue)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val player = mediaSession?.player
         if (player != null && player.mediaItemCount > 0 && player.playbackState == Player.STATE_IDLE) {
@@ -671,13 +788,9 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player ?: return
-        if (AppSettings.playback.value.stopOnTaskRemoved) {
-            player.pause()
-            player.stop()
-            stopSelf()
-            return
-        }
-        if (!player.playWhenReady || player.mediaItemCount == 0) {
+        // When cleared from recents: if the user has songs in their queue, keep the notification
+        // and player state alive so they can resume directly from the notification bar.
+        if (player.mediaItemCount == 0) {
             stopSelf()
         }
     }
@@ -941,6 +1054,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            (mediaSession?.player as? ExoPlayer)?.let { soundEffects?.onAudioSessionIdChanged(it.audioSessionId) }
             refreshArtistCredit(mediaItem)
             // The same song put onto its better stream: the swap that did it is
             // still running, waiting to bring the volume back up. A new upgrade
@@ -2337,6 +2451,9 @@ class PlaybackService : MediaLibraryService() {
         if (!Autoplay.shouldExtend(remaining, player.mediaItemCount)) return
         val seedItem = player.getMediaItemAt(player.mediaItemCount - 1)
         val seed = seedItem.mediaId
+        // While following a Listen Together host in a room, the room host dictates upcoming tracks;
+        // guest devices must never run local autoplay or fetch independent recommendations.
+        if (com.opentune.data.together.Together.room.value?.following == true) return
         // Radio is a YouTube feature; a local file has none. A song on your own
         // server carries on with more of the server's songs, picked at random.
         if (LocalMusic.isLocal(seed) || Radio.isRadio(seed)) return

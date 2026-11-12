@@ -270,7 +270,10 @@ fun AppRoot(vm: PlayerViewModel) {
     update?.let { r ->
         com.opentune.ui.settings.UpdateDialog(
             r,
-            onDismiss = { update = null },
+            onDismiss = {
+                com.opentune.data.UpdateCheck.remindLater(appContext, r.version, days = 3)
+                update = null
+            },
             onNotNow = { shown -> com.opentune.data.UpdateCheck.skip(appContext, shown.version); update = null },
         )
     }

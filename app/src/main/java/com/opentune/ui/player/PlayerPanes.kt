@@ -272,19 +272,9 @@ private fun QueueRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, handle:
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                val blendTag = song.suggestedFor?.let { "Suggested for $it" } ?: song.suggestedBy?.let { "By $it" }
-                if (blendTag != null) {
+                if (song.suggestedFor != null || song.suggestedBy != null) {
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        "✨ $blendTag",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    BlendBadge(song.suggestedFor, song.suggestedBy)
                 }
             }
         }
@@ -292,6 +282,44 @@ private fun QueueRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, handle:
         if (onRemove != null) {
             IconButton(onClick = onRemove) { Icon(Icons.Rounded.Close, "Remove from queue", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+    }
+}
+
+/** Tonal badge displaying Jam & Blends attribution using native vector icons without raw emojis. */
+@Composable
+fun BlendBadge(
+    suggestedFor: String?,
+    suggestedBy: String?,
+    modifier: Modifier = Modifier,
+) {
+    val forPerson = suggestedFor?.takeIf { it.isNotBlank() }
+    val byPerson = suggestedBy?.takeIf { it.isNotBlank() }
+    if (forPerson == null && byPerson == null) return
+    val isFor = forPerson != null
+    val label = if (isFor) "Suggested for $forPerson" else "Picked by $byPerson"
+    val icon = if (isFor) PlayerIcons.Sparkle else PlayerIcons.Headphones
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(11.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

@@ -96,7 +96,7 @@ internal fun interface TalkSink {
     fun talk(id: String, from: String, cfg: ByteArray, frames: List<ByteArray>, done: Boolean)
 }
 
-private const val HEARTBEAT_MS = 2_000L
+private const val HEARTBEAT_MS = 1_000L
 /** A knock not repeated for this long is someone who gave up waiting. */
 private const val REQUEST_TIMEOUT_MS = 30_000L
 /** Talk with no new piece for this long has stopped. */
@@ -439,6 +439,7 @@ internal class RoomSession(
                     p.addToQueue(t.toSong())
                     val forText = if (t.suggestedFor != null) " (for ${t.suggestedFor})" else ""
                     addChat(ChatLine("", "$who suggested ${t.title}$forText", system = true))
+                    sendState()
                     return
                 }
                 if (msg.action == "now") {
@@ -452,6 +453,7 @@ internal class RoomSession(
                     p.playNow(t.toSong())
                     val forText = if (t.suggestedFor != null) " (for ${t.suggestedFor})" else ""
                     addChat(ChatLine("", "$who played ${t.title}$forText", system = true))
+                    sendState()
                     return
                 }
                 if (!open) return
@@ -462,6 +464,7 @@ internal class RoomSession(
                     "next" -> p.skipNext()
                     "prev" -> p.skipPrevious()
                 }
+                sendState()
             }
             is Msg.Chat -> addChat(ChatLine(members[from]?.name ?: "Someone", msg.text.take(300), fromId = from))
             is Msg.Voice -> voiceIn(from, msg)
@@ -617,8 +620,12 @@ internal class RoomSession(
             setRate(1f)
             val start = if (s.playing) target + seekLead else target
             val index = p.queue.value.indexOfFirst { it.videoId == track.id }
-            if (index >= 0) p.seekToItem(index, start)
-            else p.playAll(listOf(track.toSong()) + s.next.map { it.toSong() }, 0, false, "Listening together", start)
+            if (index >= 0) {
+                p.seekToItem(index, start)
+                p.replaceUpcoming(s.next.map { it.toSong() })
+            } else {
+                p.playAll(listOf(track.toSong()) + s.next.map { it.toSong() }, 0, false, "Listening together", start)
+            }
             settleUntil = now + SETTLE_MS
             measureSeek = s.playing
             if (!s.playing || holding) p.pause() else p.play()

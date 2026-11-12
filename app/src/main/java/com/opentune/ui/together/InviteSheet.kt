@@ -107,7 +107,7 @@ internal fun InviteSheet(code: RoomCode, hosting: Boolean, onDismiss: () -> Unit
                 Box(
                     Modifier.size(140.dp).clip(RoundedCornerShape(22.dp)).background(Color.White).padding(12.dp),
                     contentAlignment = Alignment.Center,
-                ) { QrCode(code.link, Modifier.fillMaxSize()) }
+                ) { QrCode(code.appLink, Modifier.fillMaxSize()) }
             }
         }
     }
@@ -192,9 +192,9 @@ internal fun readBack(qr: QrModules, scale: Int = 4, quiet: Int = 4): String? {
     return runCatching { com.google.zxing.qrcode.QRCodeReader().decode(bitmap).text }.getOrNull()
 }
 
-/** Opens the share sheet with the room's link and code. */
+/** Opens the share sheet with mobile app link and web fallback. */
 internal fun shareRoom(context: Context, code: RoomCode) {
-    val text = "Listen with me on OpenBlast. Room code: ${code.pretty}\n${code.link}"
+    val text = "Join my Listen Together room on OpenBlast!\nRoom code: ${code.pretty}\n\n📱 Open in OpenBlast App:\n${code.appLink}\n\n🌐 Or join on Web:\n${code.link}"
     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Invite to your room"))
 }
 

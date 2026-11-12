@@ -1,5 +1,46 @@
 [
   {
+    "tag_name": "v2.0.2.1",
+    "name": "OpenBlast v2.0.2.1",
+    "published_at": "2026-11-12T07:15:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.2.1",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.2.1-arm64-v8a.apk",
+        "size": 11381500,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-arm64-v8a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.1-universal.apk",
+        "size": 14070550,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.1-armeabi-v7a.apk",
+        "size": 11101600,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-armeabi-v7a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.1-x86_64.apk",
+        "size": 11381600,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.1/OpenBlast-v2.0.2.1-x86_64.apk"
+      }
+    ],
+    "highlights": [
+      "Persistent Media Notification: Your playback controls now stay pinned in the status bar even when paused or cleared from recent apps, allowing instant resume anytime.",
+      "Listen Together Built-in QR Scanner: Join rooms by pointing your camera at your friend's screen with the new in-app QR scanner—no browser redirects required.",
+      "Jam & Blends Room Suggestions: Recommend songs directly for specific friends in the room with clean attribution badges showing who picked each track.",
+      "Update Dialog Snooze: Choose 'Remind in 3 days' when a new update notification appears to snooze prompts for 72 hours without interrupting your listening.",
+      "Enhanced Volume Boost: Cleaner volume amplification with balanced preamplification and soft-limiting across headphones and speakers.",
+      "Live Lyrics Animation Preview: Interactive preview screen in Lyrics Settings to test and preview every motion effect in real time.",
+      "Clean Vector Badges: Streamlined modern icons replacing emojis across the player and queue."
+    ]
+  },
+  {
     "tag_name": "v2.0.2",
     "name": "OpenBlast v2.0.2",
     "published_at": "2026-11-12T02:50:00Z",

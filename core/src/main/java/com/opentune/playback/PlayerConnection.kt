@@ -313,7 +313,7 @@ class PlayerConnection(private val context: Context) {
         }.let { o ->
             // Songs queued by hand come right after the first song. Smart shuffle
             // slots its picks by position, so it starts on the list alone.
-            val kept = if (mixing) emptyList() else handQueued(controller)
+            val kept = if (mixing || !fromList) emptyList() else handQueued(controller)
             if (kept.isEmpty()) o else {
                 val at = (if (shuffled) 0 else startIndex.coerceIn(o.indices)) + 1
                 o.take(at) + kept + o.drop(at)

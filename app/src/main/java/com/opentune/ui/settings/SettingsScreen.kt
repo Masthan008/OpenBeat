@@ -680,11 +680,8 @@ private fun settingsSections(
         )
     }
     if (lyricsAnimationDialog) {
-        ChoiceSheet(
-            title = "Lyrics animation",
-            options = LyricsAnimation.entries,
+        LyricsAnimationDialog(
             selected = ui.lyricsAnimation,
-            label = { "${it.label} · ${it.summary}" },
             onSelect = { a -> AppSettings.updateUi { it.copy(lyricsAnimation = a) } },
             onDismiss = { lyricsAnimationDialog = false },
         )

@@ -137,7 +137,7 @@ data class DspParams(
     /** The headphone correction from AutoEq, when one is chosen; independent of [eqActive]. */
     private val headphone get() = equalizer.headphone?.takeIf { it.filters.isNotEmpty() }
 
-    val isNeutral: Boolean get() = !eqActive && headphone == null && bassBoost == 0 && !spatial && !clarity && outputGainDb == 0f && eightDPeriod <= 0f && spacePeriod <= 0f && !mono && volumeBoostPercent <= 100
+    val isNeutral: Boolean get() = !eqActive && headphone == null && bassBoost == 0 && !spatial && !clarity && outputGainDb == 0f && eightDPeriod <= 0f && spacePeriod <= 0f && !mono && volumeBoostPercent == 100
 
     /**
      * Whether anything in the chain can push a sample past full scale. Only
@@ -145,7 +145,7 @@ data class DspParams(
      * mastered.
      */
     val canBoost: Boolean
-        get() = spatial || clarity || bassBoost > 0 || eightDPeriod > 0f || spacePeriod > 0f || volumeBoostPercent > 100 || headphone?.filters?.any { it.gainDb > 0 } == true || (eqActive && (
+        get() = volumeBoostPercent > 100 || spatial || clarity || bassBoost > 0 || eightDPeriod > 0f || spacePeriod > 0f || headphone?.filters?.any { it.gainDb > 0 } == true || (eqActive && (
             equalizer.preampDb > 0 || equalizer.bassDb > 0 || equalizer.trebleDb > 0 || equalizer.bands.any { it > 0 }
             ))
 
@@ -379,9 +379,9 @@ class DspAudioProcessor : BaseAudioProcessor() {
     private fun processFrame(p: DspParams, pre: Float, leftGain: Float, rightGain: Float, limit: Boolean) {
         val boost = if (p.volumeBoostPercent > 100) (p.volumeBoostPercent / 100f) else 1f
         for (c in 0 until channels) {
-            var x = (frame[c] * pre).toDouble()
+            var x = (frame[c] * pre * boost).toDouble()
             for (f in filters[c]) x = f.process(x)
-            frame[c] = (x.toFloat() * boost)
+            frame[c] = x.toFloat()
         }
         if (channels == 2) {
             if (p.mono) {

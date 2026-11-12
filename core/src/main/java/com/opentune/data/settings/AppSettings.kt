@@ -312,7 +312,7 @@ data class PlaybackSettings(
      * takes the extra state and the long press away.
      */
     val smartShuffle: Boolean = true,
-    val stopOnTaskRemoved: Boolean = true,
+    val stopOnTaskRemoved: Boolean = false,
     /** Swiping a song row plays it next (toward the end of the line) or adds it to the queue (toward the start). */
     val swipeToQueue: Boolean = true,
     /** Buffer the next track and resolve its neighbours early, for instant skips. */

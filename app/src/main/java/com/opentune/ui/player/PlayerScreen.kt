@@ -1423,6 +1423,10 @@ private fun RowScope.TitleRow(song: Song, liked: Boolean, onLike: () -> Unit, on
             style = if (apple) MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
             else MaterialTheme.typography.titleMedium,
         )
+        if (song.suggestedFor != null || song.suggestedBy != null) {
+            Spacer(Modifier.height(4.dp))
+            BlendBadge(song.suggestedFor, song.suggestedBy)
+        }
     }
     Spacer(Modifier.width(10.dp))
     if (apple) StarButton(liked, onLike) else HeartButton(liked, onLike)

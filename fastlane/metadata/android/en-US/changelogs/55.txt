@@ -1,0 +1,7 @@
+• Persistent media notification stays pinned in status bar on pause with instant resume
+• Built-in camera QR scanner to join Listen Together rooms directly inside the app
+• Jam & Blends: suggest songs for specific friends in the room with attribution badges
+• "Remind in 3 days" option on update popups to snooze reminders for 72 hours
+• Enhanced volume boost with soft-limiting for louder, cleaner audio without distortion
+• Interactive live preview in Settings for all lyrics animation styles
+• Clean modern vector icons across player badges and Listen Together rooms

@@ -187,7 +187,9 @@ class VoiceRecorder(
         var samplesIn = 0L
         var eosQueued = false
         var done = false
-        val framesPerPiece = RATE / FRAME_SAMPLES // about a second
+        // For a live voice call (gate == true), send small chunks (3 frames = ~192ms) for ultra-low latency;
+        // for recorded voice notes (gate == false), send ~1s pieces.
+        val framesPerPiece = if (gate) 3 else (RATE / FRAME_SAMPLES)
         // For a call: which frames are speech, in the order they went in.
         val speech = SpeechGate()
         val voiced = ArrayDeque<Boolean>()

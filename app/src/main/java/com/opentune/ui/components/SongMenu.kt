@@ -213,6 +213,13 @@ fun SongMenuSheet(
                 }
             }
             if (actions != null) {
+                val activeRoom by com.opentune.data.together.Together.room.collectAsState()
+                if (activeRoom != null && !local) {
+                    MenuRow(com.opentune.ui.player.PlayerIcons.Sparkle, "Suggest in room") {
+                        com.opentune.data.together.Together.suggest(song)
+                        close()
+                    }
+                }
                 MenuRow(Icons.AutoMirrored.Rounded.PlaylistPlay, "Play next") { actions.playNext(song); close() }
                 MenuRow(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") { actions.addToQueue(song); close() }
                 keepIn?.let { p -> MenuRow(Icons.AutoMirrored.Rounded.PlaylistAdd, "Keep in playlist") { close(); actions.keepInPlaylist(song, p.id) } }

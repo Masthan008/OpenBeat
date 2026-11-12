@@ -187,13 +187,21 @@ object UpdateCheck {
         }
         val release = found(prefs)?.takeIf { isNewer(it.version, BuildConfig.VERSION_NAME) } ?: return null
         _pending.value = release
-        // A version the user said "not now" to isn't offered again until the next one.
+        // A version the user said "not now" / "skip" to isn't offered again until the next one.
         if (prefs.getString("skipped", null) == release.version) return null
+        // If the user tapped "Remind me later", postpone checking/prompting until the deadline passes
+        val remindAfter = prefs.getLong("remind_after_${release.version}", 0L)
+        if (now < remindAfter) return null
         return release
     }
 
     fun skip(context: Context, version: String) =
         context.getSharedPreferences("updates", Context.MODE_PRIVATE).edit { putString("skipped", version) }
+
+    fun remindLater(context: Context, version: String, days: Int = 3) =
+        context.getSharedPreferences("updates", Context.MODE_PRIVATE).edit {
+            putLong("remind_after_$version", System.currentTimeMillis() + days * 24 * 60 * 60 * 1000L)
+        }
 
     private const val TAG = "UpdateCheck"
     private const val K_FOUND = "found"
