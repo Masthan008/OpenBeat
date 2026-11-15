@@ -36,6 +36,7 @@ class LibraryTilesScreenshotTest {
 
     private fun playlists() {
         LibraryStore.init(ApplicationProvider.getApplicationContext())
+        LibraryStore.playlists.value.forEach { LibraryStore.deletePlaylist(it.id) }
         listOf("Lub", "Old Hindi Romantic Songs", "Throwback Workout", "Late night drive", "Punjabi hits", "Ghazals").forEachIndexed { i, name ->
             LibraryStore.createPlaylist(name, Song("v$i", "Song $i", "Artist $i", null))
         }

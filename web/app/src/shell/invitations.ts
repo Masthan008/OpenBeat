@@ -7,7 +7,7 @@
 export type Invitation = 'star' | 'discord';
 
 export const GITHUB_URL = 'https://github.com/Masthan008/OpenBeat';
-export const DISCORD_URL = 'https://discord.gg/6udrCVh5n';
+export const DISCORD_URL = '';
 
 const KEY = 'opentune:invitations';
 const DAY = 86_400_000;
@@ -54,7 +54,7 @@ export function shouldAsk(state: Pick<State, 'days' | 'asked' | 'never'>, invita
 export function due(now = Date.now()): Invitation | null {
   const state = read();
   if (!state) return null;
-  return (['star', 'discord'] as const).find((invitation) => shouldAsk(state, invitation, now)) ?? null;
+  return (['star'] as const).find((invitation) => shouldAsk(state, invitation, now)) ?? null;
 }
 
 /** Shown (or turned down for good): not asked again for a month, or ever. */

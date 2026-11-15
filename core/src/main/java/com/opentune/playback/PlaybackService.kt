@@ -7,6 +7,7 @@ import kotlinx.coroutines.ensureActive
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -109,7 +110,7 @@ import kotlinx.coroutines.withContext
  */
 private const val PLAYBACK_CHANNEL_ID = "openblast_playback"
 
-private class OpenBlastDefaultNotificationProvider(context: Context) : DefaultMediaNotificationProvider(context) {
+private class OpenBlastDefaultNotificationProvider(private val context: Context) : DefaultMediaNotificationProvider(context) {
     override fun addNotificationActions(
         mediaSession: MediaSession,
         mediaButtons: ImmutableList<CommandButton>,
@@ -120,23 +121,35 @@ private class OpenBlastDefaultNotificationProvider(context: Context) : DefaultMe
         val p = mediaSession.player
         val currentItem = p.currentMediaItem
         val title = currentItem?.mediaMetadata?.title?.toString() ?: ""
-        val isPlaying = p.isPlaying
+        val isActivelyPlaying = p.isPlaying && p.playWhenReady
 
         builder.setChannelId(PLAYBACK_CHANNEL_ID)
         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT)
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-        builder.setOngoing(p.mediaItemCount > 0)
+        // Only mark ongoing while actively playing, so paused notifications can be dismissed/swiped on MI/Xiaomi devices
+        builder.setOngoing(isActivelyPlaying)
+
+        val dismissIntent = Intent(context, PlaybackService::class.java).apply {
+            action = PlaybackService.ACTION_DISMISS
+        }
+        val deletePendingIntent = PendingIntent.getService(
+            context,
+            0,
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+        builder.setDeleteIntent(deletePendingIntent)
 
         // Vivo OriginOS / FuntouchOS Dynamic Capsule & Origin Island Extras
         builder.getExtras().apply {
             putBoolean("extra_notification_capsule", true)
-            putBoolean("vivo_music_play_status", isPlaying)
+            putBoolean("vivo_music_play_status", isActivelyPlaying)
             putString("vivo.summaryText", title)
             putBoolean("android.media.session.SESSION_ACTIVE", true)
             putBoolean("ox.dynamic.island", true)
             putBoolean("op.media.capsule", true)
             putBoolean("vivo_origin_island_status", true)
-            putInt("capsule_status", if (isPlaying) 1 else 2)
+            putInt("capsule_status", if (isActivelyPlaying) 1 else 2)
         }
         return indices
     }
@@ -157,27 +170,31 @@ private class OpenBlastMediaNotificationProvider(
         val p = mediaSession.player
         val currentItem = p.currentMediaItem
         val title = currentItem?.mediaMetadata?.title?.toString() ?: ""
-        val isPlaying = p.isPlaying
+        val isActivelyPlaying = p.isPlaying && p.playWhenReady
 
-        // Directly enforce ongoing and non-clearable flag on the final built notification
-        // so it cannot be dismissed while paused or swiped away
+        // Enforce ongoing and non-clearable flags ONLY while actively playing.
+        // When paused or stopped, strip these flags so MIUI/HyperOS, Poco, Pixel and other devices
+        // allow the notification to be swiped away cleanly.
         val notification = mediaNotification.notification
-        if (p.mediaItemCount > 0) {
+        if (isActivelyPlaying) {
             notification.flags = notification.flags or
                 android.app.Notification.FLAG_ONGOING_EVENT or
                 android.app.Notification.FLAG_NO_CLEAR
+        } else {
+            notification.flags = notification.flags and
+                (android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR).inv()
         }
 
         // Vivo OriginOS / FuntouchOS Dynamic Capsule & Origin Island Extras
         notification.extras.apply {
             putBoolean("extra_notification_capsule", true)
-            putBoolean("vivo_music_play_status", isPlaying)
+            putBoolean("vivo_music_play_status", isActivelyPlaying)
             putString("vivo.summaryText", title)
             putBoolean("android.media.session.SESSION_ACTIVE", true)
             putBoolean("ox.dynamic.island", true)
             putBoolean("op.media.capsule", true)
             putBoolean("vivo_origin_island_status", true)
-            putInt("capsule_status", if (isPlaying) 1 else 2)
+            putInt("capsule_status", if (isActivelyPlaying) 1 else 2)
         }
 
         return mediaNotification
@@ -768,13 +785,20 @@ class PlaybackService : MediaLibraryService() {
         mediaSession
 
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-        val hasQueue = session.player.mediaItemCount > 0
-        // While there is an active queue in the player, keep the foreground service attached
-        // so media controls stay pinned in the notification bar and Vivo/Oppo dynamic island capsules stay visible.
-        super.onUpdateNotification(session, startInForegroundRequired || hasQueue)
+        val player = session.player
+        val isActivelyPlaying = player.isPlaying && player.playWhenReady
+        // Keep foreground service active while music is playing, or if Media3 requires foreground.
+        // When paused, allow the service to demote from foreground so the notification can be swiped/dismissed.
+        super.onUpdateNotification(session, startInForegroundRequired || isActivelyPlaying)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_DISMISS) {
+            Log.i(TAG, "onStartCommand: ACTION_DISMISS received from notification swipe; removing notification and stopping service")
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val player = mediaSession?.player
         if (player != null && player.mediaItemCount > 0 && player.playbackState == Player.STATE_IDLE) {
             val isMediaButton = intent?.action == Intent.ACTION_MEDIA_BUTTON
@@ -788,9 +812,15 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player ?: return
-        // When cleared from recents: if the user has songs in their queue, keep the notification
-        // and player state alive so they can resume directly from the notification bar.
-        if (player.mediaItemCount == 0) {
+        val stopOnRemove = com.opentune.data.settings.AppSettings.playback.value.stopOnTaskRemoved
+        val isActivelyPlaying = player.isPlaying && player.playWhenReady
+        // When cleared from recents:
+        // 1. If stopOnTaskRemoved is enabled, stop immediately.
+        // 2. If playback is paused or stopped, clean up the notification and stop the service
+        //    so MI/Xiaomi/Poco/Pixel devices do not leave un-dismissable zombie notifications in the status bar.
+        if (stopOnRemove || !isActivelyPlaying || player.mediaItemCount == 0) {
+            Log.i(TAG, "onTaskRemoved: clearing notification and stopping service (stopOnRemove=$stopOnRemove, activelyPlaying=$isActivelyPlaying, queueCount=${player.mediaItemCount})")
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
     }
@@ -2824,6 +2854,7 @@ class PlaybackService : MediaLibraryService() {
             AudioDeviceInfo.TYPE_AUX_LINE,
             AudioDeviceInfo.TYPE_DOCK,
         )
+        const val ACTION_DISMISS = "com.opentune.DISMISS_NOTIFICATION"
         const val ACTION_LIKE = "com.opentune.LIKE"
         const val ACTION_SHUFFLE = "com.opentune.SHUFFLE"
         val LIKE_COMMAND = SessionCommand(ACTION_LIKE, Bundle.EMPTY)

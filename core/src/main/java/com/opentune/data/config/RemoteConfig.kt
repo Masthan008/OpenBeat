@@ -26,7 +26,7 @@ data class AppConfig(
     val sections: List<RemoteSection> = RemoteConfigProtocol.sectionIds.map { RemoteSection(it) },
     val banners: List<RemoteBanner> = emptyList(), val playlists: List<RemotePlaylist> = emptyList(),
     val sources: List<RemoteSource>? = null,
-    val github: String = "https://github.com/Masthan008/OpenBeat", val discord: String = "https://discord.gg/6udrCVh5n",
+    val github: String = "https://github.com/Masthan008/OpenBeat", val discord: String = "",
     val web: String = "https://openblast.vercel.app/", val tv: String = "https://openblast.vercel.app/",
     val timeoutMs: Long = 8000, val retries: Int = 2, val communityPrompts: Boolean = true,
 ) {
@@ -86,9 +86,9 @@ object RemoteConfigProtocol {
         val links = data.getJSONObject("links"); val network = data.getJSONObject("network")
         val timeout = network.getLong("timeoutMs"); val retries = network.getInt("retries")
         require(timeout in 4000..20000 && retries in 0..2)
-        val github = url(links.getString("github")); val discord = url(links.getString("discord"))
+        val github = url(links.getString("github")); val discord = links.optString("discord").takeIf(String::isNotBlank)?.let(::url).orEmpty()
         require(com.opentune.data.addons.AddonProtocol.url(github).host == "github.com")
-        require(com.opentune.data.addons.AddonProtocol.url(discord).host in setOf("discord.gg", "discord.com"))
+        require(discord.isEmpty() || com.opentune.data.addons.AddonProtocol.url(discord).host in setOf("discord.gg", "discord.com"))
         return AppConfig(revision, expires, sections, banners, playlists, sources, github, discord, url(links.getString("web")), url(links.getString("tv")), timeout, retries, data.getBoolean("communityPrompts"))
     }
 }

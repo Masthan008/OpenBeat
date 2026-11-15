@@ -77,6 +77,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lens
 import androidx.compose.material.icons.rounded.LineWeight
@@ -1649,6 +1650,30 @@ private fun settingsSections(
                         { v -> AppSettings.updateUi { it.copy(countUsage = v) }; com.opentune.data.Usage.consentChanged(v) },
                         summary = "Shares a random installation ID, app version, active dates and daily play totals. No hardware ID, account or song names. Reinstalls get a new ID; updates keep it.",
                         icon = Icons.Rounded.Info,
+                    )
+                },
+                Entry("Star on GitHub", "star github repository openblast support open source") {
+                    NavRow(
+                        "Star on GitHub",
+                        {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, com.opentune.ui.components.Support.REPO.toUri()))
+                            }
+                        },
+                        summary = "Star the OpenBlast repository on GitHub",
+                        icon = Icons.Rounded.Star,
+                    )
+                },
+                Entry("GitHub repository", "source code repo github git project openblast") {
+                    NavRow(
+                        "GitHub repository",
+                        {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, com.opentune.ui.components.Support.REPO.toUri()))
+                            }
+                        },
+                        summary = com.opentune.ui.components.Support.REPO,
+                        icon = Icons.Rounded.Code,
                     )
                 },
                 Entry("Support OpenBlast", "donate upi pay money tip support developer") {

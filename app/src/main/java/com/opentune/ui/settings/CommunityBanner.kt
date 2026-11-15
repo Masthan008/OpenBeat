@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 internal fun CommunityBanner(modifier: Modifier = Modifier) {
+    if (com.opentune.ui.components.Support.DISCORD.isEmpty()) return
     val context = LocalContext.current
     Row(
         modifier

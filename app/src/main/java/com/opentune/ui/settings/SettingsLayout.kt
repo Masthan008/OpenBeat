@@ -136,7 +136,7 @@ internal val SETTINGS_CATEGORIES = listOf(
         listOf(
             "Developer" to listOf("Developer"),
             "Updates" to listOf("What's new", "Check for updates", "Check for updates automatically"),
-            "Community" to listOf("OpenBlast community", "Support OpenBlast", "Star on GitHub", "Source code"),
+            "Community" to listOf("Star on GitHub", "GitHub repository", "Support OpenBlast"),
             "Help" to listOf("Show the welcome again", "Count this phone in usage numbers", "Export diagnostics"),
         ),
     ),

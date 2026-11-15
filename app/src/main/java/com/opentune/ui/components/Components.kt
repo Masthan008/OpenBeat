@@ -449,14 +449,16 @@ fun ItemCard(
             is CardMenu.ForList -> CollectionContextMenu(menu.list, at, onDismiss = { contextOpen = false }, preview = preview)
         }
     }
+    val tv = com.opentune.ui.tv.LocalIsTv.current
+    val cardShape = if (round) CircleShape else MaterialTheme.shapes.medium
     Column(
         modifier = modifier
             .width(width)
             .menuAnchor(anchor, view)
-            .clip(MaterialTheme.shapes.medium)
+            .clip(cardShape)
             .then(
-                if (menu == null) Modifier.clickable(onClick = onClick)
-                else Modifier.menuClickable(onClick = onClick, onLongClick = { haptics.press(); contextOpen = true }),
+                if (menu == null) Modifier.menuClickable(onClick = onClick, onLongClick = null, shape = cardShape)
+                else Modifier.menuClickable(onClick = onClick, onLongClick = { haptics.press(); contextOpen = true }, shape = cardShape),
             )
             .padding(6.dp),
     ) {
@@ -744,14 +746,29 @@ private val MARQUEE_FADE = 14.dp
  * was still fading on the item when the lifted copy settled back onto it.
  */
 @Composable
-fun Modifier.menuClickable(onClick: () -> Unit, onLongClick: (() -> Unit)?): Modifier {
+fun Modifier.menuClickable(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp),
+): Modifier {
+    val tv = com.opentune.ui.tv.LocalIsTv.current
     val pressed = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val shown = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val current = remember { arrayOfNulls<androidx.compose.foundation.interaction.PressInteraction.Press>(1) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var isFocused by remember { mutableStateOf(false) }
+
     androidx.compose.runtime.LaunchedEffect(pressed) {
         pressed.interactions.collect { i ->
             when (i) {
+                is androidx.compose.foundation.interaction.FocusInteraction.Focus -> {
+                    isFocused = true
+                    shown.emit(i)
+                }
+                is androidx.compose.foundation.interaction.FocusInteraction.Unfocus -> {
+                    isFocused = false
+                    shown.emit(i)
+                }
                 is androidx.compose.foundation.interaction.PressInteraction.Press -> { current[0] = i; shown.emit(i) }
                 is androidx.compose.foundation.interaction.PressInteraction.Release ->
                     if (current[0] === i.press) { current[0] = null; shown.emit(i) }
@@ -761,21 +778,28 @@ fun Modifier.menuClickable(onClick: () -> Unit, onLongClick: (() -> Unit)?): Mod
             }
         }
     }
-    return this
-        // The app's own: a ripple on a phone, the focus ring on a TV.
-        .indication(shown, androidx.compose.foundation.LocalIndication.current)
-        .combinedClickable(
-            interactionSource = pressed,
-            indication = null,
-            onLongClick = onLongClick?.let { long ->
-                {
-                    current[0]?.let { press ->
-                        current[0] = null
-                        scope.launch { shown.emit(androidx.compose.foundation.interaction.PressInteraction.Cancel(press)) }
-                    }
-                    long()
+
+    val base = if (tv) {
+        this
+            .clip(shape)
+            .then(if (isFocused) Modifier.background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f), shape) else Modifier)
+            .indication(shown, FocusRing(shape))
+    } else {
+        this.indication(shown, androidx.compose.foundation.LocalIndication.current)
+    }
+
+    return base.combinedClickable(
+        interactionSource = pressed,
+        indication = null,
+        onLongClick = onLongClick?.let { long ->
+            {
+                current[0]?.let { press ->
+                    current[0] = null
+                    scope.launch { shown.emit(androidx.compose.foundation.interaction.PressInteraction.Cancel(press)) }
                 }
-            },
-            onClick = onClick,
-        )
+                long()
+            }
+        },
+        onClick = onClick,
+    )
 }

@@ -36,6 +36,34 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(com.opentune.ui.theme.AppLanguages.wrap(newBase))
     }
     private var tv = false
+    private var vmRef: PlayerViewModel? = null
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (tv && event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            val command = com.opentune.ui.tv.tvMediaAction(event.keyCode)
+            val vm = vmRef
+            if (command != null && vm != null) {
+                when (command) {
+                    com.opentune.ui.tv.TvMediaAction.TOGGLE -> { vm.togglePlayPause(); return true }
+                    com.opentune.ui.tv.TvMediaAction.PLAY -> { if (!vm.isPlaying.value) vm.togglePlayPause(); return true }
+                    com.opentune.ui.tv.TvMediaAction.PAUSE, com.opentune.ui.tv.TvMediaAction.STOP -> { if (vm.isPlaying.value) vm.togglePlayPause(); return true }
+                    com.opentune.ui.tv.TvMediaAction.NEXT -> { vm.skipNext(); return true }
+                    com.opentune.ui.tv.TvMediaAction.PREVIOUS -> { vm.skipPrevious(); return true }
+                    com.opentune.ui.tv.TvMediaAction.FORWARD -> {
+                        val d = vm.durationMs.value
+                        if (d > 0) vm.seekTo((vm.positionMs() + 10_000).coerceIn(0, d))
+                        return true
+                    }
+                    com.opentune.ui.tv.TvMediaAction.REWIND -> {
+                        val d = vm.durationMs.value
+                        if (d > 0) vm.seekTo((vm.positionMs() - 10_000).coerceIn(0, d))
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
 
     override fun onStop() {
         super.onStop()
@@ -80,6 +108,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val vm: PlayerViewModel = viewModel()
+            vmRef = vm
             val theme by AppSettings.theme.collectAsState()
             val ui by AppSettings.ui.collectAsState()
             LaunchedEffect(ui.highRefreshRate, ui.refreshRateHz) { preferRefreshRate(ui.highRefreshRate, ui.refreshRateHz) }

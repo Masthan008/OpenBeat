@@ -1,5 +1,41 @@
 [
   {
+    "tag_name": "v2.0.2.2",
+    "name": "OpenBlast v2.0.2.2",
+    "published_at": "2026-11-15T05:45:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.2.2",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.2.2-arm64-v8a.apk",
+        "size": 11390000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.2/OpenBlast-v2.0.2.2-arm64-v8a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.2-universal.apk",
+        "size": 14080000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.2/OpenBlast-v2.0.2.2-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.2-armeabi-v7a.apk",
+        "size": 11110000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.2/OpenBlast-v2.0.2.2-armeabi-v7a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.2-x86_64.apk",
+        "size": 11390000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.2/OpenBlast-v2.0.2.2-x86_64.apk"
+      }
+    ],
+    "highlights": [
+      "Routine patch and security maintenance updates.",
+      "General performance improvements and stability patches."
+    ]
+  },
+  {
     "tag_name": "v2.0.2.1",
     "name": "OpenBlast v2.0.2.1",
     "published_at": "2026-11-12T07:15:00Z",

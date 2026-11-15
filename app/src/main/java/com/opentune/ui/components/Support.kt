@@ -61,7 +61,7 @@ object Support {
         }
     }
 
-    val DISCORD: String get() = com.opentune.data.config.RemoteConfig.current.discord
+    val DISCORD: String get() = ""
 
     /**
      * The two monthly invitations: a GitHub star after five days of use, and the
@@ -83,12 +83,12 @@ object Support {
         p.edit { putLong("lastDay", day); putInt("days", p.getInt("days", 0) + 1) }
     }
 
-    /** The invitation that's due now, if any; the star first when both are. */
+    /** The invitation that's due now, if any; the star first when both are. Discord is disabled for now. */
     fun due(context: Context, now: Long = System.currentTimeMillis()): Invite? {
         if (!com.opentune.data.config.RemoteConfig.current.communityPrompts) return null
         val p = prefs(context)
         val other = Invite.entries.maxOf { p.getLong(it.askedKey, 0) }
-        return Invite.entries.firstOrNull { invite ->
+        return Invite.entries.filter { it != Invite.DISCORD }.firstOrNull { invite ->
             val asked = p.getLong(invite.askedKey, 0)
             shouldAsk(p.getBoolean(invite.doneKey, false), p.getInt("days", 0), asked, now, invite.daysBefore) &&
                 (other == asked || now - other >= APART_MS)

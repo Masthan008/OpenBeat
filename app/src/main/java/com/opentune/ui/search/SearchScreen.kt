@@ -1,5 +1,15 @@
 package com.opentune.ui.search
 
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import com.opentune.ui.components.menuClickable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -172,6 +182,32 @@ fun SearchScreen(
     }
     androidx.activity.compose.BackHandler(enabled = explore != null && searching, onBack = leave)
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val voiceLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == android.app.Activity.RESULT_OK) {
+            val matches = res.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            val spoken = matches?.firstOrNull()?.trim()
+            if (!spoken.isNullOrEmpty()) {
+                vm.onQueryChange(spoken)
+                submit(spoken)
+            }
+        }
+    }
+
+    val launchVoiceSearch = {
+        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak a song, artist, or album...")
+        }
+        try {
+            voiceLauncher.launch(intent)
+        } catch (_: Throwable) {
+            com.opentune.data.Pills.error("Voice search not available on this device", context)
+        }
+    }
+
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
         TextField(
             value = query,
@@ -201,10 +237,17 @@ fun SearchScreen(
                     onSearch = { field.requestFocus(); keyboard?.show() })
             },
             trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { vm.onQueryChange("") }) { Icon(Icons.Filled.Close, "Clear") }
-                } else if (onRecognize != null) {
-                    IconButton(onClick = onRecognize) { Icon(Icons.Filled.GraphicEq, "Name a song playing nearby") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (tv) {
+                        IconButton(onClick = launchVoiceSearch) {
+                            Icon(Icons.Rounded.Mic, "Voice search")
+                        }
+                    }
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { vm.onQueryChange("") }) { Icon(Icons.Filled.Close, "Clear") }
+                    } else if (onRecognize != null) {
+                        IconButton(onClick = onRecognize) { Icon(Icons.Filled.GraphicEq, "Name a song playing nearby") }
+                    }
                 }
             },
             colors = TextFieldDefaults.colors(
@@ -228,7 +271,83 @@ fun SearchScreen(
         }
 
         when {
-            !searching -> explore?.invoke()
+            !searching -> explore.invoke()
+            tv -> Row(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                TvKeyboardPanel(
+                    onKey = { key ->
+                        val next = query + key
+                        vm.onQueryChange(next)
+                        if (next.length >= 2) submit(next)
+                    },
+                    onSpace = {
+                        val next = "$query "
+                        vm.onQueryChange(next)
+                        if (next.trim().length >= 2) submit(next.trim())
+                    },
+                    onDelete = {
+                        if (query.isNotEmpty()) {
+                            val next = query.dropLast(1)
+                            vm.onQueryChange(next)
+                            if (next.trim().length >= 2) submit(next.trim())
+                        }
+                    },
+                    onClear = { vm.onQueryChange("") },
+                    onVoiceSearch = launchVoiceSearch,
+                    modifier = Modifier.width(340.dp).fillMaxHeight()
+                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .focusGroup()
+                ) {
+                    when {
+                        source == SearchSource.LIBRARY -> LibraryResults(
+                            query, library, libraryLists, contentPadding,
+                            currentVideoId, isPlaying,
+                            { focus.clearFocus(); onPlay(it) }, onPlayNext, onAddToQueue,
+                            { focus.clearFocus(); onOpenList(it) }
+                        )
+                        source == SearchSource.ADDONS -> AddonResults(
+                            query, addons, recentAddon, contentPadding,
+                            onPick = { vm.onQueryChange(it) },
+                            onPlay = playHit,
+                        )
+                        submitted == null || submitted != query.trim() -> Typing(
+                            query = query,
+                            suggestions = suggestions,
+                            recent = recent,
+                            contentPadding = contentPadding,
+                            onPick = ::submit,
+                            onFill = vm::onQueryChange,
+                            live = live,
+                            currentVideoId = currentVideoId,
+                            isPlaying = isPlaying,
+                            onPlay = { focus.clearFocus(); onPlay(it) },
+                            onPlayNext = onPlayNext,
+                            onAddToQueue = onAddToQueue,
+                            onBrowse = { focus.clearFocus(); onBrowse(it) },
+                        )
+                        else -> Column {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                items(SearchFilter.entries) { f ->
+                                    FilterChip(selected = f == filter, onClick = { vm.setFilter(f) }, label = { Text(f.label) })
+                                }
+                            }
+                            Results(results, contentPadding, currentVideoId, isPlaying, onPlay, onPlayNext, onAddToQueue, onBrowse, vm::retry)
+                        }
+                    }
+                }
+            }
             source == SearchSource.LIBRARY -> LibraryResults(query, library, libraryLists, contentPadding, currentVideoId, isPlaying, { focus.clearFocus(); onPlay(it) }, onPlayNext, onAddToQueue, { focus.clearFocus(); onOpenList(it) })
             source == SearchSource.ADDONS -> AddonResults(
                 query, addons, recentAddon, contentPadding,
@@ -458,11 +577,22 @@ private fun sectionOf(r: SearchResult): String = when (r) {
 
 @Composable
 private fun TopResult(song: Song, onPlay: () -> Unit, isCurrent: Boolean = false) {
+    val tv = com.opentune.ui.tv.LocalIsTv.current
+    val shape = MaterialTheme.shapes.large
+    var isFocused by remember { mutableStateOf(false) }
     Surface(
         onClick = onPlay,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = shape,
+        color = if (tv && isFocused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .then(
+                if (tv) Modifier
+                    .onFocusChanged { isFocused = it.isFocused }
+                    .indication(remember { MutableInteractionSource() }, com.opentune.ui.components.FocusRing(shape))
+                else Modifier
+            ),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Artwork(song.thumbnailUrl.artworkAt(CARD_ART_PX), Modifier.size(84.dp), MaterialTheme.shapes.medium)
@@ -722,6 +852,169 @@ internal fun AddonRow(hit: AddonHit, onClick: () -> Unit) {
         if (t.durationMs > 0) {
             val secs = t.durationMs / 1000
             Text("%d:%02d".format(secs / 60, secs % 60), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(start = 10.dp))
+        }
+    }
+}
+
+@Composable
+private fun TvKeyboardPanel(
+    onKey: (String) -> Unit,
+    onSpace: () -> Unit,
+    onDelete: () -> Unit,
+    onClear: () -> Unit,
+    onVoiceSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val keyboardRows = remember {
+        listOf(
+            listOf("A", "B", "C", "D", "E", "F"),
+            listOf("G", "H", "I", "J", "K", "L"),
+            listOf("M", "N", "O", "P", "Q", "R"),
+            listOf("S", "T", "U", "V", "W", "X"),
+            listOf("Y", "Z", "1", "2", "3", "4"),
+            listOf("5", "6", "7", "8", "9", "0"),
+        )
+    }
+
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Voice Search Button
+        val micShape = RoundedCornerShape(10.dp)
+        var micFocused by remember { mutableStateOf(false) }
+        Button(
+            onClick = onVoiceSearch,
+            shape = micShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (micFocused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = if (micFocused) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .onFocusChanged { micFocused = it.isFocused }
+                .indication(remember { MutableInteractionSource() }, com.opentune.ui.components.FocusRing(micShape))
+        ) {
+            Icon(Icons.Rounded.Mic, null, Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Voice Search", style = MaterialTheme.typography.labelLarge)
+        }
+
+        // Alphanumeric Keyboard Grid
+        keyboardRows.forEach { rowKeys ->
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                rowKeys.forEach { key ->
+                    val keyShape = RoundedCornerShape(8.dp)
+                    var keyFocused by remember { mutableStateOf(false) }
+                    Surface(
+                        onClick = { onKey(key) },
+                        shape = keyShape,
+                        color = if (keyFocused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .onFocusChanged { keyFocused = it.isFocused },
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        Box(
+                            Modifier.fillMaxSize().then(
+                                if (keyFocused) Modifier.indication(remember { MutableInteractionSource() }, com.opentune.ui.components.FocusRing(keyShape))
+                                else Modifier
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                key,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (keyFocused) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Action Keys: Space, Delete, Clear
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Space key
+            val spaceShape = RoundedCornerShape(8.dp)
+            var spaceFocused by remember { mutableStateOf(false) }
+            Surface(
+                onClick = onSpace,
+                shape = spaceShape,
+                color = if (spaceFocused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .weight(2f)
+                    .height(40.dp)
+                    .onFocusChanged { spaceFocused = it.isFocused },
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                Box(
+                    Modifier.fillMaxSize().then(
+                        if (spaceFocused) Modifier.indication(remember { MutableInteractionSource() }, com.opentune.ui.components.FocusRing(spaceShape))
+                        else Modifier
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("␣ Space", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // Delete key
+            val delShape = RoundedCornerShape(8.dp)
+            var delFocused by remember { mutableStateOf(false) }
+            Surface(
+                onClick = onDelete,
+                shape = delShape,
+                color = if (delFocused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .weight(1.5f)
+                    .height(40.dp)
+                    .onFocusChanged { delFocused = it.isFocused },
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                Box(
+                    Modifier.fillMaxSize().then(
+                        if (delFocused) Modifier.indication(remember { MutableInteractionSource() }, com.opentune.ui.components.FocusRing(delShape))
+                        else Modifier
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("⌫ Delete", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // Clear key
+            val clearShape = RoundedCornerShape(8.dp)
+            var clearFocused by remember { mutableStateOf(false) }
+            Surface(
+                onClick = onClear,
+                shape = clearShape,
+                color = if (clearFocused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .onFocusChanged { clearFocused = it.isFocused },
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                Box(
+                    Modifier.fillMaxSize().then(
+                        if (clearFocused) Modifier.indication(remember { MutableInteractionSource() }, com.opentune.ui.components.FocusRing(clearShape))
+                        else Modifier
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("✕", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }

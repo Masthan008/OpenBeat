@@ -126,7 +126,7 @@ internal fun LandscapePlayer(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (side != null) {
-            Box(Modifier.weight(1.1f).fillMaxHeight()) { side() }
+            Box(Modifier.weight(1.1f).fillMaxHeight().focusGroup()) { side() }
         } else {
             ArtworkSwipeArea(
                 onSwipeNext = actions.next,

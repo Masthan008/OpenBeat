@@ -38,6 +38,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AllInclusive
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
@@ -247,8 +249,25 @@ private fun PaneLabel(text: String) {
 
 @Composable
 private fun QueueRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, handle: Boolean, onClick: () -> Unit, onRemove: (() -> Unit)?) {
+    val tv = com.opentune.ui.tv.LocalIsTv.current
+    val shape = RoundedCornerShape(12.dp)
+    var isFocused by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().height(QUEUE_ROW).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        Modifier
+            .fillMaxWidth()
+            .height(QUEUE_ROW)
+            .clip(shape)
+            .then(if (tv && isFocused) Modifier.background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f), shape) else Modifier)
+            .then(
+                if (tv) Modifier
+                    .onFocusChanged { isFocused = it.isFocused }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = com.opentune.ui.components.FocusRing(shape),
+                        onClick = onClick,
+                    )
+                else Modifier.clickable(onClick = onClick)
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (handle) Icon(Icons.Rounded.DragHandle, "Drag to reorder", Modifier.padding(end = 10.dp).size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)

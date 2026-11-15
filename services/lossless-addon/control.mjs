@@ -7,7 +7,7 @@ export const SECTION_IDS = ['speed-dial', 'quick-picks', 'mixes', 'spotify-mixes
 export const defaults = () => ({
   sections: SECTION_IDS.map(id => ({ id, enabled: true, title: '' })),
   banners: [], playlists: [], sources: null,
-  links: { github: 'https://github.com/justshivv/Opentune', discord: 'https://discord.gg/6udrCVh5n', web: 'https://justshivv.github.io/Opentune/player/', tv: 'https://justshivv.github.io/Opentune/' },
+  links: { github: 'https://github.com/Masthan008/OpenBeat', discord: '', web: 'https://openblast.vercel.app/', tv: 'https://openblast.vercel.app/' },
   network: { timeoutMs: 8000, retries: 2 }, communityPrompts: true,
 });
 function requireValue(ok, message) { if (!ok) throw new Error(message); }
@@ -46,9 +46,9 @@ export function validateConfig(input) {
   const sources = input.sources === null ? null : unique(array(input.sources, 20, 'sources').map(x => ({
     id: id(x.id), name: text(x.name, 80, 'source name'), url: https(x.url), enabled: enabled(x.enabled),
   })));
-  const links = Object.fromEntries(['github', 'discord', 'web', 'tv'].map(k => [k, https(input.links?.[k])]));
+  const links = Object.fromEntries(['github', 'discord', 'web', 'tv'].map(k => [k, input.links?.[k] ? https(input.links[k]) : '']));
   requireValue(new URL(links.github).hostname === 'github.com', 'GitHub link must use github.com');
-  requireValue(['discord.gg', 'discord.com'].includes(new URL(links.discord).hostname), 'Discord link must use discord.gg or discord.com');
+  if (links.discord) requireValue(['discord.gg', 'discord.com'].includes(new URL(links.discord).hostname), 'Discord link must use discord.gg or discord.com');
   const network = input.network;
   requireValue(Number.isInteger(network?.timeoutMs) && network.timeoutMs >= 4000 && network.timeoutMs <= 20000, 'Timeout must be 4000–20000 ms');
   requireValue(Number.isInteger(network.retries) && network.retries >= 0 && network.retries <= 2, 'Retries must be 0–2');

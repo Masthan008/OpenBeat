@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -209,8 +210,17 @@ private val FROST_TAIL = 22.dp
 
 @Composable
 private fun PlayShuffleButtons(enabled: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit, modifier: Modifier = Modifier, onSmartShuffle: (() -> Unit)? = null) {
+    val tv = com.opentune.ui.tv.LocalIsTv.current
+    val playShape = androidx.compose.material3.ButtonDefaults.shape
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(onClick = onPlay, enabled = enabled, modifier = Modifier.weight(1f).height(52.dp)) {
+        Button(
+            onClick = onPlay,
+            enabled = enabled,
+            modifier = Modifier.weight(1f).height(52.dp).then(
+                if (tv) Modifier.indication(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, com.opentune.ui.components.FocusRing(playShape))
+                else Modifier
+            ),
+        ) {
             Icon(Icons.Filled.PlayArrow, null)
             Spacer(Modifier.width(8.dp))
             Text(com.opentune.ui.theme.tr("Play"))
@@ -230,6 +240,7 @@ private fun PlayShuffleButtons(enabled: Boolean, onPlay: () -> Unit, onShuffle: 
 internal fun ShuffleButton(onShuffle: () -> Unit, onSmartShuffle: (() -> Unit)?, modifier: Modifier = Modifier, enabled: Boolean = true, compact: Boolean = false) {
     val smartAllowed = com.opentune.data.settings.AppSettings.playback.collectAsState().value.smartShuffle
     val context = androidx.compose.ui.platform.LocalContext.current
+    val tv = com.opentune.ui.tv.LocalIsTv.current
     val onLong: (() -> Unit)? = onSmartShuffle?.takeIf { smartAllowed && enabled }?.let { smart ->
         {
             com.opentune.data.Pills.info("Smart shuffle: similar songs mixed in", context)
@@ -237,7 +248,9 @@ internal fun ShuffleButton(onShuffle: () -> Unit, onSmartShuffle: (() -> Unit)?,
         }
     }
     val shape = if (compact) androidx.compose.foundation.shape.CircleShape else androidx.compose.material3.ButtonDefaults.filledTonalShape
-    val press = Modifier.clip(shape).combinedClickable(
+    val press = Modifier.clip(shape)
+        .then(if (tv) Modifier.indication(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, com.opentune.ui.components.FocusRing(shape)) else Modifier)
+        .combinedClickable(
         enabled = enabled,
         role = androidx.compose.ui.semantics.Role.Button,
         onLongClickLabel = if (onLong != null) "Smart shuffle" else null,
