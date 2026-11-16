@@ -56,7 +56,7 @@ object AlbumCovers {
     /** Release kinds whose cover isn't the song's own album's. */
     private val SKIPPED_TYPES = setOf("Compilation", "DJ-mix", "Live", "Remix", "Mixtape/Street", "Demo")
     private const val LOCAL_ART = "content://media/external/audio/albumart"
-    private val USER_AGENT = "OpenTune/${BuildConfig.VERSION_NAME} ( https://github.com/justshivv/Opentune )"
+    private val USER_AGENT = "OpenBlast/${BuildConfig.VERSION_NAME} ( https://github.com/Masthan008/OpenBeat )"
 
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

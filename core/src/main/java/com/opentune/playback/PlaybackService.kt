@@ -786,9 +786,9 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
         val player = session.player
-        val isActivelyPlaying = player.isPlaying && player.playWhenReady
-        // Keep foreground service active while music is playing, or if Media3 requires foreground.
-        // When paused, allow the service to demote from foreground so the notification can be swiped/dismissed.
+        val isActivelyPlaying = (player.playWhenReady && player.playbackState != Player.STATE_IDLE) || player.isPlaying
+        // Keep foreground service active while music is playing, buffering, or if Media3 requires foreground.
+        // This ensures closing/swiping the app from recents does not kill background audio playback.
         super.onUpdateNotification(session, startInForegroundRequired || isActivelyPlaying)
     }
 
@@ -813,14 +813,19 @@ class PlaybackService : MediaLibraryService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player ?: return
         val stopOnRemove = com.opentune.data.settings.AppSettings.playback.value.stopOnTaskRemoved
-        val isActivelyPlaying = player.isPlaying && player.playWhenReady
-        // When cleared from recents:
-        // 1. If stopOnTaskRemoved is enabled, stop immediately.
-        // 2. If playback is paused or stopped, clean up the notification and stop the service
-        //    so MI/Xiaomi/Poco/Pixel devices do not leave un-dismissable zombie notifications in the status bar.
-        if (stopOnRemove || !isActivelyPlaying || player.mediaItemCount == 0) {
-            Log.i(TAG, "onTaskRemoved: clearing notification and stopping service (stopOnRemove=$stopOnRemove, activelyPlaying=$isActivelyPlaying, queueCount=${player.mediaItemCount})")
+        if (stopOnRemove) {
+            Log.i(TAG, "onTaskRemoved: stopOnTaskRemoved enabled, stopping playback and service")
+            player.pause()
+            player.stop()
             stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+        // When stopOnTaskRemoved is false (default):
+        // Keep the notification and playback alive in the background when the app is swiped away from recents.
+        // Only stop if the queue is empty and playback is not active.
+        if (player.mediaItemCount == 0 && !player.playWhenReady) {
+            Log.i(TAG, "onTaskRemoved: queue empty and not playing, stopping service")
             stopSelf()
         }
     }

@@ -85,6 +85,13 @@ object WhatsNew {
 
     /** Newest first. Add the coming version's notes at the top when releasing. */
     val NOTES: List<Pair<String, List<Note>>> = listOf(
+        "2.0.2.3" to listOf(
+            Note(Icons.Rounded.GraphicEq, "Jamming Sync & Unsync Controls", "Choose to listen independently with Unsync or instantly snap back in step with Sync with room."),
+            Note(Icons.Rounded.Groups, "Room Playback Control Fix", "Roommates and guests can now control playback in sync without stutter, drift, or lag."),
+            Note(Icons.Rounded.Notifications, "Persistent Background Notification", "Playback and notification controls stay active when swiping away the app from recents."),
+            Note(Icons.Rounded.TabletAndroid, "iOS Sideload Catalog Alignment", "Updated SideStore and AltStore repository package identifier to ensure smooth installation."),
+            Note(Icons.Rounded.Favorite, "Clean Home Feed & Star on GitHub", "Clean distraction-free home feed and direct in-app links to star the official repository."),
+        ),
         "2.0.1" to listOf(
             Note(Icons.Rounded.Lock, "Unified Release Keystore & Multi-Scheme Signing", "Signed with permanent canonical certificate ensuring seamless updates and full compatibility on Vivo OriginOS and modern 64-bit devices."),
             Note(Icons.Rounded.Download, "In-App Updater Hardening", "Pre-install ZIP integrity checks prevent incomplete or corrupted downloads from failing installation."),

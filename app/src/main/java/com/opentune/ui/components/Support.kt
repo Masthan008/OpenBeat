@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit
 
 /** Ways to back the project: a star on GitHub, or money over UPI. */
 object Support {
-    val REPO: String get() = com.opentune.data.config.RemoteConfig.current.github
+    const val REPO: String = "https://github.com/Masthan008/OpenBeat"
     const val UPI_ID = "9390160356@fam"
     private const val PAYEE = "OpenBlast"
     private const val NOTE = "Support OpenBlast"

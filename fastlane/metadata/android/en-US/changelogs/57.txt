@@ -1,0 +1,6 @@
+- Listen Together Sync & Unsync: Choose between synced playback with the host or independent listening without interrupting the room
+- Collaborative Room Playback: Seamless synchronization when the host grants playback controls to roommates and guests
+- Persistent Media Playback: Audio and notification controls now persist reliably when closing or swiping away the app from recent tasks
+- iOS Sideload Source Alignment: Corrected repository package ID so SideStore and AltStore install OpenBlast smoothly
+- Clean Home Feed: Removed legacy community invitations and Discord notices across Android and Android TV
+- Official Repository Links: Added GitHub star shortcuts and links directly to Masthan Valli's repository

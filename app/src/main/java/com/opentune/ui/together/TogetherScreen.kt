@@ -619,15 +619,40 @@ internal fun RoomView(r: Together.Room, onBack: () -> Unit, contentPadding: Padd
                     onSuggestFor = { member -> pickingForMember = member },
                 )
             }
-            if (r.holding) {
+            if (!r.hosting) {
                 item {
+                    val synced = r.synced && !r.holding
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = GAP)
-                            .background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(22.dp)).padding(16.dp),
+                            .background(
+                                if (synced) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                else MaterialTheme.colorScheme.tertiaryContainer,
+                                RoundedCornerShape(22.dp)
+                            ).padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Paused for you. The room keeps playing.", Modifier.weight(1f), color = MaterialTheme.colorScheme.onTertiaryContainer)
-                        Button(onClick = { Together.intercept(Together.Control.PlayPause) }) { Text("Catch up") }
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (synced) "Listening in sync with room" else "Listening independently (Unsynced)",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (synced) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Text(
+                                if (synced) "Your playback stays in lockstep with ${r.hostName ?: "the host"}"
+                                else "Paused or playing at your own pace without affecting the room",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (synced) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        if (synced) {
+                            Button(
+                                onClick = { Together.setSynced(false) },
+                                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors()
+                            ) { Text("Unsync") }
+                        } else {
+                            Button(onClick = { Together.setSynced(true) }) { Text("Sync with room") }
+                        }
                     }
                 }
             }
@@ -1139,7 +1164,7 @@ private fun RoomSettings(r: Together.Room) {
         if (r.hosting) {
             ToggleRow(
                 "Everyone can control playback", r.open, { Together.setOpen(it) },
-                summary = if (r.open) "Guests can play, pause, seek and skip" else "Guests can add songs; only you play, pause and skip",
+                summary = if (r.open) "Synced guests can play, pause, seek and skip" else "Guests can add songs; only you play, pause and skip",
                 icon = Icons.Rounded.SportsEsports,
             )
             RowDivider()

@@ -9,7 +9,7 @@
   "apps": [
     {
       "name": "OpenBlast",
-      "bundleIdentifier": "com.opentune.ios",
+      "bundleIdentifier": "com.openblast.ios",
       "developerName": "Masthan Valli",
       "subtitle": "Every song. No ads. No account.",
       "localizedDescription": "A free, open-source music player for the YouTube Music catalogue, with synced lyrics, radio, background play, lock-screen controls and AirPlay.",

@@ -1,5 +1,45 @@
 [
   {
+    "tag_name": "v2.0.2.3",
+    "name": "OpenBlast v2.0.2.3",
+    "published_at": "2026-11-16T06:45:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.2.3",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.2.3-arm64-v8a.apk",
+        "size": 11390000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3/OpenBlast-v2.0.2.3-arm64-v8a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.3-universal.apk",
+        "size": 14080000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3/OpenBlast-v2.0.2.3-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.3-armeabi-v7a.apk",
+        "size": 11110000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3/OpenBlast-v2.0.2.3-armeabi-v7a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.3-x86_64.apk",
+        "size": 11390000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3/OpenBlast-v2.0.2.3-x86_64.apk"
+      }
+    ],
+    "highlights": [
+      "Jamming Sessions: Added dedicated Sync and Unsync controls for group listeners.",
+      "Collaborative Playback: Seamless synchronization when the host grants playback controls to roommates and guests.",
+      "Persistent Media Playback: Audio and notification controls now persist reliably when closing or swiping away the app.",
+      "iOS Sideload Source Alignment: Corrected repository package ID so SideStore and AltStore install OpenBlast smoothly.",
+      "Clean Home Feed: Removed legacy community invitations and Discord notices across Android and Android TV.",
+      "Official Repository Links: Added GitHub star shortcuts and links directly to Masthan Valli's repository."
+    ]
+  },
+  {
     "tag_name": "v2.0.2.2",
     "name": "OpenBlast v2.0.2.2",
     "published_at": "2026-11-15T05:45:00Z",

@@ -86,7 +86,9 @@ object RemoteConfigProtocol {
         val links = data.getJSONObject("links"); val network = data.getJSONObject("network")
         val timeout = network.getLong("timeoutMs"); val retries = network.getInt("retries")
         require(timeout in 4000..20000 && retries in 0..2)
-        val github = url(links.getString("github")); val discord = links.optString("discord").takeIf(String::isNotBlank)?.let(::url).orEmpty()
+        val rawGithub = url(links.getString("github"))
+        val github = if (rawGithub.contains("justshivv", ignoreCase = true)) "https://github.com/Masthan008/OpenBeat" else rawGithub
+        val discord = ""
         require(com.opentune.data.addons.AddonProtocol.url(github).host == "github.com")
         require(discord.isEmpty() || com.opentune.data.addons.AddonProtocol.url(discord).host in setOf("discord.gg", "discord.com"))
         return AppConfig(revision, expires, sections, banners, playlists, sources, github, discord, url(links.getString("web")), url(links.getString("tv")), timeout, retries, data.getBoolean("communityPrompts"))

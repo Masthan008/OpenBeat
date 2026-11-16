@@ -184,8 +184,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** In someone else's room, picking a song sends it to the room rather than playing it here. */
-    private fun toRoom(song: Song?): Boolean = song != null && Together.room.value?.following == true && Together.suggest(song)
+    /** In someone else's room, picking a song sends it to the room when synced; when unsynced, it plays locally. */
+    private fun toRoom(song: Song?): Boolean {
+        val room = Together.room.value ?: return false
+        return song != null && room.following && room.synced && !room.holding && Together.suggest(song)
+    }
 
     private fun withRoomAttribution(song: Song): Song {
         val room = Together.room.value ?: return song

@@ -368,5 +368,5 @@ private fun Note(icon: ImageVector, text: String) {
 }
 
 private val WEB_PLAYER get() = com.opentune.data.config.RemoteConfig.current.web
-private const val RELEASES = "https://github.com/justshivv/Opentune/releases/latest"
-private const val SOURCE = "https://github.com/justshivv/Opentune/tree/main/wear"
+private const val RELEASES = "https://github.com/Masthan008/OpenBeat/releases/latest"
+private const val SOURCE = "https://github.com/Masthan008/OpenBeat/tree/main/wear"

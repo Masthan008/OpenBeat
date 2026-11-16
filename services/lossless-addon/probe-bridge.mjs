@@ -7,7 +7,7 @@ async function read(address, media = false, redirect = 'follow') {
   const url = new URL(address);
   if (url.protocol !== 'https:' || blocked.has(url.host)) throw Error('HTTPS required or host cooling down');
   const r = await fetch(url, { redirect, signal: AbortSignal.timeout(12000), headers: {
-    'User-Agent': 'OpenTune-Source-Research/1.0 (+https://github.com/justshivv/Opentune)', ...(media ? { Range: 'bytes=0-65535' } : {}),
+    'User-Agent': 'OpenBlast-Source-Research/1.0 (+https://github.com/Masthan008/OpenBeat)', ...(media ? { Range: 'bytes=0-65535' } : {}),
   } });
   if (r.status === 429) blocked.add(url.host);
   if (r.status >= 300 && r.status < 400 && redirect === 'manual') { await r.body?.cancel(); return { status: r.status, location: r.headers.get('Location') }; }

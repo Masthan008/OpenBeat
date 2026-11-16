@@ -181,6 +181,7 @@ internal class RoomSession(
     private var offset = 0L
     private var bestRtt = Long.MAX_VALUE
     private var settleUntil = 0L
+    private var synced = true
     private var holding = false
     private var rate = 1f
     // How far ahead of the target to seek, to cover the time the seek itself
@@ -558,7 +559,7 @@ internal class RoomSession(
                 update {
                     it.copy(
                         phase = Phase.Live, hostName = msg.host, members = withMe(msg.members), open = msg.open,
-                        track = msg.track, hostPrivate = msg.private,
+                        track = msg.track, hostPrivate = msg.private, synced = synced, holding = holding,
                     )
                 }
                 if (first) addChat(ChatLine("", "You joined ${msg.host}'s room", system = true))
@@ -634,7 +635,7 @@ internal class RoomSession(
         // Same song: keep what comes next the same, so the next song starts in step too.
         val after = p.upNext.value.mapNotNull { p.queue.value.getOrNull(it)?.videoId }
         if (fresh && after.take(s.next.size) != s.next.map { it.id }) p.replaceUpcoming(s.next.map { it.toSong() })
-        if (holding) {
+        if (!synced || holding) {
             setRate(1f)
             return
         }
@@ -673,11 +674,32 @@ internal class RoomSession(
             kotlin.math.abs(targetPosition(s, now, offset) - p.currentPositionMs()) < 1_500
     }
 
+    fun setSynced(on: Boolean) {
+        if (hosting) return
+        synced = on
+        holding = false
+        update { it.copy(synced = on, holding = false) }
+        if (on) {
+            localUntil = 0
+            settleUntil = 0
+            notice("Synced with ${state.value?.hostName ?: "the room"}")
+            last?.let { follow(it, fresh = true) }
+        } else {
+            setRate(1f)
+            notice("Listening independently (unsynced)")
+        }
+    }
+
     fun intercept(control: Control): Boolean {
         if (hosting) return false
         val r = state.value ?: return false
         if (r.phase != Phase.Live) return false
-        if (r.open) {
+        if (!synced && !holding) {
+            // When explicitly unsynced, playback controls are purely local to this phone.
+            // Do not broadcast to the room or disrupt the host.
+            return false
+        }
+        if (synced && r.open) {
             // Done here at once, so the button answers like it does alone,
             // and asked of the host, who does it for everyone.
             val p = player
@@ -696,7 +718,8 @@ internal class RoomSession(
             Control.PlayPause -> {
                 // Without control, play/pause is just for you; the room plays on.
                 holding = !holding
-                update { it.copy(holding = holding) }
+                synced = !holding
+                update { it.copy(holding = holding, synced = synced) }
                 if (holding) {
                     player.pause()
                     notice("Paused for you. The room keeps playing.")

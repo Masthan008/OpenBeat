@@ -88,24 +88,24 @@ jobs:
           if ! gh api "repos/${{ github.repository }}/releases/tags/ios" > ios-release.json 2>/dev/null; then
             echo "No iOS build published yet"; rm -f ios-release.json; exit 0
           fi
-          base="https://justshivv.github.io/Opentune"
+          base="https://openbeat-site.vercel.app"
           jq --arg base "$base" '
-            (.assets | map(select(.name == "OpenTune-iOS.ipa")) | first) as $ipa
+            (.assets | map(select(.name == "OpenBlast-iOS.ipa" or .name == "OpenTune-iOS.ipa" or (.name | endswith(".ipa")))) | first) as $ipa
             | if $ipa == null then empty else
             {
-              name: "OpenTune",
-              identifier: "io.github.justshivv.opentune",
-              subtitle: "A free music player",
+              name: "OpenBlast",
+              identifier: "io.github.masthan008.openbeat",
+              subtitle: "Free, open-source music player",
               sourceURL: ($base + "/ios/source.json"),
               website: ($base + "/"),
               iconURL: ($base + "/ios/icon.png"),
               tintColor: "FF8A65",
               apps: [{
-                name: "OpenTune",
-                bundleIdentifier: "com.opentune.ios",
-                developerName: "justshivv",
+                name: "OpenBlast",
+                bundleIdentifier: "com.openblast.ios",
+                developerName: "Masthan Valli",
                 subtitle: "Every song. No ads. No account.",
-                localizedDescription: "A free, open-source music player for the YouTube Music catalogue, with synced lyrics, radio once the queue runs out, background play, lock-screen controls and AirPlay. An early version of the Android app.",
+                localizedDescription: "A free, open-source music player for the YouTube Music catalogue, with synced lyrics, radio, background play, lock-screen controls and AirPlay.",
                 iconURL: ($base + "/ios/icon.png"),
                 tintColor: "FF8A65",
                 category: "entertainment",

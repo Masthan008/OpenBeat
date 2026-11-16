@@ -29,7 +29,7 @@ import okhttp3.Request
 internal object LrcRed {
     private const val BASE = "https://lrc.red/"
     private const val BINI = "https://lyrics-api.binimum.org/"
-    private const val USER_AGENT = "OpenTune (+https://github.com/justshivv/Opentune)"
+    private const val USER_AGENT = "OpenBlast (+https://github.com/Masthan008/OpenBeat)"
     private const val IDENTIFY_MS = 2_500L
     private val ISRC = Regex("^[A-Z]{2}[A-Z0-9]{3}\\d{7}$")
     private val json = Json { ignoreUnknownKeys = true }

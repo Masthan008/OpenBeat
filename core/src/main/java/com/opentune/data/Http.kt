@@ -114,7 +114,7 @@ object Http {
      * where to reach whoever runs it. Only its hosts are given this name; every
      * other request keeps the headers its caller set, YouTube's above all.
      */
-    private val WIKIMEDIA_AGENT = "OpenTune (https://github.com/justshivv/opentune) okhttp/${okhttp3.OkHttp.VERSION}"
+    private val WIKIMEDIA_AGENT = "OpenBlast (https://github.com/Masthan008/OpenBeat) okhttp/${okhttp3.OkHttp.VERSION}"
     private val namedForWikimedia = okhttp3.Interceptor { chain ->
         val request = chain.request()
         val host = request.url.host

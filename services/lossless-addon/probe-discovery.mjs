@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { flacInfo } from './worker.mjs';
 const report = { checkedAt: new Date().toISOString(), scope: 'Public catalogue/API and native FLAC header checks only', results: [] };
 async function read(url, media = false) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'OpenTune-Source-Research/1.0 (+https://github.com/justshivv/Opentune)', ...(media ? { Range: 'bytes=0-65535' } : {}) }, signal: AbortSignal.timeout(10000) });
+  const r = await fetch(url, { headers: { 'User-Agent': 'OpenBlast-Source-Research/1.0 (+https://github.com/Masthan008/OpenBeat)', ...(media ? { Range: 'bytes=0-65535' } : {}) }, signal: AbortSignal.timeout(10000) });
   if (!r.ok) { await r.body?.cancel(); throw Error(`HTTP ${r.status}`); }
   const reader = r.body.getReader(); const chunks = []; let size = 0, cap = media ? 65536 : 2097152;
   try { for (;;) { const p = await reader.read(); if (p.done) break; const b = p.value.subarray(0, cap - size); chunks.push(b); size += b.length; if (size >= cap) break; } }

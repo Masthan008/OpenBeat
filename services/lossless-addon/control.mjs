@@ -8,7 +8,7 @@ export const defaults = () => ({
   sections: SECTION_IDS.map(id => ({ id, enabled: true, title: '' })),
   banners: [], playlists: [], sources: null,
   links: { github: 'https://github.com/Masthan008/OpenBeat', discord: '', web: 'https://openblast.vercel.app/', tv: 'https://openblast.vercel.app/' },
-  network: { timeoutMs: 8000, retries: 2 }, communityPrompts: true,
+  network: { timeoutMs: 8000, retries: 2 }, communityPrompts: false,
 });
 function requireValue(ok, message) { if (!ok) throw new Error(message); }
 const text = (value, max, name, empty = false) => {

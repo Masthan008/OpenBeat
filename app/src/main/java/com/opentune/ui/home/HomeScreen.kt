@@ -297,7 +297,19 @@ fun HomeScreen(
                 }
             }
             item(key = "festival") { FestivalCard() }
-            itemsIndexed(runtime.banners.filter { platform in it.platforms }, key = { _, banner -> "remote-banner:${banner.id}" }) { _, banner ->
+            itemsIndexed(
+                runtime.banners.filter { banner ->
+                    platform in banner.platforms &&
+                    banner.id != "community" &&
+                    !banner.title.contains("community", ignoreCase = true) &&
+                    !banner.title.contains("opentune", ignoreCase = true) &&
+                    !banner.body.contains("opentune", ignoreCase = true) &&
+                    !banner.body.contains("discord", ignoreCase = true) &&
+                    !banner.action.contains("discord", ignoreCase = true) &&
+                    !banner.url.contains("discord", ignoreCase = true)
+                },
+                key = { _, banner -> "remote-banner:${banner.id}" }
+            ) { _, banner ->
                 RemoteBannerCard(banner)
             }
             for (section in runtime.sections.filter { it.enabled }) when (section.id) {

@@ -74,6 +74,8 @@ object Together {
         val hostPrivate: Boolean = false,
         /** A guest who paused for themselves; the room plays on without them. */
         val holding: Boolean = false,
+        /** Whether this phone is currently playing in sync with the room's host. */
+        val synced: Boolean = true,
         val endedReason: String? = null,
         /** This phone's id in [members]. */
         val myId: String? = null,
@@ -306,6 +308,8 @@ object Together {
     }
 
     fun setOpen(open: Boolean) = session?.setOpen(open)
+
+    fun setSynced(synced: Boolean) = session?.setSynced(synced)
 
     fun say(text: String) = session?.say(text)
 

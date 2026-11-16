@@ -61,7 +61,7 @@ import okhttp3.Request
  */
 object LyricsRepository {
     private const val BASE = "https://lrclib.net/api"
-    private const val USER_AGENT = "OpenTune (https://github.com/justshivv/Opentune)"
+    private const val USER_AGENT = "OpenBlast (https://github.com/Masthan008/OpenBeat)"
     private const val TAG = "Lyrics"
     /** A card's kind of item, once mistaken for the artist. */
     private val NOT_AN_ARTIST = setOf("song", "video", "single", "ep", "album")
