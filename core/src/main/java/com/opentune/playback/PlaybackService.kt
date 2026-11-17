@@ -110,7 +110,12 @@ import kotlinx.coroutines.withContext
  */
 private const val PLAYBACK_CHANNEL_ID = "openblast_playback"
 
-private class OpenBlastDefaultNotificationProvider(private val context: Context) : DefaultMediaNotificationProvider(context) {
+private class OpenBlastDefaultNotificationProvider(private val context: Context) : DefaultMediaNotificationProvider(
+    context,
+    NotificationIdProvider { 7_160 },
+    PLAYBACK_CHANNEL_ID,
+    androidx.media3.session.R.string.default_notification_channel_name,
+) {
     override fun addNotificationActions(
         mediaSession: MediaSession,
         mediaButtons: ImmutableList<CommandButton>,
@@ -207,7 +212,10 @@ private class OpenBlastMediaNotificationProvider(
     ): Boolean = delegate.handleCustomCommand(session, action, extras)
 
     override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo =
-        delegate.getNotificationChannelInfo()
+        MediaNotification.Provider.NotificationChannelInfo(
+            PLAYBACK_CHANNEL_ID,
+            "Music Playback",
+        )
 }
 
 @OptIn(UnstableApi::class)
@@ -786,10 +794,10 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
         val player = session.player
-        val isActivelyPlaying = (player.playWhenReady && player.playbackState != Player.STATE_IDLE) || player.isPlaying
-        // Keep foreground service active while music is playing, buffering, or if Media3 requires foreground.
-        // This ensures closing/swiping the app from recents does not kill background audio playback.
-        super.onUpdateNotification(session, startInForegroundRequired || isActivelyPlaying)
+        val hasQueue = player.mediaItemCount > 0
+        // Keep foreground service active while there is a media queue, so paused playback
+        // retains status bar notification controls and keeps Vivo Origin Player / Origin Island active.
+        super.onUpdateNotification(session, startInForegroundRequired || hasQueue)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -1068,6 +1076,8 @@ class PlaybackService : MediaLibraryService() {
                     Player.EVENT_MEDIA_ITEM_TRANSITION,
                     Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED,
                     Player.EVENT_IS_PLAYING_CHANGED,
+                    Player.EVENT_PLAY_WHEN_READY_CHANGED,
+                    Player.EVENT_PLAYBACK_STATE_CHANGED,
                     Player.EVENT_MEDIA_METADATA_CHANGED,
                 )
             ) {

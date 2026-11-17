@@ -61,7 +61,7 @@ export default function HomePage() {
     }}><RefreshCw size={20} className={home.isFetching ? 'animate-spin' : ''} /></button>
     <PrefetchLink className="ot-circle-button" to="/settings" aria-label="Settings"><Settings size={20} /></PrefetchLink>
   </div></header>;
-  const banners = runtime.banners.filter(b => b.enabled && b.platforms.includes('web')).map(b => (
+  const banners = runtime.banners.filter(b => b.enabled && b.platforms.includes('web') && b.id !== 'community' && !b.title?.toLowerCase().includes('community') && !b.body?.toLowerCase().includes('community') && !b.body?.toLowerCase().includes('discord') && !b.action?.toLowerCase().includes('discord') && !b.url?.toLowerCase().includes('discord')).map(b => (
     <section className="ot-banner" key={b.id} aria-label={b.title}><h2>{b.title}</h2><p>{b.body}</p><div><a href={b.url} target="_blank" rel="noreferrer">{b.action} ↗</a></div></section>
   ));
   if (missing) {

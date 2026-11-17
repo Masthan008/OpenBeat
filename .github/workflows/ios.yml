@@ -47,10 +47,10 @@ jobs:
             name=$(echo "${raw_tag#v}" | sed 's/-ios$//')
             tag="$raw_tag"
           else
-            name="1.0.6"
-            tag="v1.0.6-ios"
+            name="1.0.7"
+            tag="v1.0.7-ios"
           fi
-          code="6"
+          code="7"
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"

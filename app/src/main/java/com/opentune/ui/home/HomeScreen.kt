@@ -301,8 +301,13 @@ fun HomeScreen(
                 runtime.banners.filter { banner ->
                     platform in banner.platforms &&
                     banner.id != "community" &&
+                    !banner.id.contains("community", ignoreCase = true) &&
+                    !banner.id.contains("discord", ignoreCase = true) &&
                     !banner.title.contains("community", ignoreCase = true) &&
                     !banner.title.contains("opentune", ignoreCase = true) &&
+                    !banner.title.contains("discord", ignoreCase = true) &&
+                    !banner.title.contains("made for music", ignoreCase = true) &&
+                    !banner.body.contains("community", ignoreCase = true) &&
                     !banner.body.contains("opentune", ignoreCase = true) &&
                     !banner.body.contains("discord", ignoreCase = true) &&
                     !banner.action.contains("discord", ignoreCase = true) &&

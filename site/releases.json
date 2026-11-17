@@ -40,6 +40,44 @@
     ]
   },
   {
+    "tag_name": "v2.0.2.3-android-tv",
+    "name": "OpenBlast v2.0.2.3 (Android TV Edition)",
+    "published_at": "2026-11-17T12:00:00Z",
+    "html_url": "https://github.com/Masthan008/OpenBeat/releases/tag/v2.0.2.3-android-tv",
+    "assets": [
+      {
+        "name": "OpenBlast-v2.0.2.3-android-tv-universal.apk",
+        "size": 14080000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3-android-tv/OpenBlast-v2.0.2.3-android-tv-universal.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.3-android-tv-arm64-v8a.apk",
+        "size": 11390000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3-android-tv/OpenBlast-v2.0.2.3-android-tv-arm64-v8a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.3-android-tv-armeabi-v7a.apk",
+        "size": 11110000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3-android-tv/OpenBlast-v2.0.2.3-android-tv-armeabi-v7a.apk"
+      },
+      {
+        "name": "OpenBlast-v2.0.2.3-android-tv-x86_64.apk",
+        "size": 11390000,
+        "download_count": 0,
+        "browser_download_url": "https://github.com/Masthan008/OpenBeat/releases/download/v2.0.2.3-android-tv/OpenBlast-v2.0.2.3-android-tv-x86_64.apk"
+      }
+    ],
+    "highlights": [
+      "[Android TV] 10-foot widescreen Leanback interface and official TV home screen banner",
+      "[D-Pad Navigation] Seamless directional focus traversal and remote control shortcuts",
+      "[Jam Sessions on TV] Sync and unsync controls for room listening on the big screen",
+      "[Performance] Hardware-agnostic TV streaming without touch or camera requirements"
+    ]
+  },
+  {
     "tag_name": "v2.0.2.2",
     "name": "OpenBlast v2.0.2.2",
     "published_at": "2026-11-15T05:45:00Z",

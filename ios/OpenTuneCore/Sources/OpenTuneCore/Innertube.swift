@@ -127,24 +127,33 @@ public actor Innertube {
      */
     public func stream(_ videoId: String) async throws -> Stream {
         var lastError: Error = Failure.noStream
-        for client in [PlayerClient.ios, .iosRecent, .androidVR] {
+        var hlsFallback: Stream? = nil
+        let clients = [PlayerClient.androidVR, .ios, .iosRecent]
+        for client in clients {
             do {
                 let response = try await postPlayer(videoId, client)
                 let status = response.o("playabilityStatus").s("status")
                 if let status, status != "OK" {
-                    throw Failure.unplayable(response.o("playabilityStatus").s("reason") ?? status)
+                    lastError = Failure.unplayable(response.o("playabilityStatus").s("reason") ?? status)
+                    continue
                 }
-                if let stream = Self.pickStream(response, client: client) { return stream }
-                lastError = Failure.noStream
+                // Prioritize direct progressive audio/mp4 (AAC) which AVPlayer handles natively and flawlessly
+                if let direct = Self.pickDirectAudioStream(response, client: client) {
+                    return direct
+                }
+                if hlsFallback == nil, let hls = Self.pickHlsStream(response, client: client) {
+                    hlsFallback = hls
+                }
             } catch {
                 lastError = error
             }
         }
+        if let hlsFallback { return hlsFallback }
         throw lastError
     }
 
-    /** The best AAC audio format with a plain URL, or the HLS manifest. */
-    static func pickStream(_ response: JSON, client: PlayerClient) -> Stream? {
+    /** Direct progressive audio/mp4 (AAC) format with an unciphered HTTPS URL. */
+    static func pickDirectAudioStream(_ response: JSON, client: PlayerClient) -> Stream? {
         let data = response.o("streamingData")
         let loudness = response.o("playerConfig").o("audioConfig")?["loudnessDb"]?.doubleValue
         let durationMs = response.o("videoDetails").s("lengthSeconds").flatMap { Int64($0) }.map { $0 * 1000 }
@@ -159,10 +168,24 @@ public actor Innertube {
                           bitrate: best["bitrate"]?.doubleValue.map { Int($0) }, loudnessDb: loudness, durationMs: durationMs,
                           contentLength: Optional(best).s("contentLength").flatMap { Int64($0) })
         }
+        return nil
+    }
+
+    /** HLS manifest URL fallback if no direct audio/mp4 stream is available. */
+    static func pickHlsStream(_ response: JSON, client: PlayerClient) -> Stream? {
+        let data = response.o("streamingData")
+        let loudness = response.o("playerConfig").o("audioConfig")?["loudnessDb"]?.doubleValue
+        let durationMs = response.o("videoDetails").s("lengthSeconds").flatMap { Int64($0) }.map { $0 * 1000 }
+        let headers = ["User-Agent": client.userAgent]
         if let hls = data.s("hlsManifestUrl"), let url = URL(string: hls) {
             return Stream(url: url, headers: headers, isHLS: true, mimeType: "application/x-mpegURL", bitrate: nil, loudnessDb: loudness, durationMs: durationMs)
         }
         return nil
+    }
+
+    /** The best AAC audio format with a plain URL, or the HLS manifest. */
+    static func pickStream(_ response: JSON, client: PlayerClient) -> Stream? {
+        pickDirectAudioStream(response, client: client) ?? pickHlsStream(response, client: client)
     }
 
     // MARK: Requests
